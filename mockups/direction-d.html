@@ -141,21 +141,19 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
 .guides-head .stitle{font-family:"Prata",serif;font-size:36px;color:#22293a;line-height:1}
 .guides-head .stitle em{font-family:"Playfair Display",serif;font-style:italic;color:#a34a2f;font-weight:500}
 .guides-head .sdesc{font-size:14px;color:#5c6672;margin-top:14px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.55}
-.guides-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
+.guides-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;max-width:900px;margin:0 auto}
 .guide{background:#fbf6f0;border-radius:8px;overflow:hidden;box-shadow:0 12px 22px -18px rgba(34,41,58,.35);display:flex;flex-direction:column;transition:transform .25s ease,box-shadow .25s ease}
 .guide:hover{transform:translateY(-4px);box-shadow:0 20px 32px -18px rgba(34,41,58,.45)}
 .guide-photo{aspect-ratio:4/5;background:linear-gradient(135deg,#7c8a6c,#3d4a34);position:relative}
 .guide:nth-child(2) .guide-photo{background:linear-gradient(135deg,#a34a2f,#6a2b12)}
 .guide:nth-child(3) .guide-photo{background:linear-gradient(135deg,#4b5f78,#26303b)}
-.guide:nth-child(4) .guide-photo{background:linear-gradient(135deg,#c29a5b,#8a6a30)}
 .guide-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(20,27,33,.55),transparent 50%);pointer-events:none}
 .guide-tag{position:absolute;top:12px;left:12px;font-family:"PT Sans",sans-serif;font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:#22293a;font-weight:700;background:#f5ede0;padding:5px 9px;border-radius:2px;z-index:2}
-.guide-body{padding:16px 18px 20px;display:flex;flex-direction:column;flex:1}
-.guide-name{font-family:"Prata",serif;font-size:18px;color:#22293a;line-height:1.15;margin-bottom:4px}
-.guide-role{font-family:"Playfair Display",serif;font-style:italic;font-size:12.5px;color:#a34a2f;margin-bottom:10px}
-.guide-bio{font-family:"PT Serif",serif;font-size:12.5px;color:#5c6672;line-height:1.5;flex:1}
-.guide-meta{margin-top:12px;padding-top:12px;border-top:1px solid rgba(194,154,91,.4);display:flex;justify-content:space-between;align-items:center;font-family:"PT Sans",sans-serif;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#5c6672;font-weight:700}
-.guide-meta b{color:#22293a}
+.guide-body{padding:18px 20px 22px;display:flex;flex-direction:column;flex:1}
+.guide-name{font-family:"Prata",serif;font-size:20px;color:#22293a;line-height:1.15;margin-bottom:4px}
+.guide-role{font-family:"Playfair Display",serif;font-style:italic;font-size:12.5px;color:#a34a2f;margin-bottom:14px}
+.guide-quote{font-family:"Playfair Display",serif;font-style:italic;font-size:14px;color:#22293a;line-height:1.55;flex:1;position:relative}
+.guide-quote::before{content:"«"}.guide-quote::after{content:"»"}
 
 /* нижний блок отзывов — слайдер */
 .reviews{padding:70px 40px 80px;position:relative;z-index:2;border-top:1px solid rgba(34,41,58,.14);margin-top:20px}
@@ -475,49 +473,34 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
 
         <article class="guide">
           <div class="guide-photo">
-            <span class="guide-tag">Искусствовед</span>
-          </div>
-          <div class="guide-body">
-            <div class="guide-name">Мария Соловьёва</div>
-            <div class="guide-role">Эрмитаж · дворцы</div>
-            <div class="guide-bio">Кандидат искусствоведения, 12 лет водит семейные экскурсии. Автор аудиокурса о голландской живописи.</div>
-            <div class="guide-meta"><span>Стаж <b>12 лет</b></span><span>3 языка</span></div>
-          </div>
-        </article>
-
-        <article class="guide">
-          <div class="guide-photo">
             <span class="guide-tag">Историк</span>
           </div>
           <div class="guide-body">
-            <div class="guide-name">Пётр Волохов</div>
-            <div class="guide-role">Петровский Петербург</div>
-            <div class="guide-bio">Историк-урбанист, автор двух книг о раннем Петербурге. Ведёт экскурсии для подростков и взрослых.</div>
-            <div class="guide-meta"><span>Стаж <b>9 лет</b></span><span>2 языка</span></div>
+            <div class="guide-name">Павел</div>
+            <div class="guide-role">Опыт 5 лет</div>
+            <div class="guide-quote">Мне всегда была интересна сфера науки и преподавания, но особое место для меня занимают экскурсии, которые позволяют по-настоящему влюбиться в город, получить искренние эмоции и незабываемые впечатления.</div>
           </div>
         </article>
 
         <article class="guide">
           <div class="guide-photo">
-            <span class="guide-tag">Педагог</span>
+            <span class="guide-tag">Педагог-историк</span>
           </div>
           <div class="guide-body">
-            <div class="guide-name">Анна Кириллова</div>
-            <div class="guide-role">Детские квесты</div>
-            <div class="guide-bio">Учитель истории и детский психолог. Разрабатывает маршруты с игровыми заданиями для детей 5–10 лет.</div>
-            <div class="guide-meta"><span>Стаж <b>7 лет</b></span><span>2 языка</span></div>
+            <div class="guide-name">Светлана</div>
+            <div class="guide-role">Опыт 7 лет</div>
+            <div class="guide-quote">Интерес к истории расширяет познание мира и делает Вас и вашего ребёнка разносторонней личностью.</div>
           </div>
         </article>
 
         <article class="guide">
           <div class="guide-photo">
-            <span class="guide-tag">Архитектор</span>
+            <span class="guide-tag">Педагог-историк</span>
           </div>
           <div class="guide-body">
-            <div class="guide-name">Дмитрий Разумовский</div>
-            <div class="guide-role">Архитектура · мосты</div>
-            <div class="guide-bio">Архитектор-реставратор, работал над Инженерным замком. Ведёт вечерние прогулки по историческому центру.</div>
-            <div class="guide-meta"><span>Стаж <b>15 лет</b></span><span>3 языка</span></div>
+            <div class="guide-name">Дарья</div>
+            <div class="guide-role">Опыт 9 лет</div>
+            <div class="guide-quote">Во время прогулки я не только делюсь увлекательными историями, но и предлагаю детям выполнить тематические задания. Информация усваивается легче, а знакомство с Петербургом превращается в настоящее приключение!</div>
           </div>
         </article>
 

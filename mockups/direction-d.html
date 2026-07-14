@@ -103,6 +103,30 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
 .t-btn{background:#22293a;color:#fbf6f0;font-family:"PT Sans",sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;padding:9px 14px;border-radius:2px;transition:background .18s}
 .t-btn:hover{background:#0e1319}
 
+/* featured ticket — расширенный первый билет */
+.ticket.featured{grid-column:1 / -1}
+.ticket.featured .ticket-photo{aspect-ratio:auto;height:220px;background:linear-gradient(135deg,#c29a5b,#6a4820)}
+.ticket.featured .ticket-info{padding:24px 30px 26px}
+.ticket.featured .t-title{font-size:26px;margin-bottom:8px}
+.ticket.featured .t-tag{font-size:14px;margin-bottom:14px}
+.t-dates{display:flex;gap:10px;margin:0 0 16px;flex-wrap:wrap}
+.t-date-lbl{font-family:"PT Sans",sans-serif;font-size:10.5px;color:#5c6672;letter-spacing:.18em;text-transform:uppercase;margin-right:6px;align-self:center;font-weight:700}
+.t-date-chip{font-family:"PT Sans",sans-serif;font-size:12px;font-weight:700;letter-spacing:.06em;color:#22293a;background:#fbf6f0;border:1px solid rgba(34,41,58,.25);padding:8px 14px;border-radius:2px;cursor:pointer;transition:background .18s,color .18s,border-color .18s;display:inline-flex;align-items:baseline;gap:6px}
+.t-date-chip b{font-family:"Prata",serif;font-size:15px;font-weight:400}
+.t-date-chip:hover{border-color:#a34a2f;color:#a34a2f}
+.t-date-chip.active{background:#22293a;color:#fbf6f0;border-color:#22293a}
+.t-desc{font-family:"PT Serif",serif;font-size:13.5px;color:#3d4756;line-height:1.6;margin-bottom:14px}
+.t-desc p{margin:0 0 10px}
+.t-desc ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 22px}
+.t-desc li{padding-left:22px;position:relative;font-size:12.5px;line-height:1.5;color:#3d4756}
+.t-desc li::before{content:"◆";position:absolute;left:0;top:0;color:#a34a2f;font-size:10px}
+.t-note{font-family:"PT Sans",sans-serif;font-size:11.5px;color:#5c6672;background:rgba(194,154,91,.14);border-left:2px solid #c29a5b;padding:8px 12px;margin-bottom:14px;line-height:1.5}
+.t-prices{display:flex;gap:22px;align-items:baseline}
+.t-price-item{display:flex;flex-direction:column;line-height:1.1}
+.t-price-item span{font-family:"PT Sans",sans-serif;font-size:10px;color:#5c6672;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:4px}
+.t-price-item b{font-family:"Prata",serif;font-size:22px;color:#22293a;font-weight:400}
+.t-price-item b small{font-family:"PT Sans",sans-serif;font-size:10px;color:#5c6672;letter-spacing:.08em;margin-left:2px}
+
 /* ---- почему нас ---- */
 .why{padding:60px 40px 20px;position:relative;z-index:2}
 .why-band{background:rgba(251,246,240,.55);border-top:1px solid rgba(194,154,91,.4);border-bottom:1px solid rgba(194,154,91,.4);padding:50px 40px 60px;position:relative;z-index:2;margin-top:40px}
@@ -245,21 +269,39 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
 
     <div class="catalog">
 
-      <article class="ticket">
+      <article class="ticket featured">
         <div class="ticket-photo">
           <span class="t-cat family">Семейная</span>
-          <span class="t-seats">осталось 8</span>
-          <span class="t-date"><b>20 сен</b>сб · 11:00</span>
+          <span class="t-seats">2 даты на выбор</span>
         </div>
         <div class="perf"><span class="t-stub">№ 001</span></div>
         <div class="ticket-info">
-          <div class="t-title">Охотники за львами</div>
-          <div class="t-tag">семейное приключение</div>
-          <div class="t-route">Дворцовая · атланты · Львиный мостик · сфинксы на Неве</div>
-          <div class="t-meta">2 часа <i></i> 5+</div>
+          <div class="t-title">Египетский зал Эрмитажа</div>
+          <div class="t-tag">Боги и люди в Древнем Египте</div>
+          <div class="t-dates">
+            <span class="t-date-lbl">Дата:</span>
+            <button class="t-date-chip active" type="button"><b>20 сен</b>сб</button>
+            <button class="t-date-chip" type="button"><b>4 окт</b>сб</button>
+          </div>
+          <div class="t-desc">
+            <p>Юные египтологи узнают:</p>
+            <ul>
+              <li>кто такие фараоны, во что они одевались и зачем строили пирамиды</li>
+              <li>на чём писали в Древнем Египте и чему учились в школе</li>
+              <li>познакомятся с богами, в которых верили египтяне</li>
+              <li>увидят мумию жреца Па-ди-иста и красочные саркофаги — корабли в другой мир</li>
+              <li>попробуют нарисовать иероглифы и головной убор фараона</li>
+              <li>выполнят задания и получат заслуженный приз</li>
+            </ul>
+          </div>
+          <div class="t-note">Билеты в Эрмитаж приобретаются отдельно и самостоятельно.</div>
+          <div class="t-meta">2 часа <i></i> 6+</div>
           <div class="t-foot">
-            <span class="t-price">2 000 ₽<small>/чел</small></span>
-            <span class="t-btn">Купить →</span>
+            <div class="t-prices">
+              <span class="t-price-item"><span>Детский</span><b>1 390 ₽</b></span>
+              <span class="t-price-item"><span>Взрослый</span><b>490 ₽</b></span>
+            </div>
+            <span class="t-btn">Записаться →</span>
           </div>
         </div>
       </article>
@@ -622,6 +664,14 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
     track.addEventListener('scroll',()=>{
       const i=Math.round(track.scrollLeft/track.clientWidth);
       dots.forEach((d,k)=>d.classList.toggle('active',k===i));
+    });
+
+    document.querySelectorAll('.t-dates').forEach(group=>{
+      const chips=[...group.querySelectorAll('.t-date-chip')];
+      chips.forEach(chip=>chip.addEventListener('click',()=>{
+        chips.forEach(c=>c.classList.remove('active'));
+        chip.classList.add('active');
+      }));
     });
   })();
   </script>

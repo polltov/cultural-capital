@@ -178,6 +178,22 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
 .rd{width:8px;height:8px;border-radius:50%;background:rgba(34,41,58,.2);border:none;padding:0;cursor:pointer;transition:background .2s,transform .2s}
 .rd.active{background:#a34a2f;transform:scale(1.3)}
 
+/* ---- FAQ ---- */
+.faq{padding:70px 40px 90px;position:relative;z-index:2;border-top:1px solid rgba(34,41,58,.14);margin-top:20px}
+.faq-head{text-align:center;margin-bottom:40px}
+.faq-head .kicker{font-family:"PT Sans",sans-serif;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#a34a2f;font-weight:700;margin-bottom:10px}
+.faq-head .stitle{font-family:"Prata",serif;font-size:36px;color:#22293a;line-height:1}
+.faq-head .stitle em{font-family:"Playfair Display",serif;font-style:italic;color:#a34a2f;font-weight:500}
+.faq-list{max-width:760px;margin:0 auto}
+.faq-item{border-bottom:1px solid rgba(34,41,58,.16)}
+.faq-item:first-child{border-top:1px solid rgba(34,41,58,.16)}
+.faq-item summary{list-style:none;cursor:pointer;padding:22px 4px;display:flex;align-items:center;justify-content:space-between;gap:20px;font-family:"Prata",serif;font-size:19px;color:#22293a;line-height:1.35;transition:color .2s}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-item summary:hover{color:#a34a2f}
+.faq-item .plus{flex:0 0 28px;width:28px;height:28px;border:1px solid rgba(34,41,58,.35);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:"PT Sans",sans-serif;font-size:18px;color:#22293a;transition:transform .25s ease,background .2s,color .2s}
+.faq-item[open] .plus{transform:rotate(45deg);background:#a34a2f;border-color:#a34a2f;color:#fbf6f0}
+.faq-item .answer{padding:0 4px 24px;font-family:"PT Sans",sans-serif;font-size:15px;color:#5c6672;line-height:1.65;max-width:640px}
+
 .notes{max-width:800px;margin:36px auto 20px;font-family:"PT Sans",sans-serif;color:#5c6672;font-size:14px;line-height:1.6;background:rgba(251,246,240,.7);padding:20px 26px;border-radius:8px;border-left:3px solid #a34a2f}
 .notes b{color:#22293a}
 </style>
@@ -547,6 +563,47 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
           <button class="rd" data-i="3" aria-label="Отзыв 4"></button>
         </div>
         <button class="rev-arrow" id="revNext" aria-label="Следующий отзыв">→</button>
+      </div>
+    </div>
+
+    <!-- ---- FAQ ---- -->
+    <div class="faq">
+      <div class="faq-head">
+        <div class="kicker">Часто спрашивают</div>
+        <div class="stitle">Ответы на <em>популярные вопросы</em></div>
+      </div>
+      <div class="faq-list">
+
+        <details class="faq-item">
+          <summary>С какого возраста подходят экскурсии?<span class="plus">+</span></summary>
+          <div class="answer">У нас есть маршруты для детей от 5 лет, для школьников и для подростков. Формат подачи и продолжительность подбираем под возраст группы — так, чтобы было интересно и не утомительно.</div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Сколько длится экскурсия?<span class="plus">+</span></summary>
+          <div class="answer">Стандартная прогулка — 1,5–2 часа. Музейные маршруты — от 1 часа. Точное время указано в карточке каждой экскурсии; если нужен более длинный или короткий формат — договоримся индивидуально.</div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Что делать, если плохая погода?<span class="plus">+</span></summary>
+          <div class="answer">Дождь или снег — не повод отменять. У нас есть «погодные» варианты: перенос на музейный маршрут или на другой день без потери оплаты. Решаем гибко за пару часов до начала.</div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Проводите индивидуальные экскурсии?<span class="plus">+</span></summary>
+          <div class="answer">Да. Любая экскурсия из каталога может пройти в формате «только ваша семья»: выбираете удобное время, темп и акценты. Стоимость и детали — по запросу через форму или в личном сообщении.</div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Как оплатить и можно ли отменить бронь?<span class="plus">+</span></summary>
+          <div class="answer">После заявки мы согласуем детали и присылаем ссылку на оплату. Отменить или перенести бронь без потерь можно за 24 часа до начала. При отмене позже — возврат 50%.</div>
+        </details>
+
+        <details class="faq-item">
+          <summary>Есть ли скидки для больших семей?<span class="plus">+</span></summary>
+          <div class="answer">Да, при бронировании от 4 человек — семейный тариф. Для двух и более экскурсий в один визит — «маршрут выходного дня» со скидкой 10%. Пишите — подберём вариант.</div>
+        </details>
+
       </div>
     </div>
   </div>

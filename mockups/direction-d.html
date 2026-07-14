@@ -157,12 +157,27 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
 .guide-meta{margin-top:12px;padding-top:12px;border-top:1px solid rgba(194,154,91,.4);display:flex;justify-content:space-between;align-items:center;font-family:"PT Sans",sans-serif;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#5c6672;font-weight:700}
 .guide-meta b{color:#22293a}
 
-/* нижний блок отзыв */
-.foot-band{padding:50px 40px 70px;position:relative;z-index:2;text-align:center;border-top:1px solid rgba(34,41,58,.14);margin-top:20px}
-.foot-band .stars{color:#c29a5b;letter-spacing:4px;font-size:16px;margin-bottom:16px}
-.foot-band .quote{font-family:"Playfair Display",serif;font-style:italic;font-size:26px;color:#22293a;max-width:580px;margin:0 auto;line-height:1.4}
-.foot-band .who{font-family:"PT Sans",sans-serif;font-size:13px;color:#5c6672;margin-top:20px;letter-spacing:.16em;text-transform:uppercase}
-.foot-band .who b{color:#22293a;font-weight:700}
+/* нижний блок отзывов — слайдер */
+.reviews{padding:70px 40px 80px;position:relative;z-index:2;border-top:1px solid rgba(34,41,58,.14);margin-top:20px}
+.reviews-head{text-align:center;margin-bottom:36px}
+.reviews-head .kicker{font-family:"PT Sans",sans-serif;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#a34a2f;font-weight:700;margin-bottom:10px}
+.reviews-head .stitle{font-family:"Prata",serif;font-size:36px;color:#22293a;line-height:1}
+.reviews-head .stitle em{font-family:"Playfair Display",serif;font-style:italic;color:#a34a2f;font-weight:500}
+.reviews-track{overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;-ms-overflow-style:none}
+.reviews-track::-webkit-scrollbar{display:none}
+.reviews-list{display:flex;gap:0}
+.review{flex:0 0 100%;scroll-snap-align:center;text-align:center;padding:0 20px}
+.review .stars{color:#c29a5b;letter-spacing:4px;font-size:16px;margin-bottom:16px}
+.review .quote{font-family:"Playfair Display",serif;font-style:italic;font-size:26px;color:#22293a;max-width:620px;margin:0 auto;line-height:1.4}
+.review .quote::before{content:"«"}.review .quote::after{content:"»"}
+.review .who{font-family:"PT Sans",sans-serif;font-size:13px;color:#5c6672;margin-top:22px;letter-spacing:.16em;text-transform:uppercase}
+.review .who b{color:#22293a;font-weight:700}
+.reviews-nav{display:flex;justify-content:center;align-items:center;gap:20px;margin-top:32px}
+.rev-arrow{width:36px;height:36px;border-radius:50%;background:transparent;border:1px solid rgba(34,41,58,.25);color:#22293a;display:flex;align-items:center;justify-content:center;cursor:pointer;font-family:"Prata",serif;font-size:16px;transition:background .18s,border-color .18s;padding:0}
+.rev-arrow:hover{background:#22293a;color:#fbf6f0;border-color:#22293a}
+.reviews-dots{display:flex;gap:10px;align-items:center}
+.rd{width:8px;height:8px;border-radius:50%;background:rgba(34,41,58,.2);border:none;padding:0;cursor:pointer;transition:background .2s,transform .2s}
+.rd.active{background:#a34a2f;transform:scale(1.3)}
 
 .notes{max-width:800px;margin:36px auto 20px;font-family:"PT Sans",sans-serif;color:#5c6672;font-size:14px;line-height:1.6;background:rgba(251,246,240,.7);padding:20px 26px;border-radius:8px;border-left:3px solid #a34a2f}
 .notes b{color:#22293a}
@@ -509,12 +524,66 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
       </div>
     </div>
 
-    <div class="foot-band">
-      <div class="stars">★★★★★</div>
-      <div class="quote">«Дочь теперь ищет львов по всему Петербургу.»</div>
-      <div class="who"><b>Ольга</b> · мама двоих детей</div>
+    <!-- ---- ОТЗЫВЫ ---- -->
+    <div class="reviews">
+      <div class="reviews-head">
+        <div class="kicker">Что говорят</div>
+        <div class="stitle">Отзывы <em>наших гостей</em></div>
+      </div>
+      <div class="reviews-track" id="revTrack">
+        <div class="reviews-list">
+          <div class="review">
+            <div class="stars">★★★★★</div>
+            <div class="quote">Дочь теперь ищет львов по всему Петербургу. Экскурсия была не про даты и цифры, а про историю, которую она проживала.</div>
+            <div class="who"><b>Ольга</b> · мама двоих детей</div>
+          </div>
+          <div class="review">
+            <div class="stars">★★★★★</div>
+            <div class="quote">Сын-подросток обычно скучает на любых экскурсиях. Здесь два часа пролетели, а вечером он ещё гуглил про сфинксов и атлантов.</div>
+            <div class="who"><b>Игорь</b> · отец 13-летнего сына</div>
+          </div>
+          <div class="review">
+            <div class="stars">★★★★★</div>
+            <div class="quote">Приехали из Москвы на выходные. Гид сразу нашла общий язык и с 5-летним, и со мной. Уехали влюблённые в Петербург заново.</div>
+            <div class="who"><b>Марина</b> · Москва</div>
+          </div>
+          <div class="review">
+            <div class="stars">★★★★★</div>
+            <div class="quote">Не ожидала, что вечерняя прогулка по мостам может быть настолько атмосферной. Не туристический пересказ Википедии, а живой рассказ.</div>
+            <div class="who"><b>Елена</b> · гостья из Калининграда</div>
+          </div>
+        </div>
+      </div>
+      <div class="reviews-nav">
+        <button class="rev-arrow" id="revPrev" aria-label="Предыдущий отзыв">←</button>
+        <div class="reviews-dots" id="revDots">
+          <button class="rd active" data-i="0" aria-label="Отзыв 1"></button>
+          <button class="rd" data-i="1" aria-label="Отзыв 2"></button>
+          <button class="rd" data-i="2" aria-label="Отзыв 3"></button>
+          <button class="rd" data-i="3" aria-label="Отзыв 4"></button>
+        </div>
+        <button class="rev-arrow" id="revNext" aria-label="Следующий отзыв">→</button>
+      </div>
     </div>
   </div>
+
+  <script>
+  (function(){
+    const track=document.getElementById('revTrack');
+    const dots=[...document.querySelectorAll('#revDots .rd')];
+    const prev=document.getElementById('revPrev');
+    const next=document.getElementById('revNext');
+    const count=dots.length;
+    const scrollTo=i=>{const w=track.clientWidth;track.scrollTo({left:w*i,behavior:'smooth'})};
+    dots.forEach(d=>d.addEventListener('click',()=>scrollTo(+d.dataset.i)));
+    prev.addEventListener('click',()=>{const cur=Math.round(track.scrollLeft/track.clientWidth);scrollTo((cur-1+count)%count)});
+    next.addEventListener('click',()=>{const cur=Math.round(track.scrollLeft/track.clientWidth);scrollTo((cur+1)%count)});
+    track.addEventListener('scroll',()=>{
+      const i=Math.round(track.scrollLeft/track.clientWidth);
+      dots.forEach((d,k)=>d.classList.toggle('active',k===i));
+    });
+  })();
+  </script>
 
   <div class="notes">
     <b>Что здесь есть от SEBERIA:</b> крупная антиква с курсивным акцентом, декоративные органические пятна по краям, сетка каталога 4-в-ряд, кремовый тон, крупные фото в hero.<br><br>

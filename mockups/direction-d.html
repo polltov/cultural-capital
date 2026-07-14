@@ -103,25 +103,15 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
 .t-btn{background:#22293a;color:#fbf6f0;font-family:"PT Sans",sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;padding:9px 14px;border-radius:2px;transition:background .18s}
 .t-btn:hover{background:#0e1319}
 
-/* featured ticket — компактный по умолчанию, раскрывается по клику */
-.ticket.featured{grid-column:1 / -1;cursor:pointer}
-.ticket.featured .ticket-photo{background:linear-gradient(135deg,#c29a5b,#6a4820);aspect-ratio:auto;height:100px}
-.ticket.featured .ticket-info{padding:16px 24px 16px}
-.ticket.featured .t-title{font-size:19px;margin-bottom:2px}
-.ticket.featured .t-tag{font-size:12.5px;margin-bottom:0}
+/* featured ticket — по умолчанию как обычный билет, раскрывается по клику */
+.ticket.featured .ticket-photo{background:linear-gradient(135deg,#c29a5b,#6a4820)}
 .ticket.featured .t-dates,
 .ticket.featured .t-desc,
 .ticket.featured .t-note,
 .ticket.featured .t-prices{display:none}
-.ticket.featured .t-more-btn{display:inline-flex;align-items:center;gap:6px;font-family:"PT Sans",sans-serif;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#a34a2f;background:transparent;border:none;padding:0;cursor:pointer}
-.ticket.featured .t-more-btn .arrow{transition:transform .25s ease;display:inline-block}
-.ticket.featured .t-hint{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid rgba(194,154,91,.4)}
-.ticket.featured .t-hint .t-price-preview{font-family:"Prata",serif;font-size:18px;color:#22293a}
-.ticket.featured .t-hint .t-price-preview small{font-family:"PT Sans",sans-serif;font-size:10px;color:#5c6672;letter-spacing:.08em;margin-left:2px}
-.ticket.featured .t-foot{display:none}
 
-.ticket.featured.open{cursor:default}
-.ticket.featured.open .ticket-photo{height:220px}
+.ticket.featured.open{grid-column:1 / -1;cursor:default}
+.ticket.featured.open .ticket-photo{aspect-ratio:auto;height:220px}
 .ticket.featured.open .ticket-info{padding:24px 30px 26px}
 .ticket.featured.open .t-title{font-size:26px;margin-bottom:8px}
 .ticket.featured.open .t-tag{font-size:14px;margin-bottom:14px}
@@ -129,9 +119,8 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
 .ticket.featured.open .t-desc{display:block}
 .ticket.featured.open .t-note{display:block}
 .ticket.featured.open .t-prices{display:flex}
-.ticket.featured.open .t-foot{display:flex}
-.ticket.featured.open .t-hint{display:none}
-.ticket.featured.open .t-more-btn .arrow{transform:rotate(180deg)}
+.ticket.featured.open .t-route,
+.ticket.featured.open .t-price-compact{display:none}
 .t-dates{display:flex;gap:10px;margin:0 0 16px;flex-wrap:wrap}
 .t-date-lbl{font-family:"PT Sans",sans-serif;font-size:10.5px;color:#5c6672;letter-spacing:.18em;text-transform:uppercase;margin-right:6px;align-self:center;font-weight:700}
 .t-date-chip{font-family:"PT Sans",sans-serif;font-size:12px;font-weight:700;letter-spacing:.06em;color:#22293a;background:#fbf6f0;border:1px solid rgba(34,41,58,.25);padding:8px 14px;border-radius:2px;cursor:pointer;transition:background .18s,color .18s,border-color .18s;display:inline-flex;align-items:baseline;gap:6px}
@@ -295,16 +284,14 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
       <article class="ticket featured" id="ticket-egypt">
         <div class="ticket-photo">
           <span class="t-cat family">Семейная</span>
-          <span class="t-seats">2 даты на выбор</span>
+          <span class="t-seats">2 даты</span>
+          <span class="t-date"><b>20 сен</b>сб · 11:00</span>
         </div>
         <div class="perf"><span class="t-stub">№ 001</span></div>
         <div class="ticket-info">
           <div class="t-title">Египетский зал Эрмитажа</div>
-          <div class="t-tag">Боги и люди в Древнем Египте</div>
-          <div class="t-hint">
-            <span class="t-price-preview">от 490 ₽<small>/чел</small></span>
-            <button class="t-more-btn" type="button">Подробнее <span class="arrow">↓</span></button>
-          </div>
+          <div class="t-tag">боги Древнего Египта</div>
+          <div class="t-route">Мумия жреца Па-ди-иста · саркофаги · иероглифы</div>
           <div class="t-dates">
             <span class="t-date-lbl">Дата:</span>
             <button class="t-date-chip active" type="button"><b>20 сен</b>сб</button>
@@ -322,11 +309,12 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
           <div class="t-note">Билеты в Эрмитаж приобретаются отдельно и самостоятельно.</div>
           <div class="t-meta">2 часа <i></i> 6+</div>
           <div class="t-foot">
+            <span class="t-price t-price-compact">от 490 ₽<small>/чел</small></span>
             <div class="t-prices">
               <span class="t-price-item"><span>Детский</span><b>1 390 ₽</b></span>
               <span class="t-price-item"><span>Взрослый</span><b>490 ₽</b></span>
             </div>
-            <span class="t-btn">Записаться →</span>
+            <span class="t-btn">Купить →</span>
           </div>
         </div>
       </article>
@@ -701,10 +689,10 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
     });
 
     document.querySelectorAll('.ticket.featured').forEach(card=>{
-      const toggle=()=>card.classList.toggle('open');
       card.addEventListener('click',e=>{
-        if(e.target.closest('.t-btn')||e.target.closest('.t-date-chip'))return;
-        toggle();
+        if(e.target.closest('.t-date-chip'))return;
+        if(card.classList.contains('open')&&e.target.closest('.t-btn'))return;
+        card.classList.toggle('open');
       });
     });
   })();

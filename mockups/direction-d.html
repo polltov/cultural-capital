@@ -103,22 +103,22 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
 .t-btn{background:#22293a;color:#fbf6f0;font-family:"PT Sans",sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;padding:9px 14px;border-radius:2px;transition:background .18s}
 .t-btn:hover{background:#0e1319}
 
-/* featured ticket — по умолчанию как обычный билет, раскрывается по клику */
+/* билеты — компактные по умолчанию, раскрываются по клику */
 .ticket.featured .ticket-photo{background:linear-gradient(135deg,#c29a5b,#6a4820);background-image:url("assets/egypt-hall.jpg");background-size:cover;background-position:center}
 .ticket .t-seats{top:14px;left:14px;bottom:auto;right:auto}
-.ticket.featured .t-dates,
-.ticket.featured .t-desc,
-.ticket.featured .t-note,
-.ticket.featured .t-prices{display:none}
+.ticket .t-dates,
+.ticket .t-desc,
+.ticket .t-note,
+.ticket .t-prices{display:none}
 
-.ticket.featured.open{grid-column:1 / -1;cursor:default}
-.ticket.featured.open .ticket-photo{aspect-ratio:auto;height:220px}
-.ticket.featured.open .ticket-info{padding:24px 30px 26px}
-.ticket.featured.open .t-title{font-size:26px;margin-bottom:8px}
-.ticket.featured.open .t-tag{font-size:14px;margin-bottom:14px}
+.ticket.open{grid-column:1 / -1;cursor:default}
+.ticket.open .ticket-photo{aspect-ratio:auto;height:220px}
+.ticket.open .ticket-info{padding:24px 30px 26px}
+.ticket.open .t-title{font-size:26px;margin-bottom:8px}
+.ticket.open .t-tag{font-size:14px;margin-bottom:14px}
+.ticket.open .t-desc{display:block}
+.ticket.open .t-note{display:block}
 .ticket.featured.open .t-dates{display:flex}
-.ticket.featured.open .t-desc{display:block}
-.ticket.featured.open .t-note{display:block}
 .ticket.featured.open .t-prices{display:flex}
 .ticket.featured.open .t-route,
 .ticket.featured.open .t-price-compact{display:none}
@@ -329,6 +329,15 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
           <div class="t-title">Тайна первой крепости</div>
           <div class="t-tag">детский квест</div>
           <div class="t-route">Заячий остров · Петропавловский собор · Невские ворота</div>
+          <div class="t-desc">
+            <p>Юные сыщики Петербурга:</p>
+            <ul>
+              <li>пройдут через Невские ворота и Петровскую куртину</li>
+              <li>узнают, как Пётр I выбирал место для первой крепости</li>
+              <li>разгадают шифр Петропавловского собора</li>
+              <li>получат карту первой столицы</li>
+            </ul>
+          </div>
           <div class="t-meta">2 часа <i></i> 6+</div>
           <div class="t-foot">
             <span class="t-price">2 200 ₽<small>/чел</small></span>
@@ -347,6 +356,15 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
           <div class="t-title">Мосты, которые оживают</div>
           <div class="t-tag">взрослая прогулка</div>
           <div class="t-route">Дворцовая наб. · Дворцовый мост · Троицкий мост</div>
+          <div class="t-desc">
+            <p>Вечерняя прогулка вдоль Невы:</p>
+            <ul>
+              <li>увидят развод Дворцового моста с идеальной точки</li>
+              <li>узнают, как поднимаются 22-тонные крылья</li>
+              <li>услышат истории о рабочих-«разводчиках»</li>
+              <li>сфотографируются на фоне ночного Петербурга</li>
+            </ul>
+          </div>
           <div class="t-meta">1,5 часа <i></i> 8+</div>
           <div class="t-foot">
             <span class="t-price">2 500 ₽<small>/чел</small></span>
@@ -365,6 +383,15 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
           <div class="t-title">Дворцы за один день</div>
           <div class="t-tag">большая семейная</div>
           <div class="t-route">Зимний дворец · Дворцовая · Миллионная · Эрмитажный театр</div>
+          <div class="t-desc">
+            <p>Императорский Петербург крупным планом:</p>
+            <ul>
+              <li>заглянут в парадные Зимнего дворца</li>
+              <li>узнают, кто такие атланты и почему их десять</li>
+              <li>увидят Эрмитажный театр — самый маленький в СПб</li>
+              <li>познакомятся с домами Миллионной улицы</li>
+            </ul>
+          </div>
           <div class="t-meta">3 часа <i></i> 7+</div>
           <div class="t-foot">
             <span class="t-price">2 800 ₽<small>/чел</small></span>
@@ -609,7 +636,7 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
       }));
     });
 
-    document.querySelectorAll('.ticket.featured').forEach(card=>{
+    document.querySelectorAll('.ticket').forEach(card=>{
       card.addEventListener('click',e=>{
         if(e.target.closest('.t-date-chip'))return;
         if(card.classList.contains('open')&&e.target.closest('.t-btn'))return;

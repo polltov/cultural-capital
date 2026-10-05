@@ -3,6 +3,6 @@ export function orderTotal(p: { children: number; adults: number; priceChild: nu
 }
 
 export function formatRub(n: number): string {
-  const grouped = n.toLocaleString("ru-RU").replace(/[  ]/g, " ");
-  return `${grouped} ₽`;
+  const grouped = n.toLocaleString("ru-RU").replace(/[  ]/g, " ");
+  return `${grouped} ₽`;
 }

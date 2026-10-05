@@ -4,8 +4,8 @@ import { orderTotal, formatRub } from "@/lib/domain/pricing";
 describe("pricing", () => {
   it("orderTotal", () => expect(orderTotal({ children: 2, adults: 1, priceChild: 1390, priceAdult: 490 })).toBe(3270));
   it("formatRub", () => {
-    expect(formatRub(1390)).toBe("1 390 ₽");
-    expect(formatRub(490)).toBe("490 ₽");
-    expect(formatRub(1234567)).toBe("1 234 567 ₽");
+    expect(formatRub(1390)).toBe("1\u00A0390\u00A0₽");
+    expect(formatRub(490)).toBe("490\u00A0₽");
+    expect(formatRub(1234567)).toBe("1\u00A0234\u00A0567\u00A0₽");
   });
 });

@@ -72,3 +72,27 @@ describe("createOrder", () => {
     expect(r).toEqual({ ok: false, error: "Слишком много заявок. Попробуйте позже или позвоните нам." });
   });
 });
+
+describe("createOrder validation messages", () => {
+  it("out-of-range sessionId returns ok:false without throwing", async () => {
+    const r = await createOrder({ ...valid, sessionId: 3000000000 }, "3.3.3.3", db);
+    expect(r.ok).toBe(false);
+  });
+
+  it("all field errors are in Russian", async () => {
+    const bad: Record<string, unknown>[] = [
+      { sessionId: "abc" }, { sessionId: -1 }, { sessionId: 1.5 }, { sessionId: null }, { sessionId: 3000000000 },
+      { children: 21 }, { children: -1 }, { children: "x" }, { children: 1.5 }, { adults: 99 },
+      { phone: 123 }, { phone: null }, { phone: "12345" }, { name: 5 }, { name: "" }, { name: "x".repeat(81) },
+      { consent: "yes" }, { consent: false }, { consent: undefined }, { email: "nope" }, { email: 5 },
+      { comment: "x".repeat(1001) }, { comment: 5 }, { children: 0, adults: 0 },
+    ];
+    for (const b of bad) {
+      const r = await createOrder({ ...valid, sessionId: 1, ...b }, "4.4.4.4", db);
+      expect(r.ok).toBe(false);
+      const msgs = Object.values((r as { fieldErrors?: Record<string, string> }).fieldErrors ?? {});
+      expect(msgs.length, JSON.stringify(b)).toBeGreaterThan(0);
+      for (const m of msgs) expect(m, JSON.stringify(b)).toMatch(/[а-яё]/i);
+    }
+  });
+});

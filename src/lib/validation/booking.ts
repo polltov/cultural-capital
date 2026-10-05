@@ -3,11 +3,27 @@ import { normalizePhone } from "@/lib/domain/phone";
 
 export const bookingSchema = z
   .object({
-    sessionId: z.coerce.number().int().positive(),
-    children: z.coerce.number().int("Укажите целое число").min(0).max(20),
-    adults: z.coerce.number().int("Укажите целое число").min(0).max(20),
-    name: z.string().trim().min(2, "Укажите имя").max(80, "Слишком длинное имя"),
-    phone: z.string().transform((v, ctx) => {
+    sessionId: z.coerce
+      .number({ error: "Выберите сеанс" })
+      .int("Выберите сеанс")
+      .positive("Выберите сеанс")
+      .max(2147483647, "Выберите сеанс"),
+    children: z.coerce
+      .number({ error: "Укажите число участников" })
+      .int("Укажите целое число")
+      .min(0, "Число не может быть отрицательным")
+      .max(20, "Не более 20 участников"),
+    adults: z.coerce
+      .number({ error: "Укажите число участников" })
+      .int("Укажите целое число")
+      .min(0, "Число не может быть отрицательным")
+      .max(20, "Не более 20 участников"),
+    name: z
+      .string({ error: "Укажите имя" })
+      .trim()
+      .min(2, "Укажите имя")
+      .max(80, "Слишком длинное имя"),
+    phone: z.string({ error: "Проверьте номер телефона" }).transform((v, ctx) => {
       const p = normalizePhone(v);
       if (!p) {
         ctx.addIssue({ code: "custom", message: "Проверьте номер телефона" });
@@ -15,10 +31,14 @@ export const bookingSchema = z
       }
       return p;
     }),
-    email: z.string().trim().email("Проверьте email").optional().or(z.literal("")),
-    comment: z.string().max(1000, "Не более 1000 символов").optional().default(""),
+    email: z
+      .string({ error: "Проверьте email" })
+      .trim()
+      .refine((v) => v === "" || z.email().safeParse(v).success, "Проверьте email")
+      .optional(),
+    comment: z.string({ error: "Проверьте комментарий" }).max(1000, "Не более 1000 символов").optional().default(""),
     consent: z.literal(true, { error: "Нужно согласие на обработку данных" }),
-    website: z.string().optional().default(""),
+    website: z.string({ error: "Некорректное значение" }).optional().default(""),
   })
   .refine((v) => v.children + v.adults >= 1, {
     message: "Укажите хотя бы одного участника",

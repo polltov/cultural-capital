@@ -52,6 +52,7 @@ export async function notifyNewOrder(orderId: number, db: Db = sharedDb): Promis
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true }),
+      signal: AbortSignal.timeout(5000),
     });
     if (!res.ok) console.error("Telegram sendMessage failed", res.status, await res.text());
   } catch (e) {

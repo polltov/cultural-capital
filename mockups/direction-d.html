@@ -2,10 +2,18 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Культурная Столица — Направление D · Кремовый альбом</title>
+<meta name="description" content="Экскурсии по Санкт-Петербургу для детей и взрослых: авторские маршруты, маленькие группы до 8 человек, подача через игры.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Культурная Столица — экскурсии по Петербургу для семьи">
+<meta property="og:description" content="Авторские маршруты для детей и взрослых. Маленькие группы до 8 человек.">
+<meta property="og:image" content="https://polltov.github.io/cultural-capital/mockups/assets/dvortsovaya.jpg">
+<meta name="theme-color" content="#f5ede0">
+<link rel="icon" type="image/png" href="assets/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Prata&family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=PT+Serif:ital,wght@0,400;0,700;1,400&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Prata&family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=PT+Serif:ital,wght@0,400;1,400&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;padding:40px 20px;min-height:100vh;-webkit-font-smoothing:antialiased}
@@ -231,6 +239,91 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
 .faq-item[open] .plus{transform:rotate(45deg);background:#a34a2f;border-color:#a34a2f;color:#fbf6f0}
 .faq-item .answer{padding:0 4px 24px;font-family:"PT Sans",sans-serif;font-size:15px;color:#5c6672;line-height:1.65;max-width:640px}
 
+/* ---- ссылки, кнопки, фокус ---- */
+html{scroll-behavior:smooth}
+[id]{scroll-margin-top:16px}
+.nav a,.btn-primary,.btn-ghost{text-decoration:none;color:inherit}
+.btn-primary{color:#fbf6f0;display:inline-block}
+.btn-ghost{display:inline-block}
+button.btn,button.t-btn{border:none;cursor:pointer;font-family:"PT Sans",sans-serif}
+.nav .btn{color:#fbf6f0}
+a:focus-visible,button:focus-visible,summary:focus-visible,.ticket:focus-visible{outline:2px solid #a34a2f;outline-offset:3px}
+.ticket:focus{outline:none}
+.ticket:focus-visible{border-radius:8px}
+
+/* ---- планшет ---- */
+@media (max-width:900px){
+  body{padding:24px 12px}
+  .top{padding:20px 24px}
+  .logo-txt{font-size:26px}
+  .nav{gap:16px;font-size:13px}
+  .hero{grid-template-columns:1fr;padding:30px 24px 50px;gap:40px}
+  .h-title{font-size:50px}
+  .h-sub{max-width:none}
+  .h-visual{height:auto;aspect-ratio:6/5;max-width:440px;width:100%;margin:0 auto}
+  .h-photo{width:60%}
+  .h-photo-2{width:50%;bottom:0}
+  .section-h{padding:56px 24px 16px}
+  .catalog{grid-template-columns:repeat(2,1fr);padding:20px 24px 40px}
+  .why-band{padding:44px 24px 50px}
+  .why-grid{grid-template-columns:repeat(3,1fr);row-gap:30px}
+  .steps-sec{padding:60px 24px 20px}
+  .steps{grid-template-columns:repeat(3,1fr);row-gap:30px}
+  .step:nth-child(3)::after{display:none}
+  .guides-sec{padding:64px 24px 30px}
+  .guides-grid{gap:18px}
+  .reviews{padding:60px 24px 70px}
+  .faq{padding:60px 24px 80px}
+}
+
+/* ---- телефон ---- */
+@media (max-width:600px){
+  body{padding:0}
+  .title-bar{padding:14px 16px 0;margin-bottom:14px;font-size:10px;letter-spacing:.1em}
+  .mock{border-radius:0}
+  .top{padding:16px;gap:12px}
+  .logo{gap:10px}
+  .logo-txt{font-size:20px;white-space:normal;line-height:1.05}
+  .nav a:not(.btn){display:none}
+  .nav .btn{padding:9px 14px;font-size:12px}
+  .hero{padding:24px 16px 44px;gap:32px}
+  .eyebrow{font-size:10.5px;letter-spacing:.18em}
+  .h-title{font-size:38px}
+  .h-sub{font-size:15px}
+  .h-actions{flex-direction:column;gap:10px}
+  .h-actions a{text-align:center}
+  .section-h{padding:44px 16px 10px}
+  .section-h .stitle{font-size:32px}
+  .catalog{grid-template-columns:1fr;gap:20px;padding:16px 16px 30px}
+  .ticket-photo{aspect-ratio:16/10}
+  .ticket.open .ticket-photo{height:200px}
+  .ticket.open .ticket-info{padding:20px 18px 22px}
+  .ticket.open .t-title{font-size:22px}
+  .t-desc ul{grid-template-columns:1fr}
+  .t-foot{flex-wrap:wrap;gap:12px}
+  .why-band{padding:40px 16px 44px;margin-top:20px}
+  .why-head .stitle,.steps-head .stitle,.guides-head .stitle,.reviews-head .stitle,.faq-head .stitle{font-size:28px}
+  .why-grid{grid-template-columns:repeat(2,1fr);gap:24px 12px}
+  .steps-sec{padding:50px 16px 10px}
+  .steps{grid-template-columns:repeat(2,1fr);gap:24px 10px}
+  .step::after{display:none}
+  .guides-sec{padding:56px 16px 20px}
+  .guides-grid{grid-template-columns:1fr;max-width:380px}
+  .reviews{padding:50px 16px 60px}
+  .review{padding:0 4px}
+  .review .quote{font-size:20px}
+  .faq{padding:50px 16px 60px}
+  .faq-item summary{font-size:16.5px;padding:18px 2px}
+  .faq-item .answer{font-size:14.5px}
+  .notes{margin:24px 16px;padding:16px 18px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  .reviews-track{scroll-behavior:auto}
+  *{transition:none!important}
+}
+
 .notes{max-width:800px;margin:36px auto 20px;font-family:"PT Sans",sans-serif;color:#5c6672;font-size:14px;line-height:1.6;background:rgba(251,246,240,.7);padding:20px 26px;border-radius:8px;border-left:3px solid #a34a2f}
 .notes b{color:#22293a}
 </style>
@@ -239,7 +332,7 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
 <div class="wrap">
   <div class="title-bar">Макет · <b>Направление D — «Кремовый альбом»</b> · SEBERIA-стилистика × бренд «Культурная Столица»</div>
 
-  <div class="mock">
+  <div class="mock" id="top">
     <div class="blob b1"></div>
     <div class="blob b2"></div>
     <div class="blob b3"></div>
@@ -253,8 +346,8 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
         <span class="logo-txt">Культурная Столица</span>
       </a>
       <div class="nav">
-        <a>Экскурсии</a><a>Гиды</a><a>О нас</a><a>Отзывы</a>
-        <a class="btn">Написать</a>
+        <a href="#catalog">Экскурсии</a><a href="#guides">Гиды</a><a href="#about">О нас</a><a href="#reviews">Отзывы</a>
+        <button class="btn" type="button">Написать</button>
       </div>
     </div>
 
@@ -264,8 +357,8 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
         <div class="h-title">Петербург, <em>вдохновляющий</em><br>с первого шага</div>
         <div class="h-sub">Авторские маршруты для детей и взрослых. Историки и искусствоведы, которые умеют говорить с детьми на одном языке.</div>
         <div class="h-actions">
-          <span class="btn-primary">Выбрать экскурсию →</span>
-          <span class="btn-ghost">Смотреть все</span>
+          <a class="btn-primary" href="#catalog">Выбрать экскурсию →</a>
+          <a class="btn-ghost" href="#catalog">Смотреть все</a>
         </div>
       </div>
       <div class="h-visual">
@@ -274,7 +367,7 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
       </div>
     </div>
 
-    <div class="section-h">
+    <div class="section-h" id="catalog">
       <div class="kicker">каталог</div>
       <div class="stitle">Наши <em>экскурсии</em></div>
       <div class="sdesc">Каждая прогулка — как маленький спектакль: сюжет, герои и город, который открывается заново.</div>
@@ -282,7 +375,7 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
 
     <div class="catalog">
 
-      <article class="ticket featured" id="ticket-egypt">
+      <article class="ticket featured" id="ticket-egypt" tabindex="0" aria-expanded="false">
         <div class="ticket-photo">
           <span class="t-seats">осталось 4 места</span>
           <span class="t-date"><b>20 сен / 4 окт</b>вскр · 11:00</span>
@@ -314,12 +407,12 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
               <span class="t-price-item"><span>Детский</span><b>1 390 ₽</b></span>
               <span class="t-price-item"><span>Взрослый</span><b>490 ₽</b></span>
             </div>
-            <span class="t-btn">Купить</span>
+            <button class="t-btn" type="button">Купить</button>
           </div>
         </div>
       </article>
 
-      <article class="ticket">
+      <article class="ticket" tabindex="0" aria-expanded="false">
         <div class="ticket-photo">
           <span class="t-seats">осталось 6 мест</span>
           <span class="t-date"><b>27 сен</b>сб · 12:00</span>
@@ -341,12 +434,12 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
           <div class="t-meta">2 часа <i></i> 6+</div>
           <div class="t-foot">
             <span class="t-price">2 200 ₽<small>/чел</small></span>
-            <span class="t-btn">Купить</span>
+            <button class="t-btn" type="button">Купить</button>
           </div>
         </div>
       </article>
 
-      <article class="ticket">
+      <article class="ticket" tabindex="0" aria-expanded="false">
         <div class="ticket-photo">
           <span class="t-seats">осталось 10 мест</span>
           <span class="t-date"><b>26 сен</b>пт · 21:30</span>
@@ -368,12 +461,12 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
           <div class="t-meta">1,5 часа <i></i> 8+</div>
           <div class="t-foot">
             <span class="t-price">2 500 ₽<small>/чел</small></span>
-            <span class="t-btn">Купить</span>
+            <button class="t-btn" type="button">Купить</button>
           </div>
         </div>
       </article>
 
-      <article class="ticket">
+      <article class="ticket" tabindex="0" aria-expanded="false">
         <div class="ticket-photo">
           <span class="t-seats">осталось 7 мест</span>
           <span class="t-date"><b>13 сен</b>сб · 12:00</span>
@@ -395,7 +488,7 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
           <div class="t-meta">3 часа <i></i> 7+</div>
           <div class="t-foot">
             <span class="t-price">2 800 ₽<small>/чел</small></span>
-            <span class="t-btn">Купить</span>
+            <button class="t-btn" type="button">Купить</button>
           </div>
         </div>
       </article>
@@ -403,7 +496,7 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
     </div>
 
     <!-- ---- ПОЧЕМУ ВЫБИРАЮТ НАС ---- -->
-    <div class="why-band">
+    <div class="why-band" id="about">
       <div class="why-head">
         <div class="kicker">Про нас коротко</div>
         <div class="stitle">Почему <em>выбирают</em> нас</div>
@@ -483,7 +576,7 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
     </div>
 
     <!-- ---- ГИДЫ ---- -->
-    <div class="guides-sec">
+    <div class="guides-sec" id="guides">
       <div class="guides-head">
         <div class="kicker">кто ведёт экскурсии</div>
         <div class="stitle">Наши <em>экскурсоводы</em></div>
@@ -528,7 +621,7 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
     </div>
 
     <!-- ---- ОТЗЫВЫ ---- -->
-    <div class="reviews">
+    <div class="reviews" id="reviews">
       <div class="reviews-head">
         <div class="kicker">Что говорят</div>
         <div class="stitle">Отзывы <em>наших гостей</em></div>
@@ -570,7 +663,7 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
     </div>
 
     <!-- ---- FAQ ---- -->
-    <div class="faq">
+    <div class="faq" id="faq">
       <div class="faq-head">
         <div class="kicker">Часто спрашивают</div>
         <div class="stitle">Ответы на <em>популярные вопросы</em></div>
@@ -637,10 +730,16 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
     });
 
     document.querySelectorAll('.ticket').forEach(card=>{
+      const toggle=()=>card.setAttribute('aria-expanded',card.classList.toggle('open'));
       card.addEventListener('click',e=>{
         if(e.target.closest('.t-date-chip'))return;
         if(card.classList.contains('open')&&e.target.closest('.t-btn'))return;
-        card.classList.toggle('open');
+        toggle();
+      });
+      card.addEventListener('keydown',e=>{
+        if(e.target!==card||(e.key!=='Enter'&&e.key!==' '))return;
+        e.preventDefault();
+        toggle();
       });
     });
   })();

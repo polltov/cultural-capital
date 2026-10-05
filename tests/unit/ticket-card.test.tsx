@@ -26,7 +26,15 @@ describe("TicketCard", () => {
   it("shows placeholder and disabled button without sessions", () => {
     render(<TicketCard tour={tour} sessions={[]} />);
     expect(screen.getByText("Даты уточняются")).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Записаться" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole("button", { name: "Записаться" }).getAttribute("aria-disabled")).toBe("true");
+  });
+  it("expands closed card on button click when no sessions, and does not call onBook", () => {
+    const calls: (number | null)[] = [];
+    const { container } = render(<TicketCard tour={tour} sessions={[]} onBook={(x) => calls.push(x)} />);
+    fireEvent.click(screen.getByRole("button", { name: "Записаться" }));
+    expect(container.querySelector("article")!.className).toContain("open");
+    fireEvent.click(screen.getByRole("button", { name: "Записаться" }));
+    expect(calls).toEqual([]);
   });
   it("shows date header and caption for two sessions", () => {
     const { container } = render(<TicketCard tour={tour} sessions={[{ id: 1, startsAt: d1, free: 8 }, { id: 2, startsAt: d2, free: 8 }]} />);

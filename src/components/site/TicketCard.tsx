@@ -122,9 +122,9 @@ export function TicketCard({ tour, sessions, number, onBook }: TicketCardProps) 
           <button
             className="t-btn"
             type="button"
-            disabled={sessions.length === 0}
+            aria-disabled={sessions.length === 0}
             onClick={() => {
-              if (open) onBook?.(selected);
+              if (open && sessions.length) onBook?.(selected);
             }}
           >
             Записаться

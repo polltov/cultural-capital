@@ -1,9 +1,9 @@
 import { and, eq, gt, sql } from "drizzle-orm";
-import { db as sharedDb, type Db } from "@/db/client";
+import { db as sharedDb, type Db, type Tx } from "@/db/client";
 import { rateLimitHits } from "@/db/schema";
 
 /** Number of hits recorded for `key` within the last `windowSec` seconds. */
-export async function countRateLimit(key: string, windowSec: number, db: Db = sharedDb): Promise<number> {
+export async function countRateLimit(key: string, windowSec: number, db: Db | Tx = sharedDb): Promise<number> {
   const since = new Date(Date.now() - windowSec * 1000);
   const [{ n }] = await db
     .select({ n: sql<number>`count(*)::int` })
@@ -12,7 +12,7 @@ export async function countRateLimit(key: string, windowSec: number, db: Db = sh
   return n;
 }
 
-export async function recordRateLimit(key: string, db: Db = sharedDb): Promise<void> {
+export async function recordRateLimit(key: string, db: Db | Tx = sharedDb): Promise<void> {
   await db.insert(rateLimitHits).values({ key });
 }
 
@@ -23,6 +23,6 @@ export async function hitRateLimit(key: string, limit: number, windowSec: number
   return true;
 }
 
-export async function clearRateLimit(key: string, db: Db = sharedDb): Promise<void> {
+export async function clearRateLimit(key: string, db: Db | Tx = sharedDb): Promise<void> {
   await db.delete(rateLimitHits).where(eq(rateLimitHits.key, key));
 }

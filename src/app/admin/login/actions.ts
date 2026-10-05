@@ -23,6 +23,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   redirect("/admin");
 }
 
+// Без requireAdmin(): выход только удаляет cookie — для неавторизованного это no-op, утечки данных нет.
 export async function logoutAction(): Promise<void> {
   (await cookies()).delete({ name: SESSION_COOKIE, path: "/" });
   redirect("/admin/login");

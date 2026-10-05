@@ -4,7 +4,7 @@ import { db } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
 import { attemptLogin, LOGIN_ERROR, LOGIN_BLOCKED } from "@/server/admin-auth";
 import { getDashboard } from "@/server/admin-orders";
-import { hitRateLimit } from "@/server/rate-limit";
+import { countRateLimit, hitRateLimit } from "@/server/rate-limit";
 
 beforeAll(() => {
   process.env.SESSION_SECRET = "int-test-secret-0123456789abcdef0123456789abcdef";
@@ -33,6 +33,16 @@ describe("attemptLogin", () => {
     expect(LOGIN_BLOCKED).toBe("Слишком много попыток. Подождите 15 минут.");
     // другой IP не затронут
     expect((await attemptLogin("admin", "right-pass", "3.3.3.3", db)).ok).toBe(true);
+  });
+
+  it("concurrent burst from one IP gets at most 5 guesses", async () => {
+    const results = await Promise.all(Array.from({ length: 10 }, (_, i) => attemptLogin("admin", `burst${i}`, "5.5.5.5", db)));
+    const failures = results.filter((r) => !r.ok && r.error === LOGIN_ERROR).length;
+    const blocked = results.filter((r) => !r.ok && r.error === LOGIN_BLOCKED).length;
+    expect(failures).toBeLessThanOrEqual(5);
+    expect(failures + blocked).toBe(10);
+    expect(await countRateLimit("login:5.5.5.5", 900, db)).toBeLessThanOrEqual(5);
+    expect(await attemptLogin("admin", "right-pass", "5.5.5.5", db)).toEqual({ ok: false, error: LOGIN_BLOCKED });
   });
 
   it("successful logins do not count; success clears earlier failures", async () => {

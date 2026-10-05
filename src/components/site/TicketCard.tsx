@@ -28,6 +28,8 @@ export type TicketCardProps = {
   sessions: TicketSession[];
   /** Порядковый номер на перфорации (№ 00N). */
   number?: number;
+  /** Начальное состояние «раскрыт» (для живого превью в админке). По умолчанию закрыт. */
+  defaultOpen?: boolean;
   onBook?: (sessionId: number | null) => void;
 };
 
@@ -39,8 +41,8 @@ function Description({ text }: { text: string }) {
   );
 }
 
-export function TicketCard({ tour, sessions, number, onBook }: TicketCardProps) {
-  const [open, setOpen] = useState(false);
+export function TicketCard({ tour, sessions, number, defaultOpen = false, onBook }: TicketCardProps) {
+  const [open, setOpen] = useState(defaultOpen);
   const [picked, setPicked] = useState<number | null>(null);
   // Выбранный чип выводится из props: если его больше нет в sessions — первый сеанс.
   const selected = sessions.some((s) => s.id === picked) ? picked : (sessions[0]?.id ?? null);

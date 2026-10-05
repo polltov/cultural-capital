@@ -1,0 +1,77 @@
+/* Стили билета для живого превью в админке: копия блока «ticket cards» из site.css, вложенная в .tp, чтобы не конфликтовать с .adm. */
+.tp {
+.ticket{background:transparent;border-radius:8px;position:relative;filter:drop-shadow(0 10px 16px rgba(34,41,58,.16));transition:transform .4s cubic-bezier(.2,.7,.2,1);will-change:transform;cursor:pointer;display:flex;flex-direction:column}
+@media (hover:hover){.ticket:not(.open):hover{transform:translate3d(0,-4px,0)}}
+/* номер билета — крохотный серийник в центре перфорации */
+.perf .t-stub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#fbf6f0;padding:0 8px;font-family:"PT Sans",sans-serif;font-size:9px;letter-spacing:.28em;font-weight:700;color:rgba(34,41,58,.4);text-transform:uppercase;z-index:2}
+.ticket-photo{aspect-ratio:1;background:linear-gradient(135deg,#4b5f78,#26303b);border-radius:8px 8px 0 0;position:relative;overflow:hidden}
+.ticket-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(20,27,33,.7),transparent 55%);pointer-events:none}
+.t-date{position:absolute;bottom:12px;left:14px;font-family:"PT Sans",sans-serif;font-size:11.5px;color:#fbf6f0;font-weight:700;letter-spacing:.14em;text-transform:uppercase;z-index:2}
+.t-date b{font-family:"Prata",serif;font-size:16px;font-weight:400;letter-spacing:.02em;display:block;text-transform:none}
+.t-seats{position:absolute;bottom:14px;right:14px;font-family:"PT Sans",sans-serif;font-size:10px;color:#fbf6f0;background:rgba(163,74,47,.95);padding:5px 9px;border-radius:2px;font-weight:700;letter-spacing:.08em;z-index:2}
+/* перфорация с полукруглыми вырезами по краям — маска действительно режет форму */
+.perf{height:20px;background:#fbf6f0;position:relative;
+  -webkit-mask:
+    radial-gradient(circle 10px at 0 50%,transparent 98%,#000 100%),
+    radial-gradient(circle 10px at 100% 50%,transparent 98%,#000 100%);
+  mask:
+    radial-gradient(circle 10px at 0 50%,transparent 98%,#000 100%),
+    radial-gradient(circle 10px at 100% 50%,transparent 98%,#000 100%);
+  -webkit-mask-composite:source-in;
+  mask-composite:intersect}
+.perf::before{content:"";position:absolute;left:18px;right:18px;top:50%;border-top:1.5px dashed rgba(34,41,58,.3)}
+.ticket-info{padding:16px 18px 20px;background:#fbf6f0;border-radius:0 0 8px 8px;display:flex;flex-direction:column;flex:1;position:relative;overflow:hidden}
+.ticket-info::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.08;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+.t-title{font-family:"Prata",serif;font-size:17px;color:#22293a;line-height:1.15;margin-bottom:6px;position:relative;z-index:1}
+.t-tag{font-family:"Playfair Display",serif;font-style:italic;font-size:12.5px;color:#a34a2f;margin-bottom:10px;position:relative;z-index:1}
+.t-route{font-family:"PT Serif",serif;font-size:12px;color:#5c6672;line-height:1.5;margin-bottom:12px;min-height:36px;position:relative;z-index:1}
+.t-meta{display:flex;gap:12px;font-family:"PT Sans",sans-serif;font-size:11px;color:#5c6672;margin-bottom:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;position:relative;z-index:1}
+.t-meta i{width:4px;height:4px;border-radius:50%;background:#c29a5b;display:inline-block;margin:0 2px;vertical-align:middle}
+.t-foot{margin-top:auto;display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid rgba(194,154,91,.4);position:relative;z-index:1}
+.t-price{font-family:"Prata",serif;font-size:22px;color:#22293a}
+.t-price small{font-family:"PT Sans",sans-serif;font-size:10px;color:#5c6672;letter-spacing:.08em;margin-left:2px}
+.t-btn{background:#22293a;color:#fbf6f0;font-family:"PT Sans",sans-serif;font-size:11px;font-weight:700;letter-spacing:.08em;padding:9px 14px;border-radius:2px;transition:background .18s}
+.t-btn:hover{background:#0e1319}
+.t-btn[aria-disabled="true"],.t-btn[aria-disabled="true"]:hover{background:#22293a;opacity:.45;cursor:default}
+
+/* билеты — компактные по умолчанию, раскрываются по клику */
+.ticket .t-seats{top:14px;left:14px;bottom:auto;right:auto}
+.ticket .t-dates,
+.ticket .t-desc,
+.ticket .t-note,
+.ticket .t-prices{display:none}
+
+.ticket.open{grid-column:1 / -1;cursor:default}
+.ticket.open .ticket-photo{aspect-ratio:auto;height:220px}
+.ticket.open .ticket-info{padding:24px 30px 26px}
+.ticket.open .t-title{font-size:26px;margin-bottom:8px}
+.ticket.open .t-tag{font-size:14px;margin-bottom:14px}
+.ticket.open .t-desc{display:block}
+.ticket.open .t-note{display:block}
+.ticket.open :is(.t-dates,.t-desc,.t-note,.t-prices){animation:tReveal .35s cubic-bezier(.2,.7,.2,1) both}
+.ticket.featured.open .t-dates{display:flex}
+.ticket.featured.open .t-prices{display:flex}
+.ticket.featured.open .t-route,
+.ticket.featured.open .t-price-compact{display:none}
+.t-dates{display:flex;gap:10px;margin:0 0 16px;flex-wrap:wrap}
+.t-date-lbl{font-family:"PT Sans",sans-serif;font-size:10.5px;color:#5c6672;letter-spacing:.18em;text-transform:uppercase;margin-right:6px;align-self:center;font-weight:700}
+.t-date-chip{font-family:"PT Sans",sans-serif;font-size:12px;font-weight:700;letter-spacing:.06em;color:#22293a;background:#fbf6f0;border:1px solid rgba(34,41,58,.25);padding:8px 14px;border-radius:2px;cursor:pointer;transition:background .18s,color .18s,border-color .18s;display:inline-flex;align-items:baseline;gap:6px}
+.t-date-chip b{font-family:"Prata",serif;font-size:15px;font-weight:400}
+.t-date-chip:hover{border-color:#a34a2f;color:#a34a2f}
+.t-date-chip.active{background:#22293a;color:#fbf6f0;border-color:#22293a}
+.t-desc{font-family:"PT Serif",serif;font-size:13.5px;color:#3d4756;line-height:1.6;margin-bottom:14px}
+.t-desc p{margin:0 0 10px}
+.t-desc ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 22px}
+.t-desc li{padding-left:22px;position:relative;font-size:12.5px;line-height:1.5;color:#3d4756}
+.t-desc li::before{content:"◆";position:absolute;left:0;top:0;color:#a34a2f;font-size:10px}
+.t-note{font-family:"PT Sans",sans-serif;font-size:11.5px;color:#5c6672;background:rgba(194,154,91,.14);border-left:2px solid #c29a5b;padding:8px 12px;margin-bottom:14px;line-height:1.5}
+.t-prices{display:flex;gap:22px;align-items:baseline}
+.t-price-item{display:flex;flex-direction:column;line-height:1.1}
+.t-price-item span{font-family:"PT Sans",sans-serif;font-size:10px;color:#5c6672;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:4px}
+.t-price-item b{font-family:"Prata",serif;font-size:22px;color:#22293a;font-weight:400}
+.t-price-item b small{font-family:"PT Sans",sans-serif;font-size:10px;color:#5c6672;letter-spacing:.08em;margin-left:2px}
+button.t-btn{border:none;cursor:pointer;font-family:"PT Sans",sans-serif}
+.ticket:focus{outline:none}
+}
+@keyframes tReveal{from{opacity:0;transform:translateY(6px)}}

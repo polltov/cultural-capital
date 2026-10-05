@@ -12,7 +12,7 @@ export default defineConfig({
         test: {
           name: "unit",
           environment: "node",
-          include: ["src/**/*.test.{ts,tsx}"],
+          include: ["src/**/*.test.{ts,tsx}", "tests/unit/**/*.test.{ts,tsx}"],
           exclude: ["src/**/*.int.test.{ts,tsx}"],
         },
       },
@@ -21,7 +21,10 @@ export default defineConfig({
         test: {
           name: "integration",
           environment: "node",
-          include: ["src/**/*.int.test.{ts,tsx}"],
+          include: ["tests/integration/**/*.test.ts", "src/**/*.int.test.{ts,tsx}"],
+          setupFiles: ["tests/integration/setup.ts"],
+          fileParallelism: false,
+          env: { DATABASE_URL: "postgres://postgres:postgres@localhost:54329/test" },
         },
       },
     ],

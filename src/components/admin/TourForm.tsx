@@ -36,12 +36,39 @@ function previewSessions(rows: SessionRow[], now: number): TicketSession[] {
   return out.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 }
 
+/**
+ * Подтягивает свежие серверные данные (занято/заявки) в локальные строки сеансов,
+ * не затирая несохранённые правки и новые строки без id.
+ */
+export function mergeSessionRows(local: SessionRow[], server: SessionRow[]): SessionRow[] {
+  const serverById = new Map(server.filter((r) => r.id !== undefined).map((r) => [r.id!, r]));
+  const seen = new Set<number>();
+  const out: SessionRow[] = [];
+  for (const r of local) {
+    if (r.id === undefined) {
+      out.push(r);
+      continue;
+    }
+    const fresh = serverById.get(r.id);
+    if (!fresh) continue; // удалён на сервере
+    seen.add(r.id);
+    out.push({ ...r, taken: fresh.taken, orders: fresh.orders });
+  }
+  for (const r of server) if (r.id !== undefined && !seen.has(r.id)) out.push(r);
+  return out;
+}
+
 export function TourForm({
   id, initial, initialSessions, number,
 }: { id: number | null; initial: TourValues; initialSessions: SessionRow[]; number: number }) {
   const router = useRouter();
   const [v, setV] = useState(initial);
   const [rows, setRows] = useState(initialSessions);
+  const [prevSessions, setPrevSessions] = useState(initialSessions);
+  if (prevSessions !== initialSessions) {
+    setPrevSessions(initialSessions);
+    setRows((cur) => mergeSessionRows(cur, initialSessions));
+  }
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, start] = useTransition();
   const [now] = useState(() => Date.now());

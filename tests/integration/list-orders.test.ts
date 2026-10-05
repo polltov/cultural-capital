@@ -21,6 +21,8 @@ describe("listOrders", () => {
     expect((await listOrders({ status: "new" }, db)).rows.map((r) => r.customerName)).toEqual(["Анна"]);
     expect((await listOrders({ status: "all" }, db)).total).toBe(2);
     expect((await listOrders({ status: "all", q: "911123" }, db)).rows.map((r) => r.customerName)).toEqual(["Анна"]);
+    expect((await listOrders({ status: "all", q: "89111234567" }, db)).rows.map((r) => r.customerName)).toEqual(["Анна"]);
+    expect((await listOrders({ status: "all", q: "+7 (911) 123-45-67" }, db)).rows.map((r) => r.customerName)).toEqual(["Анна"]);
     expect((await listOrders({ status: "all", q: "анна" }, db)).rows).toHaveLength(1);
     expect((await listOrders({ status: "all", q: "%" }, db)).rows).toHaveLength(0);
     expect((await listOrders({ status: "all", tourId: t.id, sessionId: s.id }, db)).total).toBe(2);

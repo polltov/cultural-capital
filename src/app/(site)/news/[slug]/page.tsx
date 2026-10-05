@@ -13,17 +13,10 @@ export const generateStaticParams = async () => [];
 
 type Props = { params: Promise<{ slug: string }> };
 
-function absolute(url: string | null): string | undefined {
-  if (!url) return undefined;
-  if (/^https?:\/\//.test(url)) return url;
-  const base = process.env.SITE_URL?.replace(/\/+$/, "");
-  return base ? `${base}${url}` : undefined;
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const n = await getNewsBySlug((await params).slug);
   if (!n) return { title: "Новость не найдена" };
-  const image = absolute(n.coverUrl);
+  const image = n.coverUrl ?? undefined;
   return {
     title: `${n.title} — Культурная Столица`,
     description: n.excerpt || undefined,

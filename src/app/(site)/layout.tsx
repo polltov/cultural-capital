@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./site.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.SITE_URL || "https://cultural-capital.vercel.app"),
   title: "Культурная Столица — экскурсии по Петербургу для детей и взрослых",
   description:
     "Экскурсии по Санкт-Петербургу для детей и взрослых: авторские маршруты, маленькие группы до 8 человек, подача через игры.",
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
     type: "website",
     title: "Культурная Столица — экскурсии по Петербургу для семьи",
     description: "Авторские маршруты для детей и взрослых. Маленькие группы до 8 человек.",
-    images: ["https://polltov.github.io/cultural-capital/mockups/assets/dvortsovaya.jpg"],
+    images: ["/assets/dvortsovaya.jpg"],
   },
   icons: { icon: [{ url: "/assets/favicon.png", type: "image/png" }] },
 };

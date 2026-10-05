@@ -61,7 +61,8 @@ export async function listOrders(f: OrderFilters, db: Db = sharedDb): Promise<{ 
   if (f.sessionId) conds.push(eq(orders.sessionId, f.sessionId));
   const q = f.q?.trim();
   if (q) {
-    const digits = q.replace(/\D/g, "");
+    let digits = q.replace(/\D/g, "");
+    if (digits.length === 11 && (digits[0] === "7" || digits[0] === "8")) digits = digits.slice(1);
     const alts: SQL[] = [ilike(orders.customerName, `%${escapeLike(q)}%`)];
     if (digits.length >= 3) alts.push(sql`${orders.phone} like ${`%${digits}%`}`);
     conds.push(or(...alts)!);

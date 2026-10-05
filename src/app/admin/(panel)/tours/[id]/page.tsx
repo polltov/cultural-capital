@@ -23,7 +23,7 @@ export default async function EditTourPage({ params }: { params: Promise<{ id: s
       <p className="crumbs"><Link href="/admin/tours">← Все экскурсии</Link></p>
       <h1 className="page-title">{t.title}</h1>
       <TourForm
-        key={t.updatedAt.getTime()}
+        key={t.id}
         id={t.id}
         number={position + 1}
         initial={{

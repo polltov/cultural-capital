@@ -1,11 +1,13 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { requireAdmin } from "@/lib/auth/session";
 import { getDashboard } from "@/server/admin-orders";
 import { formatDayMonth, formatTime, formatWeekday } from "@/lib/domain/moscow-time";
 
 export const metadata: Metadata = { title: "Сводка" };
 
 export default async function DashboardPage() {
+  await requireAdmin();
   const { newOrders, upcoming } = await getDashboard();
   return (
     <>

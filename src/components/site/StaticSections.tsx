@@ -1,3 +1,4 @@
+import Link from "next/link";
 export function Hero() {
   return (
     <div className="hero">
@@ -194,11 +195,11 @@ export function Footer() {
     <footer className="foot">
       <div className="foot-row">
         <div>
-          <a className="logo" href="#top"><span className="logo-blob"></span><span className="logo-txt">Культурная Столица</span></a>
+          <Link className="logo" href="/#top"><span className="logo-blob"></span><span className="logo-txt">Культурная Столица</span></Link>
           <p className="foot-tag">Экскурсии по Петербургу для детей и взрослых: маленькие группы, авторские маршруты, история через игру.</p>
         </div>
         <nav className="foot-nav" aria-label="Разделы">
-          <a href="#catalog">Экскурсии</a><a href="#guides">Гиды</a><a href="#about">О нас</a><a href="#reviews">Отзывы</a><a href="#faq">Вопросы</a>
+          <Link href="/#catalog">Экскурсии</Link><Link href="/#guides">Гиды</Link><Link href="/#about">О нас</Link><Link href="/#reviews">Отзывы</Link><Link href="/news">Новости</Link><Link href="/#faq">Вопросы</Link>
         </nav>
       </div>
       <div className="foot-bottom">© 2026 Культурная Столица · Санкт-Петербург</div>

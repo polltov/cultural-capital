@@ -49,3 +49,9 @@ export function formatSessionLong(d: Date): string {
   const p = parts(d);
   return `${WEEKDAY_LONG[p.weekday]}, ${p.day} ${MONTHS_GEN[p.month - 1]} ${p.year}, ${p.hour}:${p.minute}`;
 }
+
+/** «4 октября 2026» (московское время). */
+export function formatDateLong(d: Date): string {
+  const p = parts(d);
+  return `${p.day} ${MONTHS_GEN[p.month - 1]} ${p.year}`;
+}

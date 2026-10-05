@@ -7,7 +7,9 @@ const TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX = 8 * 1024 * 1024;
 
 /** Загрузка обложки: перетаскивание или клик. Ошибка показывается рядом и не трогает остальную форму. */
-export function ImageDrop({ value, onChange }: { value: string | null; onChange: (url: string | null) => void }) {
+export function ImageDrop({
+  value, onChange, folder = "tours", label = "Обложка",
+}: { value: string | null; onChange: (url: string | null) => void; folder?: "tours" | "news"; label?: string }) {
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [over, setOver] = useState(false);
@@ -20,6 +22,7 @@ export function ImageDrop({ value, onChange }: { value: string | null; onChange:
     if (file.size > MAX) return setError("Файл больше 8 МБ — выберите фото поменьше");
     const fd = new FormData();
     fd.set("file", file);
+    fd.set("folder", folder);
     start(async () => {
       try {
         const r = await uploadCoverAction(fd);
@@ -33,7 +36,7 @@ export function ImageDrop({ value, onChange }: { value: string | null; onChange:
 
   return (
     <div className="field">
-      <span className="field-label">Обложка</span>
+      <span className="field-label">{label}</span>
       <div
         className={`drop${over ? " drop--over" : ""}`}
         onDragOver={(e) => {
@@ -49,7 +52,7 @@ export function ImageDrop({ value, onChange }: { value: string | null; onChange:
       >
         {value ? (
           // eslint-disable-next-line @next/next/no-img-element -- превью обложки из Blob, без оптимизатора
-          <img src={value} alt="Обложка экскурсии" className="drop-img" />
+          <img src={value} alt="Обложка" className="drop-img" />
         ) : (
           <span className="muted">Перетащите фото сюда</span>
         )}

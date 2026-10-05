@@ -1,4 +1,6 @@
 import { getPublishedCatalog } from "@/server/catalog";
+import { getLatestNews } from "@/server/news";
+import { NewsBlock } from "@/components/site/NewsBlock";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Catalog } from "@/components/site/Catalog";
 import { ReviewsCarousel } from "@/components/site/ReviewsCarousel";
@@ -9,7 +11,7 @@ import { Hero, Why, Route, Guides, Faq, Footer } from "@/components/site/StaticS
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const catalog = await getPublishedCatalog();
+  const [catalog, latestNews] = await Promise.all([getPublishedCatalog(), getLatestNews(3)]);
   return (
     <div className="mock" id="top">
       <div className="blob b1"></div>
@@ -21,6 +23,7 @@ export default async function HomePage() {
       <SiteHeader />
       <Hero />
       <Catalog items={catalog} />
+      <NewsBlock items={latestNews} />
       <Why />
       <Route />
       <Guides />

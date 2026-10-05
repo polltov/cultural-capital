@@ -60,7 +60,7 @@ export async function uploadCoverAction(formData: FormData): Promise<{ ok: true;
   const file = formData.get("file");
   if (!(file instanceof File)) return { ok: false, error: "Выберите файл" };
   try {
-    return { ok: true, url: await uploadImage(file, "tours") };
+    return { ok: true, url: await uploadImage(file, formData.get("folder") === "news" ? "news" : "tours") };
   } catch (e) {
     if (e instanceof UploadError) return { ok: false, error: e.message };
     console.error("upload failed", e);

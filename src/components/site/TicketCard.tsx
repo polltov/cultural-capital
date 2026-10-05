@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { Markdown } from "@/components/Markdown";
 import "./ticket.css";
 import { formatRub } from "@/lib/domain/pricing";
 import { formatDayMonth, formatTime, formatWeekday } from "@/lib/domain/moscow-time";
@@ -36,9 +35,7 @@ export type TicketCardProps = {
 
 function Description({ text }: { text: string }) {
   return (
-    <div className="t-desc">
-      <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
-    </div>
+    <Markdown className="t-desc">{text}</Markdown>
   );
 }
 

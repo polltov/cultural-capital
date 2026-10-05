@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { saveTourAction } from "@/app/admin/(panel)/tours/actions";
 import { TicketCard, type TicketSession } from "@/components/site/TicketCard";
 import { ImageDrop } from "@/components/admin/ImageDrop";
+import { MarkdownEditor } from "@/components/admin/MarkdownEditor";
 import { SessionsEditor, type SessionRow } from "@/components/admin/SessionsEditor";
 import { parseMoscowLocal } from "@/lib/domain/moscow-time";
 import { freeSeats } from "@/lib/domain/seats";
@@ -65,7 +66,7 @@ export function TourForm({
       {errors[k] && <span className="form-error" role="alert">{errors[k]}</span>}
     </label>
   );
-  const area = (k: "description" | "note", label: string, rows: number, hint?: string) => (
+  const area = (k: "note", label: string, rows: number, hint?: string) => (
     <label className="field">
       <span className="field-label">{label}</span>
       <textarea rows={rows} value={v[k]} aria-invalid={!!errors[k]} onChange={(e) => set(k, e.target.value)} />
@@ -107,7 +108,8 @@ export function TourForm({
           {text("title", "Название", { max: 120 })}
           {text("subtitle", "Подзаголовок", { max: 120 })}
           {text("route", "Маршрут", { max: 300 })}
-          {area("description", "Описание", 8, "Поддерживается Markdown: **жирный**, списки через «- ».")}
+          <MarkdownEditor label="Описание" value={v.description} onChange={(d) => set("description", d)} maxLength={5000} invalid={!!errors.description} hint="Поддерживается Markdown: **жирный**, списки через «- »." />
+          {errors.description && <p className="form-error" role="alert">{errors.description}</p>}
           {area("note", "Примечание", 2)}
           <div className="tour-grid">
             {text("durationLabel", "Длительность", { max: 40, placeholder: "2 часа" })}

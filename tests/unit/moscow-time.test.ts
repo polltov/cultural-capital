@@ -23,3 +23,13 @@ describe("moscow-time", () => {
   });
   it("May short month", () => expect(formatDayMonth(parseMoscowLocal("2026-05-09T10:00"))).toBe("9 мая"));
 });
+
+import { formatDateLong } from "@/lib/domain/moscow-time";
+describe("formatDateLong", () => {
+  it("formats in Moscow time with genitive month", () => {
+    expect(formatDateLong(new Date("2026-10-04T09:00:00Z"))).toBe("4 октября 2026");
+  });
+  it("uses Moscow date across midnight UTC", () => {
+    expect(formatDateLong(new Date("2026-10-04T22:00:00Z"))).toBe("5 октября 2026");
+  });
+});

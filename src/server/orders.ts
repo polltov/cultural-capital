@@ -1,18 +1,18 @@
-import { and, eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db as sharedDb, type Db, type Tx } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
 import { bookingSchema, type BookingResult } from "@/lib/validation/booking";
-import { SEAT_HOLDING_STATUSES } from "@/lib/domain/seats";
 import { orderTotal } from "@/lib/domain/pricing";
 import { formatOrderNumber } from "@/lib/domain/order-number";
 import { hitRateLimit } from "@/server/rate-limit";
+import { seatsTakenSql } from "@/server/seats-sql";
 
 /** Seats held by confirmed/done orders of a session. */
 export async function occupiedSeats(db: Db | Tx, sessionId: number): Promise<number> {
   const [r] = await db
-    .select({ n: sql<number>`coalesce(sum(${orders.children} + ${orders.adults}), 0)::int` })
+    .select({ n: seatsTakenSql() })
     .from(orders)
-    .where(and(eq(orders.sessionId, sessionId), sql`${orders.status} in ${SEAT_HOLDING_STATUSES}`));
+    .where(eq(orders.sessionId, sessionId));
   return r.n;
 }
 

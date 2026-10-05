@@ -1,7 +1,8 @@
-import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray } from "drizzle-orm";
 import { db as sharedDb, type Db } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
-import { SEAT_HOLDING_STATUSES, freeSeats } from "@/lib/domain/seats";
+import { freeSeats } from "@/lib/domain/seats";
+import { seatsTakenSql } from "@/server/seats-sql";
 import type { TicketTour } from "@/components/site/TicketCard";
 
 export type CatalogTour = {
@@ -23,7 +24,7 @@ export async function getPublishedCatalog(db: Db = sharedDb): Promise<CatalogTou
       tourId: tourSessions.tourId,
       startsAt: tourSessions.startsAt,
       capacity: tourSessions.capacity,
-      occupied: sql<number>`coalesce(sum(${orders.children} + ${orders.adults}) filter (where ${orders.status} in ${SEAT_HOLDING_STATUSES}), 0)::int`,
+      occupied: seatsTakenSql(),
     })
     .from(tourSessions)
     .leftJoin(orders, eq(orders.sessionId, tourSessions.id))

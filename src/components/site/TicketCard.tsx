@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import "./ticket.css";
 import { formatRub } from "@/lib/domain/pricing";
 import { formatDayMonth, formatTime, formatWeekday } from "@/lib/domain/moscow-time";
 import { seatsBadge } from "@/lib/domain/seats";

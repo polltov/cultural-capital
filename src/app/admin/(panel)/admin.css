@@ -12,7 +12,7 @@
   --ok: #7c8a6c;
   --radius: 6px;
 }
-.adm, .adm *, .adm *::before, .adm *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:where(.adm), :where(.adm) *, :where(.adm) *::before, :where(.adm) *::after { box-sizing: border-box; margin: 0; padding: 0; }
 .adm {
   background: var(--bg);
   color: var(--ink);
@@ -273,8 +273,7 @@
   .tour-edit { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); gap: 40px; align-items: start; }
   .tour-preview { display: block; position: sticky; top: 24px; }
   .tour-preview .field-label { margin-bottom: 10px; }
-  .srow { grid-template-columns: 1fr 90px auto auto auto; }
-  .srow-actions { grid-column: auto; }
+  .srow { grid-template-columns: 1fr 90px auto auto; }
 }
 @media (max-width: 767px) {
   .trow { grid-template-columns: 40px 48px 1fr; padding-right: 10px; }
@@ -285,4 +284,3 @@
   .page-head .btn { width: 100%; }
 }
 .srow-taken { white-space: nowrap; }
-@media (min-width: 1100px) { .srow-actions { flex-wrap: nowrap; } .srow .btn { padding: 0 14px; } }

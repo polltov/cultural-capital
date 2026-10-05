@@ -8,7 +8,7 @@ import { ImageDrop } from "@/components/admin/ImageDrop";
 import { SessionsEditor, type SessionRow } from "@/components/admin/SessionsEditor";
 import { parseMoscowLocal } from "@/lib/domain/moscow-time";
 import { freeSeats } from "@/lib/domain/seats";
-import "./ticket-preview.css";
+
 
 export type TourValues = {
   title: string; subtitle: string; route: string; description: string; note: string;

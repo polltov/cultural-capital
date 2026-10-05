@@ -1,11 +1,20 @@
-/* Стили билета для живого превью в админке: копия блока «ticket cards» из site.css, вложенная в .tp, чтобы не конфликтовать с .adm. */
-.tp {
+/* Билет-карточка: общий для сайта и живого превью в админке. Без глобальных сбросов. */
+/* тень статична (drop-shadow повторяет вырезы перфорации), анимируется только transform — без перерисовки */
 .ticket{background:transparent;border-radius:8px;position:relative;filter:drop-shadow(0 10px 16px rgba(34,41,58,.16));transition:transform .4s cubic-bezier(.2,.7,.2,1);will-change:transform;cursor:pointer;display:flex;flex-direction:column}
 @media (hover:hover){.ticket:not(.open):hover{transform:translate3d(0,-4px,0)}}
 /* номер билета — крохотный серийник в центре перфорации */
 .perf .t-stub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#fbf6f0;padding:0 8px;font-family:"PT Sans",sans-serif;font-size:9px;letter-spacing:.28em;font-weight:700;color:rgba(34,41,58,.4);text-transform:uppercase;z-index:2}
 .ticket-photo{aspect-ratio:1;background:linear-gradient(135deg,#4b5f78,#26303b);border-radius:8px 8px 0 0;position:relative;overflow:hidden}
+.ticket:nth-child(2) .ticket-photo{background:linear-gradient(135deg,#a34a2f,#6a2b12)}
+.ticket:nth-child(3) .ticket-photo{background:linear-gradient(135deg,#26303b,#0f1a24)}
+.ticket:nth-child(4) .ticket-photo{background:linear-gradient(135deg,#c29a5b,#8a6a30)}
+.ticket:nth-child(5) .ticket-photo{background:linear-gradient(135deg,#7c8a6c,#3d4a34)}
+.ticket:nth-child(6) .ticket-photo{background:linear-gradient(135deg,#5a6f80,#2b3947)}
+.ticket:nth-child(7) .ticket-photo{background:linear-gradient(135deg,#8a5a3a,#4a2a18)}
+.ticket:nth-child(8) .ticket-photo{background:linear-gradient(135deg,#4a5b3d,#1f2a1a)}
 .ticket-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(20,27,33,.7),transparent 55%);pointer-events:none}
+.t-cat{position:absolute;top:14px;left:14px;font-family:"PT Sans",sans-serif;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#22293a;font-weight:700;background:#fbf6f0;padding:5px 10px;border-radius:2px;z-index:2}
+.t-cat.family{color:#4a5b3d}.t-cat.evening{color:#26303b}.t-cat.quest{color:#a34a2f}
 .t-date{position:absolute;bottom:12px;left:14px;font-family:"PT Sans",sans-serif;font-size:11.5px;color:#fbf6f0;font-weight:700;letter-spacing:.14em;text-transform:uppercase;z-index:2}
 .t-date b{font-family:"Prata",serif;font-size:16px;font-weight:400;letter-spacing:.02em;display:block;text-transform:none}
 .t-seats{position:absolute;bottom:14px;right:14px;font-family:"PT Sans",sans-serif;font-size:10px;color:#fbf6f0;background:rgba(163,74,47,.95);padding:5px 9px;border-radius:2px;font-weight:700;letter-spacing:.08em;z-index:2}
@@ -36,6 +45,7 @@
 .t-btn[aria-disabled="true"],.t-btn[aria-disabled="true"]:hover{background:#22293a;opacity:.45;cursor:default}
 
 /* билеты — компактные по умолчанию, раскрываются по клику */
+.ticket.featured .ticket-photo{background:linear-gradient(135deg,#c29a5b,#6a4820);background-image:url("/assets/egypt-hall.jpg");background-size:cover;background-position:center}
 .ticket .t-seats{top:14px;left:14px;bottom:auto;right:auto}
 .ticket .t-dates,
 .ticket .t-desc,
@@ -50,6 +60,7 @@
 .ticket.open .t-desc{display:block}
 .ticket.open .t-note{display:block}
 .ticket.open :is(.t-dates,.t-desc,.t-note,.t-prices){animation:tReveal .35s cubic-bezier(.2,.7,.2,1) both}
+@keyframes tReveal{from{opacity:0;transform:translateY(6px)}}
 .ticket.featured.open .t-dates{display:flex}
 .ticket.featured.open .t-prices{display:flex}
 .ticket.featured.open .t-route,
@@ -72,6 +83,24 @@
 .t-price-item b{font-family:"Prata",serif;font-size:22px;color:#22293a;font-weight:400}
 .t-price-item b small{font-family:"PT Sans",sans-serif;font-size:10px;color:#5c6672;letter-spacing:.08em;margin-left:2px}
 button.t-btn{border:none;cursor:pointer;font-family:"PT Sans",sans-serif}
+.ticket:focus-visible{outline:2px solid #a34a2f;outline-offset:3px}
 .ticket:focus{outline:none}
+.ticket:focus-visible{border-radius:8px}
+@media (max-width:600px){
+  .ticket-photo{aspect-ratio:16/10}
+  .ticket.open .ticket-photo{height:200px}
+  .ticket.open .ticket-info{padding:20px 18px 22px}
+  .ticket.open .t-title{font-size:22px}
+  .t-desc ul{grid-template-columns:1fr}
+  .t-foot{flex-wrap:wrap;gap:12px}
 }
-@keyframes tReveal{from{opacity:0;transform:translateY(6px)}}
+/* превью в админке: узкая колонка — те же мобильные размеры по ширине контейнера */
+.tp{container:tp / inline-size}
+@container tp (max-width:600px){
+  .ticket-photo{aspect-ratio:16/10}
+  .ticket.open .ticket-photo{height:200px}
+  .ticket.open .ticket-info{padding:20px 18px 22px}
+  .ticket.open .t-title{font-size:22px}
+  .t-desc ul{grid-template-columns:1fr}
+  .t-foot{flex-wrap:wrap;gap:12px}
+}

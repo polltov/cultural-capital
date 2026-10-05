@@ -67,8 +67,9 @@ body{background:#f5ede0;font-family:"PT Serif",Georgia,serif;color:#22293a;min-h
 
 /* ---- ticket cards ---- */
 .catalog{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;padding:20px 40px 40px;position:relative;z-index:2}
-.ticket{background:transparent;border-radius:8px;position:relative;filter:drop-shadow(0 18px 22px rgba(34,41,58,.28));transition:transform .25s ease,filter .25s ease;cursor:pointer;display:flex;flex-direction:column}
-.ticket:hover{transform:translateY(-6px);filter:drop-shadow(0 28px 30px rgba(34,41,58,.35))}
+/* тень статична (drop-shadow повторяет вырезы перфорации), анимируется только transform — без перерисовки */
+.ticket{background:transparent;border-radius:8px;position:relative;filter:drop-shadow(0 10px 16px rgba(34,41,58,.16));transition:transform .4s cubic-bezier(.2,.7,.2,1);will-change:transform;cursor:pointer;display:flex;flex-direction:column}
+@media (hover:hover){.ticket:not(.open):hover{transform:translate3d(0,-4px,0)}}
 /* номер билета — крохотный серийник в центре перфорации */
 .perf .t-stub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#fbf6f0;padding:0 8px;font-family:"PT Sans",sans-serif;font-size:9px;letter-spacing:.28em;font-weight:700;color:rgba(34,41,58,.4);text-transform:uppercase;z-index:2}
 .ticket-photo{aspect-ratio:1;background:linear-gradient(135deg,#4b5f78,#26303b);border-radius:8px 8px 0 0;position:relative;overflow:hidden}
@@ -125,6 +126,8 @@ body{background:#f5ede0;font-family:"PT Serif",Georgia,serif;color:#22293a;min-h
 .ticket.open .t-tag{font-size:14px;margin-bottom:14px}
 .ticket.open .t-desc{display:block}
 .ticket.open .t-note{display:block}
+.ticket.open :is(.t-dates,.t-desc,.t-note,.t-prices){animation:tReveal .35s cubic-bezier(.2,.7,.2,1) both}
+@keyframes tReveal{from{opacity:0;transform:translateY(6px)}}
 .ticket.featured.open .t-dates{display:flex}
 .ticket.featured.open .t-prices{display:flex}
 .ticket.featured.open .t-route,
@@ -327,7 +330,7 @@ a:focus-visible,button:focus-visible,summary:focus-visible,.ticket:focus-visible
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   .reviews-track{scroll-behavior:auto}
-  *{transition:none!important}
+  *{transition:none!important;animation:none!important}
 }
 
 </style>

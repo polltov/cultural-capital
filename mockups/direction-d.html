@@ -16,23 +16,24 @@
 <link href="https://fonts.googleapis.com/css2?family=Prata&family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=PT+Serif:ital,wght@0,400;1,400&family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;padding:40px 20px;min-height:100vh;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1000px;margin:0 auto}
+body{background:#f5ede0;font-family:"PT Serif",Georgia,serif;color:#22293a;min-height:100vh;-webkit-font-smoothing:antialiased}
 
-.mock{background:#f5ede0;border-radius:16px;overflow:hidden;
-      box-shadow:0 30px 60px -30px rgba(34,41,58,.4);position:relative}
+.mock{--gut:max(40px,calc((100% - 1200px) / 2));background:#f5ede0;overflow:clip;position:relative}
+/* общая колонка контента: 1200px по центру, фоны секций — на всю ширину */
+.mock > :not(.blob){padding-left:var(--gut);padding-right:var(--gut)}
 
 /* декоративные пятна */
 .blob{position:absolute;pointer-events:none;z-index:0}
-.blob.b1{width:200px;height:250px;background:#a34a2f;border-radius:60% 40% 55% 45% / 45% 55% 45% 55%;top:-60px;right:-60px;opacity:.92}
-.blob.b2{width:130px;height:130px;background:#e8b45a;border-radius:52% 48% 60% 40% / 60% 40% 60% 40%;top:200px;left:-50px;opacity:.9}
+.blob.b1{width:clamp(200px,22vw,340px);height:clamp(250px,27vw,420px);background:#a34a2f;border-radius:60% 40% 55% 45% / 45% 55% 45% 55%;top:-90px;right:-90px;opacity:.92}
+.blob.b2{width:clamp(130px,13vw,200px);height:clamp(130px,13vw,200px);background:#e8b45a;border-radius:52% 48% 60% 40% / 60% 40% 60% 40%;top:340px;left:-70px;opacity:.9}
 .blob.b3{width:170px;height:170px;background:#7c8a6c;border-radius:40% 60% 40% 60% / 55% 45% 55% 45%;bottom:180px;right:-60px;opacity:.88}
 .blob.b4{width:80px;height:80px;background:#c29a5b;border-radius:50% 50% 40% 60%;bottom:80px;left:100px;opacity:.85}
-.blob.b5{width:70px;height:70px;background:#22293a;border-radius:60% 40% 50% 50%;top:80px;left:380px;opacity:.15}
+.blob.b5{width:70px;height:70px;background:#22293a;border-radius:60% 40% 50% 50%;top:120px;left:38%;opacity:.12}
 .blob.b6{width:100px;height:100px;background:#a34a2f;border-radius:55% 45% 60% 40%;bottom:-30px;left:-30px;opacity:.6}
 
 /* header */
-.top{display:flex;justify-content:space-between;align-items:center;padding:24px 40px;position:relative;z-index:2}
+.top{display:flex;justify-content:space-between;align-items:center;padding-top:22px;padding-bottom:22px;position:sticky;top:0;z-index:20;transition:background .25s,box-shadow .25s,padding .25s}
+.top.scrolled{background:rgba(245,237,224,.88);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:0 1px 0 rgba(34,41,58,.1);padding-top:14px;padding-bottom:14px}
 .logo{display:flex;align-items:center;text-decoration:none;gap:14px}
 .logo-blob{width:28px;height:32px;background:linear-gradient(135deg,#4b5f78,#26303b);border-radius:60% 40% 55% 45% / 45% 55% 45% 55%;flex:none;display:block;transform:translateY(-2px);position:relative}
 .logo-blob::after{content:"";position:absolute;top:14px;left:-8px;width:12px;height:14px;background:#a34a2f;border-radius:55% 45% 60% 40% / 60% 40% 60% 40%;opacity:.95}
@@ -42,20 +43,20 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
 .nav .btn{background:#a34a2f;color:#fbf6f0;padding:10px 20px;font-weight:700;border-radius:2px;font-size:13px;letter-spacing:.06em}
 
 /* hero */
-.hero{padding:50px 40px 40px;position:relative;z-index:2;display:grid;grid-template-columns:1.4fr 1fr;gap:36px;align-items:center}
+.hero{min-height:min(calc(100vh - 92px),860px);padding-top:40px;padding-bottom:90px;position:relative;z-index:2;display:grid;grid-template-columns:1.25fr 1fr;gap:56px;align-items:center}
 .eyebrow{font-family:"PT Sans",sans-serif;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:#a34a2f;font-weight:700;margin-bottom:18px}
-.h-title{font-family:"Playfair Display",serif;font-weight:500;font-size:62px;line-height:.98;color:#22293a;letter-spacing:-.01em}
+.h-title{font-family:"Playfair Display",serif;font-weight:500;font-size:clamp(62px,6.4vw,92px);line-height:.96;color:#22293a;letter-spacing:-.015em}
 .h-title em{font-style:italic;color:#a34a2f}
 .h-sub{margin-top:24px;font-size:16px;color:#5c6672;max-width:420px;line-height:1.6}
 .h-actions{margin-top:28px;display:flex;gap:14px}
 .btn-primary{background:#22293a;color:#fbf6f0;padding:14px 28px;font-family:"PT Sans",sans-serif;font-size:13px;font-weight:700;letter-spacing:.06em;border-radius:2px;cursor:pointer}
 .btn-ghost{padding:14px 26px;border:1px solid rgba(34,41,58,.28);font-family:"PT Sans",sans-serif;font-size:13px;font-weight:700;letter-spacing:.06em;border-radius:2px;color:#22293a;cursor:pointer}
-.h-visual{position:relative;height:340px}
-.h-photo{position:absolute;width:78%;aspect-ratio:3/4;background:linear-gradient(135deg,rgba(75,95,120,.35),rgba(38,48,59,.55)),url("assets/dvortsovaya.jpg?v=2") center/cover;border-radius:6px;top:0;right:0;box-shadow:0 24px 44px -22px rgba(34,41,58,.55);overflow:hidden}
+.h-visual{position:relative;height:clamp(420px,42vw,560px)}
+.h-photo{position:absolute;width:76%;aspect-ratio:3/4;background:linear-gradient(135deg,rgba(75,95,120,.35),rgba(38,48,59,.55)),url("assets/dvortsovaya.jpg?v=2") center/cover;border-radius:6px;top:0;right:0;box-shadow:0 24px 44px -22px rgba(34,41,58,.55);overflow:hidden}
 .h-photo::before{content:"";position:absolute;inset:0;background:radial-gradient(80% 100% at 30% 30%,rgba(163,74,47,.4),transparent 60%);border-radius:6px;pointer-events:none}
-.h-photo-2{position:absolute;width:55%;aspect-ratio:4/5;background:linear-gradient(135deg,rgba(124,138,108,.3),rgba(61,74,52,.55)),url("assets/spas.jpg") center/cover;border-radius:6px;bottom:-24px;left:0;box-shadow:0 18px 36px -20px rgba(34,41,58,.55);overflow:hidden}
+.h-photo-2{position:absolute;width:55%;aspect-ratio:4/5;background:linear-gradient(135deg,rgba(124,138,108,.3),rgba(61,74,52,.55)),url("assets/spas.jpg") center/cover;border-radius:6px;bottom:-36px;left:-6%;box-shadow:0 18px 36px -20px rgba(34,41,58,.55);overflow:hidden}
 .h-photo-2::after{content:"Спас на Крови";position:absolute;left:12px;bottom:10px;font-family:"PT Sans",sans-serif;font-size:11px;color:rgba(251,246,240,.85);letter-spacing:.14em;text-transform:uppercase}
-.h-photo::after{content:"Дворцовая";position:absolute;left:14px;bottom:12px;font-family:"PT Sans",sans-serif;font-size:11px;color:rgba(251,246,240,.85);letter-spacing:.14em;text-transform:uppercase}
+.h-photo::after{content:"Дворцовая";position:absolute;right:14px;bottom:12px;font-family:"PT Sans",sans-serif;font-size:11px;color:rgba(251,246,240,.85);letter-spacing:.14em;text-transform:uppercase}
 
 /* каталог */
 .section-h{padding:70px 40px 20px;text-align:center;position:relative;z-index:2}
@@ -239,7 +240,7 @@ body{background:#efe6d6;font-family:"PT Serif",Georgia,serif;color:#22293a;paddi
 
 /* ---- ссылки, кнопки, фокус ---- */
 html{scroll-behavior:smooth}
-[id]{scroll-margin-top:16px}
+[id]{scroll-margin-top:84px}
 .nav a,.btn-primary,.btn-ghost{text-decoration:none;color:inherit}
 .btn-primary{color:#fbf6f0;display:inline-block}
 .btn-ghost{display:inline-block}
@@ -249,18 +250,28 @@ a:focus-visible,button:focus-visible,summary:focus-visible,.ticket:focus-visible
 .ticket:focus{outline:none}
 .ticket:focus-visible{border-radius:8px}
 
+/* ---- подвал ---- */
+.foot{background:#22293a;color:rgba(251,246,240,.72);font-family:"PT Sans",sans-serif;font-size:14px;position:relative;z-index:2;padding-top:56px;padding-bottom:40px}
+.foot-row{display:flex;justify-content:space-between;align-items:flex-start;gap:40px;flex-wrap:wrap}
+.foot .logo-blob{background:linear-gradient(135deg,#d9dee5,#8995a3)}
+.foot .logo-txt{color:#fbf6f0;font-size:28px;transform:none}
+.foot-tag{margin-top:12px;max-width:340px;line-height:1.6}
+.foot-nav{display:flex;gap:28px;flex-wrap:wrap}
+.foot-nav a{color:#fbf6f0;text-decoration:none}
+.foot-nav a:hover{color:#e8b45a}
+.foot-bottom{margin-top:44px;padding-top:20px;border-top:1px solid rgba(251,246,240,.14);font-size:12.5px;color:rgba(251,246,240,.5)}
+
 /* ---- планшет ---- */
 @media (max-width:900px){
-  body{padding:24px 12px}
-  .top{padding:20px 24px}
+  .mock{--gut:24px}
   .logo-txt{font-size:26px}
   .nav{gap:16px;font-size:13px}
-  .hero{grid-template-columns:1fr;padding:30px 24px 50px;gap:40px}
-  .h-title{font-size:50px}
+  .hero{grid-template-columns:1fr;min-height:0;padding-top:30px;padding-bottom:60px;gap:40px}
+  .h-title{font-size:54px}
   .h-sub{max-width:none}
   .h-visual{height:auto;aspect-ratio:6/5;max-width:440px;width:100%;margin:0 auto}
   .h-photo{width:60%}
-  .h-photo-2{width:50%;bottom:0}
+  .h-photo-2{width:50%;bottom:0;left:0}
   .section-h{padding:56px 24px 16px}
   .catalog{grid-template-columns:repeat(2,1fr);padding:20px 24px 40px}
   .why-band{padding:44px 24px 50px}
@@ -276,16 +287,15 @@ a:focus-visible,button:focus-visible,summary:focus-visible,.ticket:focus-visible
 
 /* ---- телефон ---- */
 @media (max-width:600px){
-  body{padding:0}
-  .mock{border-radius:0}
-  .top{padding:16px;gap:12px}
+  .mock{--gut:16px}
+  .top{gap:12px;padding-top:14px;padding-bottom:14px}
   .logo{gap:10px}
   .logo-txt{font-size:20px;white-space:normal;line-height:1.05}
   .nav a:not(.btn){display:none}
   .nav .btn{padding:9px 14px;font-size:12px}
   .hero{padding:24px 16px 44px;gap:32px}
   .eyebrow{font-size:10.5px;letter-spacing:.18em}
-  .h-title{font-size:38px}
+  .h-title{font-size:40px}
   .h-sub{font-size:15px}
   .h-actions{flex-direction:column;gap:10px}
   .h-actions a{text-align:center}
@@ -323,7 +333,6 @@ a:focus-visible,button:focus-visible,summary:focus-visible,.ticket:focus-visible
 </style>
 </head>
 <body>
-<div class="wrap">
 
   <div class="mock" id="top">
     <div class="blob b1"></div>
@@ -695,6 +704,19 @@ a:focus-visible,button:focus-visible,summary:focus-visible,.ticket:focus-visible
 
       </div>
     </div>
+
+    <footer class="foot">
+      <div class="foot-row">
+        <div>
+          <a class="logo" href="#top"><span class="logo-blob"></span><span class="logo-txt">Культурная Столица</span></a>
+          <p class="foot-tag">Экскурсии по Петербургу для детей и взрослых: маленькие группы, авторские маршруты, история через игру.</p>
+        </div>
+        <nav class="foot-nav" aria-label="Разделы">
+          <a href="#catalog">Экскурсии</a><a href="#guides">Гиды</a><a href="#about">О нас</a><a href="#reviews">Отзывы</a><a href="#faq">Вопросы</a>
+        </nav>
+      </div>
+      <div class="foot-bottom">© 2026 Культурная Столица · Санкт-Петербург</div>
+    </footer>
   </div>
 
   <script>
@@ -735,8 +757,11 @@ a:focus-visible,button:focus-visible,summary:focus-visible,.ticket:focus-visible
         toggle();
       });
     });
+
+    const top=document.querySelector('.top');
+    const onScroll=()=>top.classList.toggle('scrolled',scrollY>8);
+    addEventListener('scroll',onScroll,{passive:true});onScroll();
   })();
   </script>
-</div>
 </body>
 </html>

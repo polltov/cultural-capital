@@ -6,6 +6,7 @@ import { ORDER_STATUSES, type OrderStatus } from "@/lib/domain/order-status";
 import { setAdminNote, transitionOrder, type TransitionResult } from "@/server/orders";
 
 function revalidateAll(id: number) {
+  revalidatePath("/admin/sessions/[id]", "page");
   revalidatePath("/");
   revalidatePath("/admin");
   revalidatePath("/admin/orders");

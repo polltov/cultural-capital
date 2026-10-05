@@ -208,3 +208,17 @@
   .detail dd { margin-bottom: 10px; }
   .btn-row .btn, .confirm-row .btn { flex: 1 1 100%; }
 }
+.roster-meta { font-size: 18px; margin: -12px 0 20px; }
+.roster-actions { margin-bottom: 24px; }
+.nowrap { white-space: nowrap; }
+@media print {
+  .side, .no-print, .toast { display: none !important; }
+  .shell { display: block; }
+  .content { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+  body { background: #fff !important; color: #000 !important; }
+  .page-title { font-size: 22px; margin-bottom: 8px; }
+  .roster-meta { margin: 0 0 16px; font-size: 14px; }
+  .roster-table { background: #fff; border: 1px solid #000; border-radius: 0; font-size: 12px; }
+  .roster-table th, .roster-table td { border: 1px solid #000; padding: 6px 8px; color: #000; }
+  .roster-table tbody tr:hover { background: none; }
+}

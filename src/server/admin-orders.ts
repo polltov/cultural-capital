@@ -1,7 +1,10 @@
-import { and, asc, desc, eq, gte, ilike, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql, type SQL } from "drizzle-orm";
 import { db as sharedDb, type Db } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
 import type { OrderStatus } from "@/lib/domain/order-status";
+import { formatOrderNumber } from "@/lib/domain/order-number";
+import { SEAT_HOLDING_STATUSES } from "@/lib/domain/seats";
+import type { Roster } from "@/lib/domain/roster-csv";
 import { seatsTakenSql } from "@/server/seats-sql";
 
 const UPCOMING_DAYS = 14;
@@ -104,4 +107,32 @@ export async function getOrder(id: number, db: Db = sharedDb): Promise<OrderDeta
     .innerJoin(tours, eq(tourSessions.tourId, tours.id))
     .where(eq(orders.id, id));
   return r ?? null;
+}
+
+export { rosterToCsv, type Roster, type RosterRow } from "@/lib/domain/roster-csv";
+
+const INT4_MAX = 2_147_483_647;
+
+export async function getSessionRoster(sessionId: number, db: Db = sharedDb): Promise<Roster | null> {
+  if (!Number.isInteger(sessionId) || sessionId < 1 || sessionId > INT4_MAX) return null;
+  const [s] = await db
+    .select({ tourTitle: tours.title, startsAt: tourSessions.startsAt, capacity: tourSessions.capacity })
+    .from(tourSessions)
+    .innerJoin(tours, eq(tourSessions.tourId, tours.id))
+    .where(eq(tourSessions.id, sessionId));
+  if (!s) return null;
+  const list = await db
+    .select({
+      number: orders.number, name: orders.customerName, phone: orders.phone, children: orders.children,
+      adults: orders.adults, total: orders.total, adminNote: orders.adminNote,
+    })
+    .from(orders)
+    .where(and(eq(orders.sessionId, sessionId), inArray(orders.status, SEAT_HOLDING_STATUSES)))
+    .orderBy(asc(orders.createdAt), asc(orders.id));
+  const rows = list.map((r) => ({ ...r, number: formatOrderNumber(r.number), adminNote: r.adminNote || null }));
+  return {
+    session: s,
+    rows,
+    totals: { children: list.reduce((a, r) => a + r.children, 0), adults: list.reduce((a, r) => a + r.adults, 0) },
+  };
 }

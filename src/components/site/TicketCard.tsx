@@ -1,14 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { formatRub } from "@/lib/domain/pricing";
+import { formatDayMonth, formatTime, formatWeekday } from "@/lib/domain/moscow-time";
+import { seatsBadge } from "@/lib/domain/seats";
 
 export type TicketTour = {
-  number: number;
   title: string;
   subtitle: string;
   route: string;
   description: string;
-  note: string | null;
+  note: string;
   durationLabel: string;
   ageLabel: string;
   coverUrl: string | null;
@@ -22,69 +26,27 @@ export type TicketSession = { id: number; startsAt: Date; free: number };
 export type TicketCardProps = {
   tour: TicketTour;
   sessions: TicketSession[];
+  /** Порядковый номер на перфорации (№ 00N). */
+  number?: number;
   onBook?: (sessionId: number | null) => void;
 };
 
-const MONTHS = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
-const WEEKDAYS: Record<string, string> = { Mon: "пн", Tue: "вт", Wed: "ср", Thu: "чт", Fri: "пт", Sat: "сб", Sun: "вскр" };
-
-function moscowParts(d: Date) {
-  const f = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Moscow",
-    weekday: "short",
-    day: "numeric",
-    month: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  });
-  const p = Object.fromEntries(f.formatToParts(d).map((x) => [x.type, x.value]));
-  return {
-    day: `${Number(p.day)} ${MONTHS[Number(p.month) - 1]}`,
-    weekday: WEEKDAYS[p.weekday],
-    time: `${p.hour}:${p.minute}`,
-  };
-}
-
-function formatRub(n: number) {
-  return `${n.toLocaleString("ru-RU").replace(/ | /g, " ")} ₽`;
-}
-
-function seatsLabel(free: number) {
-  const mod10 = free % 10;
-  const mod100 = free % 100;
-  const word = mod10 === 1 && mod100 !== 11 ? "место" : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) ? "места" : "мест";
-  return `осталось ${free} ${word}`;
-}
-
 function Description({ text }: { text: string }) {
-  const blocks: React.ReactNode[] = [];
-  let items: string[] = [];
-  const flush = () => {
-    if (items.length) {
-      blocks.push(<ul key={`ul${blocks.length}`}>{items.map((t, i) => <li key={i}>{t}</li>)}</ul>);
-      items = [];
-    }
-  };
-  for (const line of text.split("\n")) {
-    const li = line.match(/^\s*[-*]\s+(.*)$/);
-    if (li) items.push(li[1]);
-    else if (line.trim()) {
-      flush();
-      blocks.push(<p key={`p${blocks.length}`}>{line.trim()}</p>);
-    }
-  }
-  flush();
-  return <div className="t-desc">{blocks}</div>;
+  return (
+    <div className="t-desc">
+      <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>
+    </div>
+  );
 }
 
-export function TicketCard({ tour, sessions, onBook }: TicketCardProps) {
+export function TicketCard({ tour, sessions, number, onBook }: TicketCardProps) {
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<number | null>(sessions[0]?.id ?? null);
+  const [picked, setPicked] = useState<number | null>(null);
+  // Выбранный чип выводится из props: если его больше нет в sessions — первый сеанс.
+  const selected = sessions.some((s) => s.id === picked) ? picked : (sessions[0]?.id ?? null);
 
-  const parts = sessions.map((s) => moscowParts(s.startsAt));
-  const first = parts[0];
-  const free = sessions[0]?.free ?? 0;
+  const first = sessions[0];
+  const badge = first ? seatsBadge(first.free) : null;
   const twoPrices = tour.priceChild !== tour.priceAdult;
 
   const toggle = () => setOpen((o) => !o);
@@ -108,15 +70,17 @@ export function TicketCard({ tour, sessions, onBook }: TicketCardProps) {
       }}
     >
       <div className="ticket-photo" style={tour.coverUrl ? { backgroundImage: `url("${tour.coverUrl}")` } : undefined}>
-        {free > 0 && <span className="t-seats">{seatsLabel(free)}</span>}
-        {first && (
+        {badge && <span className="t-seats">{badge}</span>}
+        {first ? (
           <span className="t-date">
-            <b>{parts.map((p) => p.day).join(" / ")}</b>
-            {first.weekday} · {first.time}
+            <b>{sessions.map((s) => formatDayMonth(s.startsAt)).join(" / ")}</b>
+            {formatWeekday(first.startsAt)} · {formatTime(first.startsAt)}
           </span>
+        ) : (
+          <span className="t-date"><b>Даты уточняются</b></span>
         )}
       </div>
-      <div className="perf"><span className="t-stub">№ {String(tour.number).padStart(3, "0")}</span></div>
+      <div className="perf"><span className="t-stub">№ {String(number ?? 0).padStart(3, "0")}</span></div>
       <div className="ticket-info">
         <div className="t-title">{tour.title}</div>
         <div className="t-tag">{tour.subtitle}</div>
@@ -124,24 +88,24 @@ export function TicketCard({ tour, sessions, onBook }: TicketCardProps) {
         {sessions.length > 1 && (
           <div className="t-dates">
             <span className="t-date-lbl">Дата:</span>
-            {sessions.map((s, i) => (
+            {sessions.map((s) => (
               <button
                 key={s.id}
                 className={`t-date-chip${s.id === selected ? " active" : ""}`}
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setSelected(s.id);
+                  setPicked(s.id);
                 }}
               >
-                <b>{parts[i].day}</b>
-                {parts[i].weekday}
+                <b>{formatDayMonth(s.startsAt)}</b>
+                {formatWeekday(s.startsAt)}
               </button>
             ))}
           </div>
         )}
         <Description text={tour.description} />
-        {tour.note && <div className="t-note">{tour.note}</div>}
+        {tour.note.trim() && <div className="t-note">{tour.note}</div>}
         <div className="t-meta">{tour.durationLabel} <i></i> {tour.ageLabel}</div>
         <div className="t-foot">
           {twoPrices ? (
@@ -155,7 +119,16 @@ export function TicketCard({ tour, sessions, onBook }: TicketCardProps) {
           ) : (
             <span className="t-price">{formatRub(tour.priceChild)}<small>/чел</small></span>
           )}
-          <button className="t-btn" type="button" onClick={() => onBook?.(selected)}>Купить</button>
+          <button
+            className="t-btn"
+            type="button"
+            disabled={sessions.length === 0}
+            onClick={() => {
+              if (open) onBook?.(selected);
+            }}
+          >
+            Записаться
+          </button>
         </div>
       </div>
     </article>

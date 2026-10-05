@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach, beforeAll, vi } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 
-vi.mock("@/app/(site)/actions", () => ({ submitBooking: vi.fn(async () => ({ ok: false })) }));
+vi.mock("@/app/(site)/actions", () => ({
+  submitBooking: vi.fn(async () => ({ ok: false, fieldErrors: { phone: "Проверьте номер телефона" } })),
+}));
 
 import { BookingDialog } from "@/components/site/BookingDialog";
+import { normalizePhone } from "@/lib/domain/phone";
 import { maskPhone } from "@/lib/domain/phone-mask";
 
 beforeAll(() => {
@@ -53,15 +56,57 @@ describe("BookingDialog", () => {
     expect(plusChild.disabled).toBe(true);
     expect((screen.getByLabelText("Взрослых: больше") as HTMLButtonElement).disabled).toBe(true);
   });
+  it("keeps typed values after a server-side error", async () => {
+    setup(2);
+    fireEvent.change(screen.getByLabelText(/Имя/), { target: { value: "Анна" } });
+    fireEvent.change(screen.getByLabelText(/Email/), { target: { value: "a@b.ru" } });
+    fireEvent.change(screen.getByLabelText(/Комментарий/), { target: { value: "привет" } });
+    fireEvent.click(screen.getByLabelText(/Согласен/));
+    fireEvent.click(screen.getByRole("button", { name: "Записаться" }));
+    await screen.findByText("Проверьте номер телефона");
+    await waitFor(() => {
+      expect((screen.getByLabelText(/Имя/) as HTMLInputElement).value).toBe("Анна");
+      expect((screen.getByLabelText(/Email/) as HTMLInputElement).value).toBe("a@b.ru");
+      expect((screen.getByLabelText(/Комментарий/) as HTMLTextAreaElement).value).toBe("привет");
+      expect((screen.getByLabelText(/Согласен/) as HTMLInputElement).checked).toBe(true);
+    });
+  });
 });
 
 describe("maskPhone", () => {
-  it("formats progressively", () => {
+  it("formats progressively without trailing separators", () => {
     expect(maskPhone("")).toBe("");
     expect(maskPhone("9")).toBe("+7 (9");
     expect(maskPhone("+7 (9")).toBe("+7 (9");
     expect(maskPhone("+7 (")).toBe("");
-    expect(maskPhone("89211234567")).toBe("+7 (921) 123-45-67");
+    expect(maskPhone("+7 (921")).toBe("+7 (921");
+    expect(maskPhone("+7 (9211")).toBe("+7 (921) 1");
     expect(maskPhone("92112345678999")).toBe("+7 (921) 123-45-67");
+  });
+  it("backspace over separators always makes progress", () => {
+    expect(maskPhone("+7 (921) ")).toBe("+7 (921"); // not reachable from mask, but stable
+    expect(maskPhone("+7 (921")).toBe("+7 (921");
+    expect(maskPhone("+7 (92")).toBe("+7 (92");
+    expect(maskPhone("+7 (921) 123-")).toBe("+7 (921) 123");
+    expect(maskPhone("+7 (921) 123-45-")).toBe("+7 (921) 123-45");
+  });
+  it("handles leading 7/8", () => {
+    expect(maskPhone("8 911 123-45-67")).toBe("+7 (911) 123-45-67");
+    expect(maskPhone("89111234567")).toBe("+7 (911) 123-45-67");
+    expect(maskPhone("+7 812 1234567")).toBe("+7 (812) 123-45-67");
+    expect(maskPhone("81212345678")).toBe("+7 (121) 234-56-78");
+  });
+  it("keeps 8xx area code typed digit by digit", () => {
+    let v = "";
+    for (const c of "8121234567") v = maskPhone(v + c);
+    expect(v).toBe("+7 (812) 123-45-67");
+    let w = "";
+    for (const c of "89111234567") w = maskPhone(w + c);
+    expect(w).toBe("+7 (911) 123-45-67");
+  });
+  it("result is accepted by normalizePhone", () => {
+    for (const raw of ["8 911 123-45-67", "+7 812 1234567", "8121234567"]) {
+      expect(normalizePhone(maskPhone(raw))).toMatch(/^\+7\d{10}$/);
+    }
   });
 });

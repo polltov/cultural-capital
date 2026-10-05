@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { submitBooking } from "@/app/(site)/actions";
 import { formatRub, orderTotal } from "@/lib/domain/pricing";
 import { formatDayMonth, formatTime, formatWeekday } from "@/lib/domain/moscow-time";
@@ -44,6 +44,11 @@ export function BookingDialog({ tour, sessions, initialSessionId, onClose }: Boo
   const [children, setChildren] = useState(0);
   const [adults, setAdults] = useState(1);
   const [phone, setPhone] = useState("");
+  // Поля контролируемые: React 19 сбрасывает форму после action, и без этого ввод пропадал бы при ошибке сервера.
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [comment, setComment] = useState("");
+  const [consent, setConsent] = useState(false);
 
   const session = sessions.find((s) => s.id === sessionId) ?? null;
   const max = session ? Math.min(MAX_PER_SIDE, session.free) : 0;
@@ -83,7 +88,15 @@ export function BookingDialog({ tour, sessions, initialSessionId, onClose }: Boo
             <button type="button" className="t-btn" onClick={() => ref.current?.close()}>Закрыть</button>
           </div>
         ) : (
-          <form action={formAction} noValidate>
+          <form
+            noValidate
+            onSubmit={(e) => {
+              // Не <form action>: React 19 сбрасывает такую форму после action, ввод пользователя пропадал бы.
+              e.preventDefault();
+              const fd = new FormData(e.currentTarget);
+              startTransition(() => formAction(fd));
+            }}
+          >
             <div className="kicker">запись на экскурсию</div>
             <div className="bk-title" id="bk-title">{tour.title}</div>
 
@@ -122,7 +135,7 @@ export function BookingDialog({ tour, sessions, initialSessionId, onClose }: Boo
 
             <label className="bk-field">
               <span>Имя</span>
-              <input name="name" type="text" autoComplete="name" maxLength={80} {...invalid("name")} />
+              <input name="name" type="text" autoComplete="name" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} {...invalid("name")} />
               {err("name")}
             </label>
             <label className="bk-field">
@@ -135,17 +148,17 @@ export function BookingDialog({ tour, sessions, initialSessionId, onClose }: Boo
             </label>
             <label className="bk-field">
               <span>Email <small>(необязательно)</small></span>
-              <input name="email" type="email" autoComplete="email" {...invalid("email")} />
+              <input name="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} {...invalid("email")} />
               {err("email")}
             </label>
             <label className="bk-field">
               <span>Комментарий <small>(необязательно)</small></span>
-              <textarea name="comment" rows={3} maxLength={1000} {...invalid("comment")} />
+              <textarea name="comment" rows={3} maxLength={1000} value={comment} onChange={(e) => setComment(e.target.value)} {...invalid("comment")} />
               {err("comment")}
             </label>
 
             <label className="bk-consent">
-              <input type="checkbox" name="consent" {...invalid("consent")} />
+              <input type="checkbox" name="consent" checked={consent} onChange={(e) => setConsent(e.target.checked)} {...invalid("consent")} />
               <span>Согласен на обработку <a href="/privacy" target="_blank" rel="noopener">персональных данных</a></span>
             </label>
             {err("consent")}

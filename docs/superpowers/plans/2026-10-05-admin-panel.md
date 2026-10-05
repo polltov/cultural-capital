@@ -50,7 +50,7 @@ src/
   proxy.ts                            защита /admin/*
   db/schema.ts                        таблицы Drizzle
   db/client.ts                        db = drizzle(postgres(DATABASE_URL))
-  db/seed-data.ts                     12 экскурсий из текущей вёрстки
+  db/seed-data.ts                     4 экскурсии из текущей вёрстки
   db/seed.ts                          скрипт сида
   lib/domain/                         чистые функции (без БД и Next)
     seats.ts, order-status.ts, pricing.ts, phone.ts, slug.ts, moscow-time.ts, order-number.ts
@@ -161,7 +161,7 @@ tests/integration/setup.ts            миграции + TRUNCATE перед к�
 - Consumes: таблицы из Task 2, `parseMoscowLocal`, `slugify`.
 - Produces: `seed(db: Db): Promise<void>` — идемпотентный (повторный запуск не дублирует: upsert по `tours.slug`; сеансы сида вставляются только если у экскурсии сеансов нет).
 
-- [ ] **Step 1: Failing test:** после `seed(db)` дважды — ровно 12 экскурсий; «Египетский зал Эрмитажа» имеет `priceChild=1390`, `priceAdult=490`, `featured=true`, 2 сеанса (20 сен и 4 окт 2026, 11:00 МСК); у «Тайна первой крепости» `priceChild = priceAdult = 2200`.
+- [ ] **Step 1: Failing test:** после `seed(db)` дважды — ровно 4 экскурсии; «Египетский зал Эрмитажа» имеет `priceChild=1390`, `priceAdult=490`, `featured=true`, 2 сеанса (20 сен и 4 окт 2026, 11:00 МСК); у «Тайна первой крепости» `priceChild = priceAdult = 2200`.
 - [ ] **Step 2:** Запустить → FAIL.
 - [ ] **Step 3:** Переписать все 12 билетов из исходного `direction-d.html` (после Task 1 файла нет — брать `git show cd0c3b6:mockups/direction-d.html`) в `seed-data.ts`: заголовок, t-tag, t-route, описание как Markdown (вступление + список), примечание, длительность, возраст, обложка (`/assets/…` если есть фото, иначе `null` — на сайте останется градиент), цены (если у билета одна цена «/чел» — она идёт в обе), даты и время → сеансы с `capacity` = 8. Год всех дат — 2026. `seed.ts` — CLI-обёртка (`npm run db:seed`).
 - [ ] **Step 4:** Тест → PASS. `npm run db:seed` против Neon.

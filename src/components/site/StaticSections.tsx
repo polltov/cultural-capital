@@ -142,6 +142,7 @@ export function Footer() {
           )}
         </div>
         <nav aria-label="Документы">
+          <Link href="/offer">Договор-оферта</Link>
           <Link href="/privacy">Политика обработки персональных данных</Link>
           <Link href="/consent">Согласие на обработку данных</Link>
         </nav>

@@ -17,6 +17,14 @@ export function pluralRu(n: number, forms: [string, string, string]): string {
   return forms[2];
 }
 
+/** Состав заказа словами: «2 детских + 1 взрослый». */
+export function formatComposition(children: number, adults: number): string {
+  const parts: string[] = [];
+  if (children > 0) parts.push(`${children} ${pluralRu(children, ["детский", "детских", "детских"])}`);
+  if (adults > 0) parts.push(`${adults} ${pluralRu(adults, ["взрослый", "взрослых", "взрослых"])}`);
+  return parts.join(" + ");
+}
+
 export function seatsBadge(free: number): string | null {
   if (free <= 0) return "мест нет";
   if (free > 4) return null;

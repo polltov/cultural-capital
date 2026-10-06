@@ -3,7 +3,7 @@ import { db as sharedDb, type Db } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
 import { formatOrderNumber } from "@/lib/domain/order-number";
 import { formatRub } from "@/lib/domain/pricing";
-import { pluralRu } from "@/lib/domain/seats";
+import { formatComposition } from "@/lib/domain/seats";
 import { formatSessionLong } from "@/lib/domain/moscow-time";
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -12,14 +12,11 @@ export function buildOrderMessage(o: {
   number: string; tourTitle: string; startsAt: Date; children: number; adults: number; total: number;
   name: string; phone: string; comment: string | null; adminUrl: string;
 }): string {
-  const parts: string[] = [];
-  if (o.children > 0) parts.push(`${o.children} ${pluralRu(o.children, ["детский", "детских", "детских"])}`);
-  if (o.adults > 0) parts.push(`${o.adults} ${pluralRu(o.adults, ["взрослый", "взрослых", "взрослых"])}`);
   const lines = [
     `<b>Новая заявка ${esc(o.number)}</b>`,
     esc(o.tourTitle),
     formatSessionLong(o.startsAt),
-    `${parts.join(" + ")} — ${formatRub(o.total)}`,
+    `${formatComposition(o.children, o.adults)} — ${formatRub(o.total)}`,
     `${esc(o.name)}, ${esc(o.phone)}`,
   ];
   if (o.comment) lines.push(`Комментарий: ${esc(o.comment)}`);

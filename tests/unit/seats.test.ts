@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { SEAT_HOLDING_STATUSES, HOLD_MINUTES, freeSeats, seatsBadge, pluralRu } from "@/lib/domain/seats";
+import { SEAT_HOLDING_STATUSES, HOLD_MINUTES, freeSeats, seatsBadge, pluralRu, formatComposition } from "@/lib/domain/seats";
 
 const F: [string, string, string] = ["место", "места", "мест"];
 describe("seats", () => {
@@ -23,5 +23,11 @@ describe("seats", () => {
     expect(pluralRu(5, F)).toBe("мест");
     expect(pluralRu(112, F)).toBe("мест");
     expect(pluralRu(0, F)).toBe("мест");
+  });
+  it("formatComposition", () => {
+    expect(formatComposition(2, 1)).toBe("2 детских + 1 взрослый");
+    expect(formatComposition(1, 0)).toBe("1 детский");
+    expect(formatComposition(0, 3)).toBe("3 взрослых");
+    expect(formatComposition(21, 22)).toBe("21 детский + 22 взрослых");
   });
 });

@@ -337,7 +337,8 @@
 .frow-confirm { grid-column: 1 / -1; padding: 10px 14px; background: rgba(140, 47, 47, .08); border: 1px solid rgba(140, 47, 47, .3); border-radius: 4px; font-weight: 700; color: #8c2f2f; }
 .faq-form { max-width: 760px; }
 .faq-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
-@media (max-width: 767px) {
+/* до 1023px (планшеты) кнопки уходят под вопрос, иначе колонка с вопросом сжимается почти до нуля */
+@media (max-width: 1023px) {
   .frow { grid-template-columns: 40px minmax(0, 1fr); padding-right: 10px; }
   .frow-controls { grid-column: 1 / -1; }
   .frow-controls .switch { margin-right: auto; }

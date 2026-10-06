@@ -33,3 +33,20 @@ describe("formatDateLong", () => {
     expect(formatDateLong(new Date("2026-10-04T22:00:00Z"))).toBe("5 октября 2026");
   });
 });
+
+import { formatDateNumeric, formatDayMonthNumeric } from "@/lib/domain/moscow-time";
+describe("numeric dates", () => {
+  const d = parseMoscowLocal("2026-10-12T11:00");
+  it("formatDateNumeric: ДД.ММ.ГГГГ", () => expect(formatDateNumeric(d)).toBe("12.10.2026"));
+  it("formatDayMonthNumeric: ДД.ММ", () => expect(formatDayMonthNumeric(d)).toBe("12.10"));
+  it("adds leading zeros", () => {
+    const x = parseMoscowLocal("2026-03-05T09:00");
+    expect(formatDateNumeric(x)).toBe("05.03.2026");
+    expect(formatDayMonthNumeric(x)).toBe("05.03");
+  });
+  it("uses Moscow date across midnight UTC", () => {
+    const x = new Date("2026-10-11T21:30:00Z");
+    expect(formatDateNumeric(x)).toBe("12.10.2026");
+    expect(formatDayMonthNumeric(x)).toBe("12.10");
+  });
+});

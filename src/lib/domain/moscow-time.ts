@@ -50,6 +50,18 @@ export function formatSessionLong(d: Date): string {
   return `${WEEKDAY_LONG[p.weekday]}, ${p.day} ${MONTHS_GEN[p.month - 1]} ${p.year}, ${p.hour}:${p.minute}`;
 }
 
+/** «12.10.2026» (московское время). */
+export function formatDateNumeric(d: Date): string {
+  const p = parts(d);
+  return `${String(p.day).padStart(2, "0")}.${String(p.month).padStart(2, "0")}.${p.year}`;
+}
+
+/** «12.10» (московское время). */
+export function formatDayMonthNumeric(d: Date): string {
+  const p = parts(d);
+  return `${String(p.day).padStart(2, "0")}.${String(p.month).padStart(2, "0")}`;
+}
+
 /** «4 октября 2026» (московское время). */
 export function formatDateLong(d: Date): string {
   const p = parts(d);

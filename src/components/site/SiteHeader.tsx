@@ -21,7 +21,6 @@ export function SiteHeader() {
       </Link>
       <div className="nav">
         <Link href="/#catalog">Экскурсии</Link>
-        <Link href="/#guides">Гиды</Link>
         <Link href="/#about">О нас</Link>
         <Link href="/#reviews">Отзывы</Link>
         <Link href="/news">Новости</Link>

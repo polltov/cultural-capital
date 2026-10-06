@@ -76,26 +76,6 @@ body{background:#f5ede0;font-family:"PT Serif",Georgia,serif;color:#22293a;min-h
 .route-step p{margin-top:8px;font-family:"PT Sans",sans-serif;font-size:14.5px;line-height:1.6;color:rgba(251,246,240,.62)}
 
 /* ---- гиды ---- */
-.guides-sec{padding:80px 40px 30px;position:relative;z-index:2}
-.guides-head{text-align:center;margin-bottom:44px}
-.guides-head .kicker{font-family:"PT Sans",sans-serif;font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:#a34a2f;font-weight:700;margin-bottom:10px}
-.guides-head .stitle{font-family:"Prata",serif;font-size:36px;color:#22293a;line-height:1}
-.guides-head .stitle em{font-family:"Playfair Display",serif;font-style:italic;color:#a34a2f;font-weight:500}
-.guides-head .sdesc{font-size:14px;color:#5c6672;margin-top:14px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.55}
-.guides-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;max-width:900px;margin:0 auto}
-.guide{background:#fbf6f0;border-radius:8px;overflow:hidden;box-shadow:0 12px 22px -18px rgba(34,41,58,.35);display:flex;flex-direction:column;transition:transform .25s ease,box-shadow .25s ease}
-.guide:hover{transform:translateY(-4px);box-shadow:0 20px 32px -18px rgba(34,41,58,.45)}
-.guide-photo{aspect-ratio:4/5;background:linear-gradient(135deg,#7c8a6c,#3d4a34);background-size:cover;background-position:center 20%;position:relative}
-.guide:nth-child(1) .guide-photo{background-image:url("/assets/pavel.jpg")}
-.guide:nth-child(2) .guide-photo{background-image:url("/assets/svetlana.jpg")}
-.guide:nth-child(3) .guide-photo{background-image:url("/assets/darya.jpg")}
-.guide-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(20,27,33,.55),transparent 50%);pointer-events:none}
-.guide-tag{position:absolute;top:12px;left:12px;font-family:"PT Sans",sans-serif;font-size:9.5px;letter-spacing:.22em;text-transform:uppercase;color:#22293a;font-weight:700;background:#f5ede0;padding:5px 9px;border-radius:2px;z-index:2}
-.guide-body{padding:18px 20px 22px;display:flex;flex-direction:column;flex:1}
-.guide-name{font-family:"Prata",serif;font-size:20px;color:#22293a;line-height:1.15;margin-bottom:4px}
-.guide-role{font-family:"Playfair Display",serif;font-style:italic;font-size:12.5px;color:#a34a2f;margin-bottom:14px}
-.guide-quote{font-family:"Playfair Display",serif;font-style:italic;font-size:14px;color:#22293a;line-height:1.55;flex:1;position:relative}
-.guide-quote::before{content:"«"}.guide-quote::after{content:"»"}
 
 /* нижний блок отзывов — слайдер */
 .reviews{padding:70px 40px 80px;position:relative;z-index:2;border-top:1px solid rgba(34,41,58,.14);margin-top:20px}
@@ -176,8 +156,6 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid #a3
   .h-photo-2{width:50%;bottom:0;left:0}
   .section-h{padding:56px 24px 16px}
   .catalog{grid-template-columns:repeat(2,1fr);padding:20px 24px 40px}
-  .guides-sec{padding:64px 24px 30px}
-  .guides-grid{gap:18px}
   .reviews{padding:60px 24px 70px}
   .faq{padding:60px 24px 80px}
 }
@@ -210,9 +188,7 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid #a3
   .section-h{padding:44px 16px 10px}
   .section-h .stitle{font-size:32px}
   .catalog{grid-template-columns:1fr;gap:20px;padding:16px 16px 30px}
-  .guides-head .stitle,.reviews-head .stitle,.faq-head .stitle{font-size:28px}
-  .guides-sec{padding:56px 16px 20px}
-  .guides-grid{grid-template-columns:1fr;max-width:380px}
+  .reviews-head .stitle,.faq-head .stitle{font-size:28px}
   .reviews{padding:50px 16px 60px}
   .review{padding:0 4px}
   .review .quote{font-size:20px}

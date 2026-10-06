@@ -98,54 +98,6 @@ export function Route() {
   );
 }
 
-export function Guides() {
-  return (
-    <div className="guides-sec" id="guides">
-      <div className="guides-head">
-        <div className="kicker">кто ведёт экскурсии</div>
-        <div className="stitle">Наши <em>экскурсоводы</em></div>
-        <div className="sdesc">Историки, искусствоведы и педагоги. Каждый — специалист в своей эпохе и умеет рассказывать так, чтобы слушали и взрослые, и дети.</div>
-      </div>
-      <div className="guides-grid">
-
-        <article className="guide">
-          <div className="guide-photo">
-            <span className="guide-tag">Историк</span>
-          </div>
-          <div className="guide-body">
-            <div className="guide-name">Павел</div>
-            <div className="guide-role">Опыт 5 лет</div>
-            <div className="guide-quote">Мне всегда была интересна сфера науки и преподавания, но особое место для меня занимают экскурсии, которые позволяют по-настоящему влюбиться в город, получить искренние эмоции и незабываемые впечатления.</div>
-          </div>
-        </article>
-
-        <article className="guide">
-          <div className="guide-photo">
-            <span className="guide-tag">Педагог-историк</span>
-          </div>
-          <div className="guide-body">
-            <div className="guide-name">Светлана</div>
-            <div className="guide-role">Опыт 7 лет</div>
-            <div className="guide-quote">Интерес к истории расширяет познание мира и делает Вас и вашего ребёнка разносторонней личностью.</div>
-          </div>
-        </article>
-
-        <article className="guide">
-          <div className="guide-photo">
-            <span className="guide-tag">Педагог-историк</span>
-          </div>
-          <div className="guide-body">
-            <div className="guide-name">Дарья</div>
-            <div className="guide-role">Опыт 9 лет</div>
-            <div className="guide-quote">Во время прогулки я не только делюсь увлекательными историями, но и предлагаю детям выполнить тематические задания. Информация усваивается легче, а знакомство с Петербургом превращается в настоящее приключение!</div>
-          </div>
-        </article>
-
-      </div>
-    </div>
-  );
-}
-
 export function Faq() {
   return (
     <div className="faq" id="faq">
@@ -199,7 +151,7 @@ export function Footer() {
           <p className="foot-tag">Экскурсии по Петербургу для детей и взрослых: маленькие группы, авторские маршруты, история через игру.</p>
         </div>
         <nav className="foot-nav" aria-label="Разделы">
-          <Link href="/#catalog">Экскурсии</Link><Link href="/#guides">Гиды</Link><Link href="/#about">О нас</Link><Link href="/#reviews">Отзывы</Link><Link href="/news">Новости</Link><Link href="/#faq">Вопросы</Link>
+          <Link href="/#catalog">Экскурсии</Link><Link href="/#about">О нас</Link><Link href="/#reviews">Отзывы</Link><Link href="/news">Новости</Link><Link href="/#faq">Вопросы</Link>
         </nav>
       </div>
       <div className="foot-bottom">© 2026 Культурная Столица · Санкт-Петербург</div>

@@ -4,7 +4,7 @@ import { NewsBlock } from "@/components/site/NewsBlock";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { Catalog } from "@/components/site/Catalog";
 import { ReviewsCarousel } from "@/components/site/ReviewsCarousel";
-import { Hero, Why, Route, Guides, Faq, Footer } from "@/components/site/StaticSections";
+import { Hero, Why, Route, Faq, Footer } from "@/components/site/StaticSections";
 
 // Сеансы уходят в прошлое со временем, свободные места меняются — обновляем раз в 5 минут;
 // мутации (админка, заявки) дополнительно вызывают revalidatePath('/').
@@ -26,7 +26,6 @@ export default async function HomePage() {
       <NewsBlock items={latestNews} />
       <Why />
       <Route />
-      <Guides />
       <ReviewsCarousel />
       <Faq />
       <Footer />

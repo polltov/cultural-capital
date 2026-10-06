@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Markdown } from "@/components/Markdown";
 import { ogrnLabel, operator } from "@/lib/legal";
 
 export function Hero() {
@@ -100,7 +101,8 @@ export function Route() {
   );
 }
 
-export function Faq() {
+export function Faq({ items }: { items: { id: number; question: string; answer: string }[] }) {
+  if (items.length === 0) return null;
   return (
     <div className="faq" id="faq">
       <div className="faq-head">
@@ -108,37 +110,12 @@ export function Faq() {
         <div className="stitle">Ответы на <em>популярные вопросы</em></div>
       </div>
       <div className="faq-list">
-
-        <details className="faq-item">
-          <summary>С какого возраста подходят экскурсии?<span className="plus">+</span></summary>
-          <div className="answer">У нас есть маршруты для детей от 5 лет, для школьников и для подростков. Формат подачи и продолжительность подбираем под возраст группы — так, чтобы было интересно и не утомительно.</div>
-        </details>
-
-        <details className="faq-item">
-          <summary>Сколько длится экскурсия?<span className="plus">+</span></summary>
-          <div className="answer">Стандартная прогулка — 1,5–2 часа. Музейные маршруты — от 1 часа. Точное время указано в карточке каждой экскурсии; если нужен более длинный или короткий формат — договоримся индивидуально.</div>
-        </details>
-
-        <details className="faq-item">
-          <summary>Что делать, если плохая погода?<span className="plus">+</span></summary>
-          <div className="answer">Дождь или снег — не повод отменять. У нас есть «погодные» варианты: перенос на музейный маршрут или на другой день без потери оплаты. Решаем гибко за пару часов до начала.</div>
-        </details>
-
-        <details className="faq-item">
-          <summary>Проводите индивидуальные экскурсии?<span className="plus">+</span></summary>
-          <div className="answer">Да. Любая экскурсия из каталога может пройти в формате «только ваша семья»: выбираете удобное время, темп и акценты. Стоимость и детали — по запросу через форму или в личном сообщении.</div>
-        </details>
-
-        <details className="faq-item">
-          <summary>Как оплатить и можно ли отменить бронь?<span className="plus">+</span></summary>
-          <div className="answer">После заявки мы согласуем детали и присылаем ссылку на оплату. Отменить или перенести бронь без потерь можно за 24 часа до начала. При отмене позже — возврат 50%.</div>
-        </details>
-
-        <details className="faq-item">
-          <summary>Есть ли скидки для больших семей?<span className="plus">+</span></summary>
-          <div className="answer">Да, при бронировании от 4 человек — семейный тариф. Для двух и более экскурсий в один визит — «маршрут выходного дня» со скидкой 10%. Пишите — подберём вариант.</div>
-        </details>
-
+        {items.map((q) => (
+          <details className="faq-item" key={q.id}>
+            <summary>{q.question}<span className="plus">+</span></summary>
+            <div className="answer"><Markdown>{q.answer}</Markdown></div>
+          </details>
+        ))}
       </div>
     </div>
   );

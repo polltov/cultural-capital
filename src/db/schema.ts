@@ -85,6 +85,16 @@ export const news = pgTable(
   (t) => [index("news_published_at_idx").on(t.publishedAt)],
 );
 
+export const faqItems = pgTable("faq_items", {
+  id: serial("id").primaryKey(),
+  question: text("question").notNull(),
+  answer: text("answer").notNull().default(""),
+  sortOrder: integer("sort_order").notNull().default(0),
+  published: boolean("published").notNull().default(true),
+  createdAt: ts("created_at").notNull().defaultNow(),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+});
+
 export const rateLimitHits = pgTable(
   "rate_limit_hits",
   {

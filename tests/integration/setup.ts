@@ -9,6 +9,6 @@ beforeEach(async () => {
   migrated ??= migrate(db, { migrationsFolder: "./drizzle" });
   await migrated;
   await db.execute(
-    sql`TRUNCATE tours, tour_sessions, orders, news, rate_limit_hits RESTART IDENTITY CASCADE`,
+    sql`TRUNCATE tours, tour_sessions, orders, news, faq_items, rate_limit_hits RESTART IDENTITY CASCADE`,
   );
 });

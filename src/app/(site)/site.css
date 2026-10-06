@@ -114,6 +114,12 @@ body{background:#f5ede0;font-family:"PT Serif",Georgia,serif;color:#22293a;min-h
 .faq-item .plus{flex:0 0 28px;width:28px;height:28px;border:1px solid rgba(34,41,58,.35);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:"PT Sans",sans-serif;font-size:18px;color:#22293a;transition:transform .25s ease,background .2s,color .2s}
 .faq-item[open] .plus{transform:rotate(45deg);background:#a34a2f;border-color:#a34a2f;color:#fbf6f0}
 .faq-item .answer{padding:0 4px 24px;font-family:"PT Sans",sans-serif;font-size:15px;color:#5c6672;line-height:1.65;max-width:640px}
+/* ответ — Markdown: одиночный абзац выглядит как прежний простой текст (у p margin обнуляет общий сброс) */
+.faq-item .answer{overflow-wrap:anywhere}
+.faq-item .answer>*+*{margin-top:.6em}
+.faq-item .answer ul,.faq-item .answer ol{padding-left:1.3em}
+.faq-item .answer li+li{margin-top:.25em}
+.faq-item .answer a{color:#a34a2f;text-decoration:underline;text-underline-offset:3px}
 
 /* ---- ссылки, кнопки, фокус ---- */
 html{scroll-behavior:smooth}

@@ -321,3 +321,24 @@
   .nrow .pill { justify-self: start; }
   .editor-bar { padding: 4px; }
 }
+
+/* faq */
+.frows { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.frow {
+  display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px 14px; align-items: center; padding: 10px 14px 10px 6px;
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); position: relative; touch-action: manipulation;
+}
+.frow--drag { z-index: 5; box-shadow: 0 14px 28px -16px rgba(34, 41, 58, .6); border-color: var(--accent); }
+.frow-main { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.frow-q { font-weight: 700; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.frow-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.frow-controls .btn { padding: 0 16px; }
+.frow .switch-label { min-width: 0; }
+.frow-confirm { grid-column: 1 / -1; padding: 10px 14px; background: rgba(140, 47, 47, .08); border: 1px solid rgba(140, 47, 47, .3); border-radius: 4px; font-weight: 700; color: #8c2f2f; }
+.faq-form { max-width: 760px; }
+.faq-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
+@media (max-width: 767px) {
+  .frow { grid-template-columns: 40px minmax(0, 1fr); padding-right: 10px; }
+  .frow-controls { grid-column: 1 / -1; }
+  .frow-controls .switch { margin-right: auto; }
+}

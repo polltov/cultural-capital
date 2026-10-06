@@ -1,4 +1,5 @@
 import { getPublishedCatalog } from "@/server/catalog";
+import { listPublishedFaq } from "@/server/faq";
 import { getLatestNews } from "@/server/news";
 import { NewsBlock } from "@/components/site/NewsBlock";
 import { SiteHeader } from "@/components/site/SiteHeader";
@@ -11,7 +12,7 @@ import { Hero, Why, Route, Faq, Footer } from "@/components/site/StaticSections"
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const [catalog, latestNews] = await Promise.all([getPublishedCatalog(), getLatestNews(3)]);
+  const [catalog, latestNews, faq] = await Promise.all([getPublishedCatalog(), getLatestNews(3), listPublishedFaq()]);
   return (
     <div className="mock" id="top">
       <div className="blob b1"></div>
@@ -27,7 +28,7 @@ export default async function HomePage() {
       <Why />
       <Route />
       <ReviewsCarousel />
-      <Faq />
+      <Faq items={faq} />
       <Footer />
     </div>
   );

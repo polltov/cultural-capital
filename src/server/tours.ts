@@ -5,6 +5,7 @@ import { slugify, uniqueSlug } from "@/lib/domain/slug";
 import { parseMoscowLocal } from "@/lib/domain/moscow-time";
 import { idSchema, sessionSchema, tourSchema } from "@/lib/validation/tour";
 import { occupiedSeats } from "@/server/orders";
+import { reorderRows } from "@/server/reorder";
 import { seatsTakenSql } from "@/server/seats-sql";
 
 export type SaveTourResult = { ok: true; id: number } | { ok: false; fieldErrors: Record<string, string> };
@@ -61,21 +62,7 @@ export async function setTourPublished(id: number, published: boolean, db: Db = 
 
 /** sortOrder = индекс в переданном списке; список должен быть перестановкой всех экскурсий. */
 export async function reorderTours(ids: number[], db: Db = sharedDb): Promise<SimpleResult> {
-  if (!Array.isArray(ids) || !ids.every((x) => idSchema.safeParse(x).success) || new Set(ids).size !== ids.length) {
-    return { ok: false, error: "Некорректный порядок" };
-  }
-  return db.transaction(async (tx) => {
-    const existing = await tx.select({ id: tours.id }).from(tours).for("update");
-    const have = new Set(existing.map((r) => r.id));
-    if (existing.length !== ids.length || !ids.every((x) => have.has(x))) {
-      return { ok: false, error: "Список экскурсий изменился — обновите страницу" } as const;
-    }
-    const now = new Date();
-    for (const [i, id] of ids.entries()) {
-      await tx.update(tours).set({ sortOrder: i, updatedAt: now }).where(eq(tours.id, id));
-    }
-    return { ok: true } as const;
-  });
+  return reorderRows(tours, ids, "Список экскурсий изменился — обновите страницу", db);
 }
 
 export async function saveSession(input: unknown, db: Db = sharedDb): Promise<SaveSessionResult> {

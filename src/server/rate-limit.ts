@@ -1,4 +1,4 @@
-import { and, eq, gt, sql } from "drizzle-orm";
+import { and, eq, gt, lt, sql } from "drizzle-orm";
 import { db as sharedDb, type Db, type Tx } from "@/db/client";
 import { rateLimitHits } from "@/db/schema";
 
@@ -12,7 +12,11 @@ export async function countRateLimit(key: string, windowSec: number, db: Db | Tx
   return n;
 }
 
+/** Ключи содержат IP посетителей: храним не дольше суток (окна лимитов — не больше часа). */
+const RETENTION_SEC = 24 * 3600;
+
 export async function recordRateLimit(key: string, db: Db | Tx = sharedDb): Promise<void> {
+  await db.delete(rateLimitHits).where(lt(rateLimitHits.createdAt, new Date(Date.now() - RETENTION_SEC * 1000)));
   await db.insert(rateLimitHits).values({ key });
 }
 

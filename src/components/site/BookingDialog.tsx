@@ -159,7 +159,7 @@ export function BookingDialog({ tour, sessions, initialSessionId, onClose }: Boo
 
             <label className="bk-consent">
               <input type="checkbox" name="consent" checked={consent} onChange={(e) => setConsent(e.target.checked)} {...invalid("consent")} />
-              <span>Согласен на обработку <a href="/privacy" target="_blank" rel="noopener">персональных данных</a></span>
+              <span>Даю <a href="/consent" target="_blank" rel="noopener">согласие на обработку персональных данных</a> и ознакомлен(а) с <a href="/privacy" target="_blank" rel="noopener">политикой</a></span>
             </label>
             {err("consent")}
 

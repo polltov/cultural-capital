@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { ogrnLabel, operator } from "@/lib/legal";
+
 export function Hero() {
   return (
     <div className="hero">
@@ -154,7 +156,19 @@ export function Footer() {
           <Link href="/#catalog">Экскурсии</Link><Link href="/#about">О нас</Link><Link href="/#reviews">Отзывы</Link><Link href="/news">Новости</Link><Link href="/#faq">Вопросы</Link>
         </nav>
       </div>
-      <div className="foot-bottom">© 2026 Культурная Столица · Санкт-Петербург</div>
+      <div className="foot-legal">
+        <div>
+          © 2026 Культурная Столица · Санкт-Петербург
+          {operator.name && <><br />{operator.name}</>}
+          {(operator.inn || operator.ogrn) && (
+            <><br />{[operator.inn && `ИНН ${operator.inn}`, operator.ogrn && `${ogrnLabel(operator.name)} ${operator.ogrn}`].filter(Boolean).join(" · ")}</>
+          )}
+        </div>
+        <nav aria-label="Документы">
+          <Link href="/privacy">Политика обработки персональных данных</Link>
+          <Link href="/consent">Согласие на обработку данных</Link>
+        </nav>
+      </div>
     </footer>
   );
 }

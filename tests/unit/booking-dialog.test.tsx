@@ -61,14 +61,14 @@ describe("BookingDialog", () => {
     fireEvent.change(screen.getByLabelText(/Имя/), { target: { value: "Анна" } });
     fireEvent.change(screen.getByLabelText(/Email/), { target: { value: "a@b.ru" } });
     fireEvent.change(screen.getByLabelText(/Комментарий/), { target: { value: "привет" } });
-    fireEvent.click(screen.getByLabelText(/Согласен/));
+    fireEvent.click(screen.getByLabelText(/Даю согласие/));
     fireEvent.click(screen.getByRole("button", { name: "Записаться" }));
     await screen.findByText("Проверьте номер телефона");
     await waitFor(() => {
       expect((screen.getByLabelText(/Имя/) as HTMLInputElement).value).toBe("Анна");
       expect((screen.getByLabelText(/Email/) as HTMLInputElement).value).toBe("a@b.ru");
       expect((screen.getByLabelText(/Комментарий/) as HTMLTextAreaElement).value).toBe("привет");
-      expect((screen.getByLabelText(/Согласен/) as HTMLInputElement).checked).toBe(true);
+      expect((screen.getByLabelText(/Даю согласие/) as HTMLInputElement).checked).toBe(true);
     });
   });
 });

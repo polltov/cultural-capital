@@ -56,13 +56,38 @@ describe("paymentItems", () => {
     expect(adultOver.description.length).toBe(128);
     expect(adultOver.description).toContain("Ы…»");
   });
+});
 
-  it("does not split a surrogate pair when truncating", () => {
-    const items = paymentItems({ ...o, tourTitle: "😀".repeat(100) }, 1, "full_prepayment");
-    const d = items[0].description;
+// Каждая функция режет название по своему бюджету (у детского и взрослого билета он разный по чётности),
+// поэтому проверяем оба варианта выравнивания: «😀…» и «Я😀…» — наивный slice ломается хотя бы на одном.
+describe("truncation never splits a surrogate pair", () => {
+  const titles = [{ name: "even", title: "😀".repeat(100) }, { name: "odd", title: "Я" + "😀".repeat(100) }];
+
+  function expectWellFormed(d: string) {
     expect(d.length).toBeLessThanOrEqual(128);
     expect(d).not.toMatch(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/);
     expect(d).not.toMatch(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/);
+  }
+
+  it.each(titles)("paymentItems, every item ($name alignment)", ({ title }) => {
+    const items = paymentItems({ ...o, tourTitle: title }, 1, "full_prepayment");
+    expect(items).toHaveLength(2);
+    for (const i of items) {
+      expect(i.description).toContain("…»");
+      expectWellFormed(i.description);
+    }
+  });
+
+  it.each(titles)("refundItems ($name alignment)", ({ title }) => {
+    const d = refundItems({ tourTitle: title, startsAt: o.startsAt }, 500, 1)[0].description;
+    expect(d).toContain("…»");
+    expectWellFormed(d);
+  });
+
+  it.each(titles)("paymentDescription ($name alignment)", ({ title }) => {
+    const d = paymentDescription("КС-0057", title, o.startsAt);
+    expect(d).toContain("… · ");
+    expectWellFormed(d);
   });
 });
 

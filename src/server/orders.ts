@@ -8,7 +8,7 @@ import { canTransition, STATUS_LABELS, type OrderStatus } from "@/lib/domain/ord
 import { hitRateLimit } from "@/server/rate-limit";
 import { seatsTakenSql } from "@/server/seats-sql";
 
-/** Seats held by confirmed/done orders of a session. */
+/** Seats held by confirmed/done/paid orders and active payment holds of a session. */
 export async function occupiedSeats(db: Db | Tx, sessionId: number): Promise<number> {
   const [r] = await db
     .select({ n: seatsTakenSql() })
@@ -82,8 +82,7 @@ export async function transitionOrder(id: number, to: OrderStatus, db: Db = shar
       const free = session.capacity - (await occupiedSeats(tx, ref.sessionId));
       if (n > free) return { ok: false, error: `Свободно ${Math.max(free, 0)}, в заявке ${n} — увеличьте лимит или отмените` } as const;
     }
-    // as — до задачи 4 enum order_status в БД знает только старые статусы; ручные переходы ведут лишь в них
-    await tx.update(orders).set({ status: to as (typeof orders.status.enumValues)[number], updatedAt: new Date() }).where(eq(orders.id, id));
+    await tx.update(orders).set({ status: to, updatedAt: new Date() }).where(eq(orders.id, id));
     return { ok: true } as const;
   });
 }

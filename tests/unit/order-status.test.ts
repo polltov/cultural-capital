@@ -1,8 +1,14 @@
-import { describe, it, expect } from "vitest";
-import { ORDER_STATUSES, STATUS_LABELS, canTransition, nextStatuses } from "@/lib/domain/order-status";
+import { describe, it, expect, expectTypeOf } from "vitest";
+import { ORDER_STATUSES, STATUS_LABELS, canTransition, nextStatuses, type OrderStatus } from "@/lib/domain/order-status";
+import { orderStatus } from "@/db/schema";
 
-// Тип-уровневое сравнение с pgEnum вернём в задаче 4, когда enum в БД получит новые значения.
 describe("order-status", () => {
+  it("OrderStatus совпадает со значениями pgEnum", () => {
+    type DbStatus = (typeof orderStatus.enumValues)[number];
+    expectTypeOf<OrderStatus>().toExtend<DbStatus>();
+    expectTypeOf<DbStatus>().toExtend<OrderStatus>();
+    expect([...orderStatus.enumValues]).toEqual([...ORDER_STATUSES]);
+  });
   it("statuses", () => {
     expect([...ORDER_STATUSES]).toEqual(["new", "confirmed", "done", "cancelled", "awaiting_payment", "paid", "expired"]);
   });

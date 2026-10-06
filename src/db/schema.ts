@@ -1,11 +1,13 @@
 import { sql } from "drizzle-orm";
 import {
-  boolean, check, index, integer, pgEnum, pgTable, serial, text, timestamp,
+  boolean, check, index, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 const ts = (name: string) => timestamp(name, { withTimezone: true });
 
-export const orderStatus = pgEnum("order_status", ["new", "confirmed", "done", "cancelled"]);
+export const orderStatus = pgEnum("order_status", [
+  "new", "confirmed", "done", "cancelled", "awaiting_payment", "paid", "expired",
+]);
 
 export const tours = pgTable("tours", {
   id: serial("id").primaryKey(),
@@ -15,6 +17,8 @@ export const tours = pgTable("tours", {
   route: text("route").notNull().default(""),
   description: text("description").notNull().default(""),
   note: text("note").notNull().default(""),
+  meetingPoint: text("meeting_point").notNull().default(""),
+  whatToBring: text("what_to_bring").notNull().default(""),
   durationLabel: text("duration_label").notNull(),
   ageLabel: text("age_label").notNull(),
   coverUrl: text("cover_url"),
@@ -59,6 +63,13 @@ export const orders = pgTable(
     consentAt: ts("consent_at").notNull(),
     paymentStatus: text("payment_status"),
     paymentId: text("payment_id"),
+    accessToken: text("access_token").unique(),
+    holdExpiresAt: ts("hold_expires_at"),
+    paidAt: ts("paid_at"),
+    refundId: text("refund_id"),
+    refundedAmount: integer("refunded_amount").notNull().default(0),
+    ticketSentAt: ts("ticket_sent_at"),
+    closingReceiptAt: ts("closing_receipt_at"),
     createdAt: ts("created_at").notNull().defaultNow(),
     updatedAt: ts("updated_at").notNull().defaultNow(),
   },
@@ -66,7 +77,23 @@ export const orders = pgTable(
     check("orders_participants_check", sql`${t.children} >= 0 and ${t.adults} >= 0 and ${t.children} + ${t.adults} >= 1`),
     index("orders_status_created_idx").on(t.status, t.createdAt),
     index("orders_session_idx").on(t.sessionId),
+    uniqueIndex("orders_payment_id_idx").on(t.paymentId),
   ],
+);
+
+export const paymentEvents = pgTable(
+  "payment_events",
+  {
+    id: serial("id").primaryKey(),
+    receivedAt: ts("received_at").notNull().defaultNow(),
+    source: text("source").notNull(),
+    event: text("event").notNull(),
+    paymentId: text("payment_id").notNull(),
+    orderId: integer("order_id").references(() => orders.id, { onDelete: "set null" }),
+    payload: jsonb("payload").notNull(),
+    note: text("note").notNull().default(""),
+  },
+  (t) => [index("payment_events_payment_id_idx").on(t.paymentId)],
 );
 
 export const news = pgTable(

@@ -10,7 +10,7 @@ const BUTTONS: Record<OrderStatus, { label: string; cls: string }> = {
   done: { label: "Отметить проведённым", cls: "btn btn-accent" },
   cancelled: { label: "Отменить", cls: "btn btn-ghost" },
   new: { label: "Вернуть в новые", cls: "btn btn-ghost" },
-  // Системные статусы и оплаченные: админ ими вручную не управляет (возврат — задача 13); записи нужны для типов
+  // Системные статусы и оплаченные: админ ими вручную не управляет (возврат оплаченного — отдельное действие); записи нужны для типов
   awaiting_payment: { label: "Ждёт оплаты", cls: "btn btn-ghost" },
   paid: { label: "Оплачен", cls: "btn btn-ghost" },
   expired: { label: "Не оплачен", cls: "btn btn-ghost" },

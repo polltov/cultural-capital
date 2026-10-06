@@ -1,9 +1,12 @@
-import { sql } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 import { orders } from "@/db/schema";
 import { SEAT_HOLDING_STATUSES } from "@/lib/domain/seats";
 
-/** Aggregate: seats held by confirmed/done/paid orders among the rows of `orders` in the current group. */
+/**
+ * Aggregate: seats held by confirmed/done/paid orders and by awaiting_payment orders with an active hold
+ * (hold_expires_at in the future) among the rows of `orders` in the current group.
+ */
 export function seatsTakenSql() {
-  // ::text — до задачи 4 enum order_status в БД не знает "paid", и Postgres отвергает такой литерал
-  return sql<number>`coalesce(sum(${orders.children} + ${orders.adults}) filter (where ${orders.status}::text in ${SEAT_HOLDING_STATUSES}), 0)::int`;
+  const holding = inArray(orders.status, [...SEAT_HOLDING_STATUSES]);
+  return sql<number>`coalesce(sum(${orders.children} + ${orders.adults}) filter (where ${holding} or (${orders.status} = 'awaiting_payment' and ${orders.holdExpiresAt} > now())), 0)::int`;
 }

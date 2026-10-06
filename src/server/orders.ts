@@ -82,7 +82,8 @@ export async function transitionOrder(id: number, to: OrderStatus, db: Db = shar
       const free = session.capacity - (await occupiedSeats(tx, ref.sessionId));
       if (n > free) return { ok: false, error: `Свободно ${Math.max(free, 0)}, в заявке ${n} — увеличьте лимит или отмените` } as const;
     }
-    await tx.update(orders).set({ status: to, updatedAt: new Date() }).where(eq(orders.id, id));
+    // as — до задачи 4 enum order_status в БД знает только старые статусы; ручные переходы ведут лишь в них
+    await tx.update(orders).set({ status: to as (typeof orders.status.enumValues)[number], updatedAt: new Date() }).where(eq(orders.id, id));
     return { ok: true } as const;
   });
 }

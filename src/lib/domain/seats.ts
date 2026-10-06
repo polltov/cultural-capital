@@ -1,4 +1,8 @@
-export const SEAT_HOLDING_STATUSES = ["confirmed", "done"] as const;
+// Места держат подтверждённые и оплаченные заявки; удержание awaiting_payment (15 минут) считается отдельно в SQL.
+export const SEAT_HOLDING_STATUSES = ["confirmed", "done", "paid"] as const;
+
+/** На сколько минут места закрепляются за заказом, ожидающим оплаты. */
+export const HOLD_MINUTES = 15;
 
 export function freeSeats(capacity: number, occupied: number): number {
   return Math.max(0, capacity - occupied);

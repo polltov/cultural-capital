@@ -46,7 +46,7 @@ describe("transitionOrder", () => {
   it("rejects done→new with a Russian message", async () => {
     const s = await setup();
     const o = await mk(s.id, { status: "done" });
-    expect(await transitionOrder(o.id, "new", db)).toEqual({ ok: false, error: "Нельзя перевести заявку из «Проведена» в «Новая»" });
+    expect(await transitionOrder(o.id, "new", db)).toEqual({ ok: false, error: "Нельзя перевести заявку из «Проведён» в «Новая заявка»" });
     expect(await status(o.id)).toBe("done");
   });
 

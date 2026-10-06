@@ -1,9 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { SEAT_HOLDING_STATUSES, freeSeats, seatsBadge, pluralRu } from "@/lib/domain/seats";
+import { SEAT_HOLDING_STATUSES, HOLD_MINUTES, freeSeats, seatsBadge, pluralRu } from "@/lib/domain/seats";
 
 const F: [string, string, string] = ["место", "места", "мест"];
 describe("seats", () => {
-  it("holding statuses", () => expect([...SEAT_HOLDING_STATUSES]).toEqual(["confirmed", "done"]));
+  it("holding statuses", () => expect([...SEAT_HOLDING_STATUSES]).toEqual(["confirmed", "done", "paid"]));
+  it("hold minutes", () => expect(HOLD_MINUTES).toBe(15));
   it("freeSeats", () => {
     expect(freeSeats(8, 5)).toBe(3);
     expect(freeSeats(8, 10)).toBe(0);

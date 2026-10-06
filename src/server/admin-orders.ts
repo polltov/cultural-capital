@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, lte, or, sql, type SQL } from "drizzle-orm";
 import { db as sharedDb, type Db } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
 import type { OrderStatus } from "@/lib/domain/order-status";
@@ -56,7 +56,8 @@ const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 export async function listOrders(f: OrderFilters, db: Db = sharedDb): Promise<{ rows: OrderRow[]; total: number }> {
   const conds: SQL[] = [];
-  if (f.status && f.status !== "all") conds.push(eq(orders.status, f.status));
+  // ::text — до задачи 4 enum order_status в БД не знает новых статусов
+  if (f.status && f.status !== "all") conds.push(sql`${orders.status}::text = ${f.status}`);
   if (f.tourId) conds.push(eq(tourSessions.tourId, f.tourId));
   if (f.sessionId) conds.push(eq(orders.sessionId, f.sessionId));
   const q = f.q?.trim();
@@ -128,7 +129,7 @@ export async function getSessionRoster(sessionId: number, db: Db = sharedDb): Pr
       adults: orders.adults, total: orders.total, adminNote: orders.adminNote,
     })
     .from(orders)
-    .where(and(eq(orders.sessionId, sessionId), inArray(orders.status, SEAT_HOLDING_STATUSES)))
+    .where(and(eq(orders.sessionId, sessionId), sql`${orders.status}::text in ${SEAT_HOLDING_STATUSES}`))
     .orderBy(asc(orders.createdAt), asc(orders.id));
   const rows = list.map((r) => ({ ...r, number: formatOrderNumber(r.number), adminNote: r.adminNote || null }));
   return {

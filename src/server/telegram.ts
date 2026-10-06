@@ -24,13 +24,41 @@ export function buildOrderMessage(o: {
   return lines.join("\n");
 }
 
-export async function notifyNewOrder(orderId: number, db: Db = sharedDb): Promise<void> {
+function telegramConfig(): { token: string; chatId: string } | null {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) {
     console.warn("Telegram не настроен: TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID не заданы");
-    return;
+    return null;
   }
+  return { token, chatId };
+}
+
+/** Отправка в чат владельца; не бросает — ошибки только в лог. */
+async function sendTelegram(cfg: { token: string; chatId: string }, text: string): Promise<void> {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${cfg.token}/sendMessage`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chat_id: cfg.chatId, text, parse_mode: "HTML", disable_web_page_preview: true }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) console.error("Telegram sendMessage failed", res.status, await res.text());
+  } catch (e) {
+    console.error("Telegram notify error", e);
+  }
+}
+
+type OrderRow = {
+  number: string; tourTitle: string; startsAt: Date; children: number; adults: number; total: number;
+  name: string; phone: string; comment: string | null; adminUrl: string;
+};
+
+/** Загружает заказ и отправляет сообщение, собранное `compose`. Ссылка в админку без токена страницы заказа. */
+async function notifyOrder(orderId: number, db: Db, compose: (o: OrderRow) => string): Promise<void> {
+  const cfg = telegramConfig();
+  if (!cfg) return;
+  let text: string;
   try {
     const [row] = await db
       .select({ o: orders, title: tours.title, startsAt: tourSessions.startsAt })
@@ -40,19 +68,42 @@ export async function notifyNewOrder(orderId: number, db: Db = sharedDb): Promis
       .where(eq(orders.id, orderId));
     if (!row) return;
     const site = process.env.SITE_URL || "http://localhost:3000";
-    const text = buildOrderMessage({
+    text = compose({
       number: formatOrderNumber(row.o.number), tourTitle: row.title, startsAt: row.startsAt,
       children: row.o.children, adults: row.o.adults, total: row.o.total, name: row.o.customerName,
       phone: row.o.phone, comment: row.o.comment || null, adminUrl: `${site}/admin/orders/${row.o.id}`,
     });
-    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true }),
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!res.ok) console.error("Telegram sendMessage failed", res.status, await res.text());
   } catch (e) {
     console.error("Telegram notify error", e);
+    return;
   }
+  await sendTelegram(cfg, text);
+}
+
+export function notifyNewOrder(orderId: number, db: Db = sharedDb): Promise<void> {
+  return notifyOrder(orderId, db, buildOrderMessage);
+}
+
+export function buildPaidOrderMessage(o: {
+  number: string; tourTitle: string; startsAt: Date; children: number; adults: number; total: number;
+  name: string; phone: string; adminUrl: string;
+}): string {
+  return [
+    `<b>Оплачен заказ ${esc(o.number)} · ${formatRub(o.total)}</b>`,
+    esc(o.tourTitle),
+    formatSessionLong(o.startsAt),
+    formatComposition(o.children, o.adults),
+    `${esc(o.name)}, ${esc(o.phone)}`,
+    esc(o.adminUrl),
+  ].join("\n");
+}
+
+export function notifyPaidOrder(orderId: number, db: Db = sharedDb): Promise<void> {
+  return notifyOrder(orderId, db, buildPaidOrderMessage);
+}
+
+/** Тревога владельцу: несовпадение суммы, поздняя оплата без мест. */
+export async function notifyAlert(text: string): Promise<void> {
+  const cfg = telegramConfig();
+  if (cfg) await sendTelegram(cfg, `⚠️ ${esc(text)}`);
 }

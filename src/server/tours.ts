@@ -3,6 +3,7 @@ import { db as sharedDb, type Db } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
 import { slugify, uniqueSlug } from "@/lib/domain/slug";
 import { parseMoscowLocal } from "@/lib/domain/moscow-time";
+import { pluralRu } from "@/lib/domain/seats";
 import { idSchema, sessionSchema, tourSchema } from "@/lib/validation/tour";
 import { occupiedSeats } from "@/server/orders";
 import { reorderRows } from "@/server/reorder";
@@ -88,7 +89,8 @@ export async function saveSession(input: unknown, db: Db = sharedDb): Promise<Sa
     if (!s || s.tour_id !== v.tourId) return { ok: false, error: "Сеанс не найден" } as const;
     const taken = await occupiedSeats(tx, v.id);
     if (v.capacity < taken) {
-      return { ok: false, error: `Уже подтверждено ${taken} человек — лимит не может быть меньше` } as const;
+      const seats = pluralRu(taken, ["место", "места", "мест"]);
+      return { ok: false, error: `Уже занято ${taken} ${seats} (оплачено, подтверждено или ждёт оплаты) — лимит не может быть меньше` } as const;
     }
     await tx.update(tourSessions).set({ startsAt, capacity: v.capacity, hidden: v.hidden }).where(eq(tourSessions.id, v.id));
     return { ok: true, id: v.id } as const;

@@ -20,6 +20,8 @@ export const tourSchema = z.object({
   route: text("Маршрут", 300).default(""),
   description: text("Описание", 5000).default(""),
   note: text("Примечание", 500).default(""),
+  meetingPoint: text("Место встречи", 300).default(""),
+  whatToBring: text("Что взять с собой", 500).default(""),
   durationLabel: text("Длительность", 40).min(1, "Укажите длительность"),
   ageLabel: text("Возраст", 10).min(1, "Укажите возраст"),
   priceChild: price,

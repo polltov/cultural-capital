@@ -13,12 +13,13 @@ import { freeSeats } from "@/lib/domain/seats";
 
 export type TourValues = {
   title: string; subtitle: string; route: string; description: string; note: string;
+  meetingPoint: string; whatToBring: string;
   durationLabel: string; ageLabel: string; priceChild: string; priceAdult: string;
   featured: boolean; coverUrl: string | null;
 };
 
 export const EMPTY_TOUR: TourValues = {
-  title: "", subtitle: "", route: "", description: "", note: "", durationLabel: "", ageLabel: "",
+  title: "", subtitle: "", route: "", description: "", note: "", meetingPoint: "", whatToBring: "", durationLabel: "", ageLabel: "",
   priceChild: "", priceAdult: "", featured: false, coverUrl: null,
 };
 
@@ -93,7 +94,7 @@ export function TourForm({
       {errors[k] && <span className="form-error" role="alert">{errors[k]}</span>}
     </label>
   );
-  const area = (k: "note", label: string, rows: number, hint?: string) => (
+  const area = (k: "note" | "meetingPoint" | "whatToBring", label: string, rows: number, hint?: string) => (
     <label className="field">
       <span className="field-label">{label}</span>
       <textarea rows={rows} value={v[k]} aria-invalid={!!errors[k]} onChange={(e) => set(k, e.target.value)} />
@@ -138,6 +139,8 @@ export function TourForm({
           <MarkdownEditor label="Описание" value={v.description} onChange={(d) => set("description", d)} maxLength={5000} invalid={!!errors.description} hint="Поддерживается Markdown: **жирный**, списки через «- »." />
           {errors.description && <p className="form-error" role="alert">{errors.description}</p>}
           {area("note", "Примечание", 2)}
+          {area("meetingPoint", "Место встречи", 2)}
+          {area("whatToBring", "Что взять с собой", 3)}
           <div className="tour-grid">
             {text("durationLabel", "Длительность", { max: 40, placeholder: "2 часа" })}
             {text("ageLabel", "Возраст", { max: 10, placeholder: "6+" })}

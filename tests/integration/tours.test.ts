@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { tours, tourSessions, orders } from "@/db/schema";
 import { getPublishedCatalog } from "@/server/catalog";
-import { saveTour, setTourPublished, reorderTours, saveSession, deleteSession, listAdminTours } from "@/server/tours";
+import { saveTour, setTourPublished, reorderTours, saveSession, deleteSession, listAdminTours, getAdminTour } from "@/server/tours";
 
 const H = 3600_000;
 const valid = { title: "Дворцовая площадь", subtitle: "", route: "", description: "", note: "", durationLabel: "2 часа", ageLabel: "6+", priceChild: 1000, priceAdult: 1500, featured: false, coverUrl: null };
@@ -58,6 +58,38 @@ describe("saveTour", () => {
     const r = await saveTour(valid, 99999, db);
     expect(r.ok).toBe(false);
   });
+
+  it("stores meeting point and what to bring and returns them from getAdminTour", async () => {
+    const extra = { meetingPoint: "Дворцовая пл., у Александровской колонны", whatToBring: "Удобная обувь" };
+    const created = await saveTour({ ...valid, ...extra }, undefined, db);
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const [row] = await db.select().from(tours).where(eq(tours.id, created.id));
+    expect(row).toMatchObject(extra);
+    expect((await getAdminTour(created.id, db))?.tour).toMatchObject(extra);
+
+    const updated = await saveTour({ ...valid, meetingPoint: "У арки Главного штаба", whatToBring: "" }, created.id, db);
+    expect(updated).toEqual({ ok: true, id: created.id });
+    expect((await getAdminTour(created.id, db))?.tour).toMatchObject({ meetingPoint: "У арки Главного штаба", whatToBring: "" });
+  });
+
+  it("defaults meeting point and what to bring to empty strings", async () => {
+    const r = await saveTour(valid, undefined, db);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect((await getAdminTour(r.id, db))?.tour).toMatchObject({ meetingPoint: "", whatToBring: "" });
+  });
+
+  it("limits meeting point to 300 and what to bring to 500 characters", async () => {
+    const long = await saveTour({ ...valid, meetingPoint: "x".repeat(301), whatToBring: "y".repeat(501) }, undefined, db);
+    expect(long.ok).toBe(false);
+    if (!long.ok) {
+      expect(long.fieldErrors.meetingPoint).toBe("Не длиннее 300 символов");
+      expect(long.fieldErrors.whatToBring).toBe("Не длиннее 500 символов");
+    }
+    const edge = await saveTour({ ...valid, meetingPoint: "x".repeat(300), whatToBring: "y".repeat(500) }, undefined, db);
+    expect(edge.ok).toBe(true);
+  });
 });
 
 describe("setTourPublished / reorderTours", () => {
@@ -106,7 +138,7 @@ describe("saveSession", () => {
     expect((await saveSession({ tourId: 9999, startsAt: "2030-05-10T12:30", capacity: 8, hidden: false }, db)).ok).toBe(false);
   });
 
-  it("refuses to lower capacity below confirmed+done seats", async () => {
+  it("refuses to lower capacity below occupied seats", async () => {
     const t = await mkTour("a");
     const [s] = await db.insert(tourSessions).values({ tourId: t.id, startsAt: startsAt(), capacity: 8 }).returning();
     await db.insert(orders).values([
@@ -114,12 +146,24 @@ describe("saveSession", () => {
       { ...orderBase, sessionId: s.id, children: 0, adults: 5, status: "new" },
     ]);
     const r = await saveSession({ id: s.id, tourId: t.id, startsAt: "2030-05-10T12:30", capacity: 2, hidden: false }, db);
-    expect(r).toEqual({ ok: false, error: "Уже подтверждено 3 человек — лимит не может быть меньше" });
+    expect(r).toEqual({ ok: false, error: "Уже занято 3 места (оплачено, подтверждено или ждёт оплаты) — лимит не может быть меньше" });
     const ok = await saveSession({ id: s.id, tourId: t.id, startsAt: "2030-05-10T12:30", capacity: 3, hidden: true }, db);
     expect(ok).toMatchObject({ ok: true });
     const [row] = await db.select().from(tourSessions).where(eq(tourSessions.id, s.id));
     expect(row.capacity).toBe(3);
     expect(row.hidden).toBe(true);
+  });
+
+  it("counts paid orders and active holds (not expired ones) in the capacity error", async () => {
+    const t = await mkTour("a");
+    const [s] = await db.insert(tourSessions).values({ tourId: t.id, startsAt: startsAt(), capacity: 8 }).returning();
+    await db.insert(orders).values([
+      { ...orderBase, sessionId: s.id, children: 0, adults: 1, status: "paid" },
+      { ...orderBase, sessionId: s.id, children: 2, adults: 2, status: "awaiting_payment", holdExpiresAt: new Date(Date.now() + 10 * 60_000) },
+      { ...orderBase, sessionId: s.id, children: 0, adults: 9, status: "awaiting_payment", holdExpiresAt: new Date(Date.now() - 60_000) },
+    ]);
+    const r = await saveSession({ id: s.id, tourId: t.id, startsAt: "2030-05-10T12:30", capacity: 4, hidden: false }, db);
+    expect(r).toEqual({ ok: false, error: "Уже занято 5 мест (оплачено, подтверждено или ждёт оплаты) — лимит не может быть меньше" });
   });
 
   it("hidden sessions disappear from the catalog", async () => {

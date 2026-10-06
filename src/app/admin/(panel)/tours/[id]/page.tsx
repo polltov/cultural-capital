@@ -28,6 +28,7 @@ export default async function EditTourPage({ params }: { params: Promise<{ id: s
         number={position + 1}
         initial={{
           title: t.title, subtitle: t.subtitle, route: t.route, description: t.description, note: t.note,
+          meetingPoint: t.meetingPoint, whatToBring: t.whatToBring,
           durationLabel: t.durationLabel, ageLabel: t.ageLabel, priceChild: String(t.priceChild), priceAdult: String(t.priceAdult),
           featured: t.featured, coverUrl: t.coverUrl,
         }}

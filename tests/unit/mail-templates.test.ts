@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { cancelledEmail, sorryEmail, ticketEmail, type TicketData } from "@/server/mail/templates";
 import { formatRub } from "@/lib/domain/pricing";
 import { operator } from "@/lib/legal";
@@ -17,6 +17,12 @@ const t: TicketData = {
   email: "anna@example.com",
   url: "https://x.test/order/abc_DEF-123",
 };
+
+// Реквизиты в src/lib/legal.ts заполняет владелец; тесты не должны зависеть от того, заполнены они или нет:
+// по умолчанию контакты пусты, тесты контактов выставляют их сами, после каждого теста значения восстанавливаются.
+const savedOperator = { ...operator };
+beforeEach(() => Object.assign(operator, { phone: "", email: "" }));
+afterEach(() => Object.assign(operator, savedOperator));
 
 describe("ticketEmail", () => {
   it("paid: тема и содержимое", () => {
@@ -91,19 +97,19 @@ describe("ticketEmail", () => {
   });
 
   describe("контакты", () => {
-    const saved = { ...operator };
-    afterEach(() => Object.assign(operator, saved));
-
     it("показываются, когда заполнены (и экранируются)", () => {
-      Object.assign(operator, { phone: "+7 999 123-45-67", email: "hi@x.test" });
+      Object.assign(operator, { phone: "+7 999 123-45-67", email: "a&b@x.test" });
       const m = ticketEmail(t, "paid");
       expect(m.html).toContain("+7 999 123-45-67");
-      expect(m.html).toContain("hi@x.test");
-      expect(m.text).toContain("hi@x.test");
+      expect(m.html).toContain("a&amp;b@x.test");
+      expect(m.text).toContain("a&b@x.test");
     });
 
     it("не показываются, когда пусты", () => {
-      expect(ticketEmail(t, "paid").html).not.toContain("Контакты");
+      Object.assign(operator, { phone: "", email: "" });
+      const m = ticketEmail(t, "paid");
+      expect(m.html).not.toContain("Контакты");
+      expect(m.text).not.toContain("Контакты");
     });
   });
 });

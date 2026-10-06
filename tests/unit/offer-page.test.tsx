@@ -1,8 +1,14 @@
 // @vitest-environment jsdom
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import OfferPage from "@/app/(site)/offer/page";
 import { Footer } from "@/components/site/StaticSections";
+
+// Реквизиты в src/lib/legal.ts заполняет владелец; тест не должен зависеть от того, заполнены они или нет.
+vi.mock("@/lib/legal", async (orig) => ({
+  ...(await orig<typeof import("@/lib/legal")>()),
+  operator: { name: "", inn: "", ogrn: "", address: "", email: "", phone: "" },
+}));
 
 afterEach(cleanup);
 
@@ -14,6 +20,12 @@ describe("OfferPage", () => {
     expect(screen.getByText(/50%/)).toBeTruthy();
     // Пустые реквизиты видны как «[не заполнено]» — до публикации их нельзя пропустить.
     expect(screen.getAllByText(/\[не заполнено\]/).length).toBeGreaterThan(0);
+  });
+
+  it("refunds 100% when cancelled in time and 50% when later", () => {
+    render(<OfferPage />);
+    expect(screen.getByText(/не позднее чем за 24 часа/).textContent).toMatch(/100%/);
+    expect(screen.getByText(/при отмене позже/).textContent).toMatch(/50%/);
   });
 
   it("has the eight sections in order", () => {

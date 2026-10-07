@@ -60,8 +60,7 @@ const plain = (text: string) => text.replace(/\s/g, " ");
 const SUMMARY = plain(`Эрмитаж для детей · 11 окт, вскр, 11:00 · 2 детских + 1 взрослый · ${formatRub(3270)}`);
 const PAY = `Перейти к оплате · ${formatRub(3270)}`;
 
-const ok = (holdExpiresAt = new Date(Date.now() + 15 * 60_000).toISOString()) =>
-  ({ ok: true as const, orderToken: TOKEN, confirmationToken: "ct-1", holdExpiresAt });
+const ok = (holdSeconds = 15 * 60) => ({ ok: true as const, orderToken: TOKEN, confirmationToken: "ct-1", holdSeconds });
 
 const radios = () => screen.getAllByRole("radio") as HTMLInputElement[];
 const click = (name: string | RegExp) => fireEvent.click(screen.getByRole("button", { name }));
@@ -271,7 +270,22 @@ describe("виджет оплаты", () => {
     expect(FakeWidget.instances[0].destroy).not.toHaveBeenCalled();
   });
 
-  it("таймер идёт к holdExpiresAt; на нуле виджет убирается, «Начать заново» освобождает места и возвращает форму", async () => {
+  it("часы клиента не важны: таймер отсчитывает holdSeconds от ответа сервера", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2031-05-05T12:00:00Z")); // часы клиента сильно спешат
+    startCheckoutAction.mockResolvedValue(ok(10 * 60 + 30));
+    toPayStep();
+    fillValid();
+    await act(async () => { click(PAY); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByText(/Места за вами ещё 10:30/)).toBeTruthy();
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+    expect(screen.getByText(/Места за вами ещё 10:00/)).toBeTruthy();
+    expect(screen.queryByText("Время на оплату истекло")).toBeNull();
+  });
+
+  it("таймер идёт от holdSeconds; на нуле виджет убирается, «Начать заново» освобождает места и возвращает форму", async () => {
     vi.useFakeTimers();
     startCheckoutAction.mockResolvedValue(ok());
     toPayStep();

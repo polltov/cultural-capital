@@ -39,7 +39,7 @@ type Fields = {
 type Hold = {
   orderToken: string;
   confirmationToken: string;
-  /** Конец удержания по часам сервера, мс. */
+  /** Конец удержания по часам клиента, мс: момент ответа сервера + оставшиеся по его часам секунды. */
   expiresAt: number;
   /** Что ушло на сервер и как это называлось: каталог после покупки пересчитывается под удержание, брать оттуда уже нельзя. */
   fields: Fields;
@@ -167,7 +167,7 @@ export function CheckoutDialog({ tour, sessions, initialSessionId, onClose }: Ch
       if (result.ok) {
         setHold({
           orderToken: result.orderToken, confirmationToken: result.confirmationToken,
-          expiresAt: new Date(result.holdExpiresAt).getTime(), fields, summary: label, phase: "paying",
+          expiresAt: Date.now() + result.holdSeconds * 1000, fields, summary: label, phase: "paying",
         });
         return;
       }

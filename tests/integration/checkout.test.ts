@@ -53,7 +53,8 @@ describe("startCheckout", () => {
       phone: "+79991234567", customerName: "Анна",
     });
     expect(o.consentAt).toBeInstanceOf(Date);
-    expect(o.holdExpiresAt!.toISOString()).toBe(r.holdExpiresAt);
+    expect(r.holdSeconds).toBeGreaterThanOrEqual(15 * 60 - 2);
+    expect(r.holdSeconds).toBeLessThanOrEqual(15 * 60);
     expect(o.holdExpiresAt!.getTime() - before).toBeGreaterThanOrEqual(15 * 60_000);
     expect(o.holdExpiresAt!.getTime() - Date.now()).toBeLessThanOrEqual(15 * 60_000);
     expect(8 - (await occupiedSeats(db, s.id))).toBe(5);
@@ -71,6 +72,22 @@ describe("startCheckout", () => {
       [1, "1270.00", "full_prepayment"],
     ]);
     expect(d.gateway.payments.get("pay-1")).toMatchObject({ amount: { value: "3270.00", currency: "RUB" }, metadata: { order_id: String(o.id) } });
+  });
+
+  it("holdSeconds is what is left of the hold after the gateway call, by the server clock", async () => {
+    const { s } = await setup();
+    const d = deps();
+    const create = d.gateway.createPayment.bind(d.gateway);
+    d.gateway.createPayment = async (i) => {
+      await new Promise((r) => setTimeout(r, 1100)); // медленный ответ ЮKassa съедает часть удержания
+      return create(i);
+    };
+    const r = await startCheckout({ ...valid, sessionId: s.id }, "1.1.1.1", d);
+    if (!r.ok) throw new Error("unreachable");
+    const [o] = await db.select().from(orders);
+    expect(r.holdSeconds).toBeLessThanOrEqual(15 * 60 - 1);
+    expect(Math.abs(r.holdSeconds * 1000 - (o.holdExpiresAt!.getTime() - Date.now()))).toBeLessThan(2000);
+    expect(r).not.toHaveProperty("holdExpiresAt");
   });
 
   it("takes the total from DB prices, not from the input", async () => {

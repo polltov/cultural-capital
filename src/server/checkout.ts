@@ -130,7 +130,9 @@ export async function startCheckout(
     .update(orders)
     .set({ paymentId: payment.id, paymentStatus: payment.status, updatedAt: new Date() })
     .where(eq(orders.id, order.id));
-  return { ok: true, orderToken: accessToken, confirmationToken: payment.confirmationToken, holdExpiresAt: holdExpiresAt.toISOString() };
+  // Остаток удержания считаем здесь, после вызова ЮKassa: абсолютное время клиенту ни к чему — его часы могут спешить или отставать.
+  const holdSeconds = Math.max(0, Math.floor((holdExpiresAt.getTime() - Date.now()) / 1000));
+  return { ok: true, orderToken: accessToken, confirmationToken: payment.confirmationToken, holdSeconds };
 }
 
 /** «Изменить» / «Начать заново»: снимает удержание. Только awaiting_payment → expired; платёж в ЮKassa не трогаем. */

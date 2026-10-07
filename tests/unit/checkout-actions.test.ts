@@ -29,7 +29,7 @@ describe("startCheckoutAction", () => {
   const fields = { sessionId: "2", children: "2", adults: "1", name: "Анна", phone: "+7 (999) 123-45-67", email: "a@b.ru", consent: "on", website: "" };
 
   it("передаёт поля формы и IP клиента; consent «on» → true", async () => {
-    startCheckout.mockResolvedValue({ ok: true, orderToken: TOKEN, confirmationToken: "ct", holdExpiresAt: "2026-10-07T10:00:00.000Z" });
+    startCheckout.mockResolvedValue({ ok: true, orderToken: TOKEN, confirmationToken: "ct", holdSeconds: 900 });
     await startCheckoutAction(null, form(fields));
     expect(startCheckout).toHaveBeenCalledWith({
       sessionId: "2", children: "2", adults: "1", name: "Анна", phone: "+7 (999) 123-45-67", email: "a@b.ru", consent: true, website: "",
@@ -46,7 +46,7 @@ describe("startCheckoutAction", () => {
   });
 
   it("успех обновляет каталог: удержание меняет число свободных мест", async () => {
-    const result = { ok: true, orderToken: TOKEN, confirmationToken: "ct", holdExpiresAt: "2026-10-07T10:00:00.000Z" };
+    const result = { ok: true, orderToken: TOKEN, confirmationToken: "ct", holdSeconds: 900 };
     startCheckout.mockResolvedValue(result);
     expect(await startCheckoutAction(null, form(fields))).toEqual(result);
     expect(revalidatePath).toHaveBeenCalledWith("/");

@@ -47,6 +47,7 @@ export const checkoutSchema = z
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 
+/** `holdSeconds` — сколько ещё держатся места, по часам сервера: клиент отсчитывает от момента ответа, а не от своих часов. */
 export type CheckoutResult =
-  | { ok: true; orderToken: string; confirmationToken: string; holdExpiresAt: string }
+  | { ok: true; orderToken: string; confirmationToken: string; holdSeconds: number }
   | { ok: false; error?: string; fieldErrors?: Partial<Record<string, string>> };

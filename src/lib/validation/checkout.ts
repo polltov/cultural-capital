@@ -36,6 +36,7 @@ export const checkoutSchema = z
       .string({ error: (iss) => (iss.input === undefined ? "Укажите email" : "Проверьте email") })
       .trim()
       .min(1, "Укажите email")
+      .max(254, "Проверьте email")
       .refine((v) => v === "" || z.email().safeParse(v).success, "Проверьте email"),
     consent: z.literal(true, { error: "Нужно согласие на обработку данных" }),
     website: z.string({ error: "Некорректное значение" }).optional().default(""),

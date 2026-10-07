@@ -313,3 +313,39 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid #a3
   .article{padding-top:14px;padding-bottom:60px}
   .md{font-size:16px}
 }
+
+/* ---- страница заказа / билет (/order/<token>) ---- */
+.order{max-width:640px;margin:0 auto;padding-top:140px;padding-bottom:80px;box-sizing:content-box;position:relative;z-index:2;font-size:16px;line-height:1.6;color:#3d4756}
+.order-state{display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:8px 0 4px}
+.order-h1{font-family:"Prata",serif;font-weight:400;font-size:clamp(26px,3.2vw,36px);line-height:1.2;color:#22293a}
+.order-sub{margin-top:4px;font-family:"PT Sans",sans-serif;font-size:14px;color:#5c6672}
+.order-spinner{width:28px;height:28px;border-radius:50%;border:3px solid rgba(34,41,58,.15);border-top-color:#a34a2f;animation:orderSpin 1s linear infinite}
+@keyframes orderSpin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.order-spinner{animation:none}}
+/* билет: карточка ticket.css в раскрытом виде, но с низкой «шапкой» вместо фото */
+.ticket.open.order-ticket .ticket-photo{aspect-ratio:auto;height:128px}
+.order-ticket .ticket-info > *{position:relative;z-index:1}
+.order-ticket .t-title{font-weight:400}
+.order-rows{display:grid;gap:10px;margin:16px 0 18px}
+.order-rows > div{display:grid;grid-template-columns:140px 1fr;gap:12px;padding-bottom:10px;border-bottom:1px solid rgba(194,154,91,.35)}
+.order-rows dt{padding-top:3px;font-family:"PT Sans",sans-serif;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#5c6672}
+.order-rows dd{font-size:15px;color:#22293a}
+.order-bring{white-space:pre-line}
+.order-bring b{display:block;margin-bottom:4px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#22293a}
+.order-receipt{margin-top:14px;font-family:"PT Sans",sans-serif;font-size:12.5px;line-height:1.5;color:#5c6672}
+.order-terms,.order-contacts{margin-top:18px;font-family:"PT Sans",sans-serif;font-size:13px;line-height:1.5;color:#5c6672}
+.order-state + .order-contacts{margin-top:28px}
+@media (max-width:600px){
+  .order{padding-top:110px}
+  .order-rows > div{grid-template-columns:1fr;gap:2px}
+}
+/* печать: только билет — без шапки, подвала и кнопки; «шапку» на тёмном фоне не печатаем (дата есть в строках), номер остаётся на перфорации */
+@media print{
+  .top,.foot,.no-print{display:none !important}
+  .mock{background:#fff;overflow:visible}
+  .order{max-width:none;padding:0}
+  .ticket.order-ticket{filter:none;border:1px solid #22293a}
+  .ticket.open.order-ticket .ticket-photo{display:none}
+  .order-ticket .ticket-info::before{display:none}
+  .ticket.order-ticket .perf .t-stub{color:#22293a;font-size:11px}
+}

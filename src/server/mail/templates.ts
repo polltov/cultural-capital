@@ -1,5 +1,6 @@
 import { formatSessionLong } from "@/lib/domain/moscow-time";
 import { formatRub } from "@/lib/domain/pricing";
+import { CANCEL_TERMS } from "@/lib/domain/refund-policy";
 import { formatComposition } from "@/lib/domain/seats";
 import { operator } from "@/lib/legal";
 
@@ -28,9 +29,6 @@ const ACCENT = "#a34a2f";
 const MUTED = "#6a6f7c";
 const LINE = "#e6d9c8";
 const FONT = "font-family:Arial,Helvetica,sans-serif";
-
-const CANCEL_TERMS =
-  "Отменить или перенести билет без потерь можно не позднее чем за 24 часа до начала экскурсии; при отмене позже возвращаем 50% стоимости. Для отмены напишите или позвоните нам.";
 
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");

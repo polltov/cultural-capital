@@ -11,12 +11,28 @@ import { hitRateLimit } from "@/server/rate-limit";
 import { occupiedSeats } from "@/server/orders";
 import { paymentGateway, vatCode } from "@/server/payments/gateway";
 import type { PaymentGateway } from "@/server/payments/types";
+import { notifyAlert } from "@/server/telegram";
 
 const RATE_LIMIT = 10;
 const RATE_WINDOW_SEC = 3600;
 
 const UNAVAILABLE = "Этот сеанс недоступен для покупки";
 const GATEWAY_DOWN = "Оплата временно недоступна. Попробуйте позже или позвоните нам.";
+
+/**
+ * Тревога владельцу: платежи не создаются. Такой сбой обычно у всех покупателей сразу (ключи, блокировка магазина, ставка НДС),
+ * поэтому — не чаще раза в час. В тексте только ошибка шлюза: ни данных покупателя, ни токенов. Никогда не бросает —
+ * покупатель получает свой ответ в любом случае.
+ */
+async function alertGatewayDown(e: unknown, db: Db): Promise<void> {
+  try {
+    if (!(await hitRateLimit("alert:checkout", 1, 3600, db))) return;
+    const message = Array.from(e instanceof Error ? e.message : String(e)).slice(0, 200).join("");
+    await notifyAlert(`Оплата на сайте не создаётся: ${message} — проверьте настройки ЮKassa`);
+  } catch (err) {
+    console.error("Оплата: тревога о сбое не отправлена", err);
+  }
+}
 
 /** Заказ с удержанием мест на 15 минут + платёж в ЮKassa. Шлюз по умолчанию создаётся лениво — только если дошли до оплаты. */
 export async function startCheckout(
@@ -106,6 +122,7 @@ export async function startCheckout(
       .update(orders)
       .set({ status: "expired", updatedAt: new Date() })
       .where(and(eq(orders.id, order.id), eq(orders.status, "awaiting_payment")));
+    await alertGatewayDown(e, db);
     return { ok: false, error: GATEWAY_DOWN };
   }
 

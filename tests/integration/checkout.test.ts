@@ -1,11 +1,20 @@
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { tours, tourSessions, orders, rateLimitHits } from "@/db/schema";
 import { occupiedSeats } from "@/server/orders";
 import { startCheckout, releaseHold } from "@/server/checkout";
+import { PaymentGatewayError } from "@/server/payments/types";
+import { notifyAlert } from "@/server/telegram";
 import { fakeGateway } from "../support/fake-gateway";
 import { lockSession, whileLocked } from "../support/lock-gate";
+
+vi.mock("@/server/telegram", () => ({ notifyAlert: vi.fn() }));
+
+beforeEach(() => {
+  vi.mocked(notifyAlert).mockReset();
+  vi.mocked(notifyAlert).mockResolvedValue(undefined);
+});
 
 const H = 3600_000;
 const valid = { children: 2, adults: 1, name: "Анна", phone: "8 (999) 123-45-67", email: "anna@example.com", consent: true, website: "" };
@@ -227,6 +236,59 @@ describe("startCheckout", () => {
     expect(await db.select().from(orders)).toHaveLength(10);
     // другой IP не затронут
     expect((await startCheckout({ ...valid, sessionId: s.id }, "4.4.4.4", d)).ok).toBe(true);
+  });
+});
+
+describe("startCheckout: the owner learns that payments are failing", () => {
+  const failing = (message: string) => {
+    const d = deps();
+    d.gateway.failNext("createPayment", new PaymentGatewayError(message, 403));
+    return d;
+  };
+  const alertText = (message: string) => `Оплата на сайте не создаётся: ${message} — проверьте настройки ЮKassa`;
+  let log: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    log = vi.spyOn(console, "error").mockImplementation(() => {});
+    return () => log.mockRestore();
+  });
+
+  it("a gateway failure alerts once an hour, with the error text and no customer data", async () => {
+    const { s } = await setup({ capacity: 20 });
+    expect(await startCheckout({ ...valid, sessionId: s.id }, "1.1.1.1", failing("Shop is blocked"))).toEqual({ ok: false, error: GATEWAY_DOWN });
+    expect(await startCheckout({ ...valid, sessionId: s.id }, "2.2.2.2", failing("Shop is blocked"))).toEqual({ ok: false, error: GATEWAY_DOWN });
+
+    expect(notifyAlert).toHaveBeenCalledExactlyOnceWith(alertText("Shop is blocked"));
+    const sent = JSON.stringify(vi.mocked(notifyAlert).mock.calls);
+    for (const o of await db.select().from(orders)) expect(sent).not.toContain(o.accessToken!);
+    expect(sent).not.toMatch(/anna@example\.com|9991234567|Анна|1\.1\.1\.1/);
+  });
+
+  it("an hour later the next failure alerts again", async () => {
+    const { s } = await setup({ capacity: 20 });
+    await startCheckout({ ...valid, sessionId: s.id }, "1.1.1.1", failing("first"));
+    await db.update(rateLimitHits).set({ createdAt: new Date(Date.now() - 3601_000) }).where(eq(rateLimitHits.key, "alert:checkout"));
+    await startCheckout({ ...valid, sessionId: s.id }, "1.1.1.1", failing("second"));
+    expect(vi.mocked(notifyAlert).mock.calls).toEqual([[alertText("first")], [alertText("second")]]);
+  });
+
+  it("a long error is cut to 200 characters", async () => {
+    const { s } = await setup();
+    await startCheckout({ ...valid, sessionId: s.id }, "1.1.1.1", failing("x".repeat(500)));
+    expect(notifyAlert).toHaveBeenCalledExactlyOnceWith(alertText("x".repeat(200)));
+  });
+
+  it("the alert itself failing does not change the customer's answer", async () => {
+    vi.mocked(notifyAlert).mockRejectedValue(new Error("telegram down"));
+    const { s } = await setup();
+    expect(await startCheckout({ ...valid, sessionId: s.id }, "1.1.1.1", failing("boom"))).toEqual({ ok: false, error: GATEWAY_DOWN });
+    expect((await db.select().from(orders))[0].status).toBe("expired");
+  });
+
+  it("a successful checkout and an ordinary refusal (no seats) do not alert", async () => {
+    const { s } = await setup({ capacity: 3 });
+    expect((await startCheckout({ ...valid, sessionId: s.id }, "1.1.1.1", deps())).ok).toBe(true);
+    expect(await startCheckout({ ...valid, sessionId: s.id }, "1.1.1.1", deps())).toEqual({ ok: false, error: "Мест не осталось" });
+    expect(notifyAlert).not.toHaveBeenCalled();
   });
 });
 

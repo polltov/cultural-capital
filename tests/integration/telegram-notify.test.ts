@@ -24,7 +24,7 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   vi.stubEnv("TELEGRAM_BOT_TOKEN", "bot-token");
   vi.stubEnv("TELEGRAM_CHAT_ID", "42");
-  vi.stubEnv("SITE_URL", "https://x.test");
+  vi.stubEnv("SITE_URL", "https://x.test/"); // слеш в конце не должен дать «//admin»
 });
 afterEach(() => {
   vi.unstubAllGlobals();

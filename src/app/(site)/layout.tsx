@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import { siteUrl } from "@/lib/site-url";
 import "../fonts.css";
 import "./site.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.SITE_URL || "https://cultural-capital.vercel.app"),
+  metadataBase: new URL(siteUrl()),
   title: "Культурная Столица — экскурсии по Петербургу для детей и взрослых",
   description:
     "Экскурсии по Санкт-Петербургу для детей и взрослых: авторские маршруты, маленькие группы до 8 человек, подача через игры.",

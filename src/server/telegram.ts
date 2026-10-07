@@ -5,6 +5,7 @@ import { formatOrderNumber } from "@/lib/domain/order-number";
 import { formatRub } from "@/lib/domain/pricing";
 import { formatComposition } from "@/lib/domain/seats";
 import { formatSessionLong } from "@/lib/domain/moscow-time";
+import { siteUrl } from "@/lib/site-url";
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -51,11 +52,10 @@ async function notifyOrder(orderId: number, db: Db, compose: (o: OrderRow) => st
       .innerJoin(tours, eq(tourSessions.tourId, tours.id))
       .where(eq(orders.id, orderId));
     if (!row) return;
-    const site = process.env.SITE_URL || "http://localhost:3000";
     text = compose({
       number: formatOrderNumber(row.o.number), tourTitle: row.title, startsAt: row.startsAt,
       children: row.o.children, adults: row.o.adults, total: row.o.total, name: row.o.customerName,
-      phone: row.o.phone, adminUrl: `${site}/admin/orders/${row.o.id}`,
+      phone: row.o.phone, adminUrl: `${siteUrl()}/admin/orders/${row.o.id}`,
     });
   } catch (e) {
     console.error("Telegram notify error", e);

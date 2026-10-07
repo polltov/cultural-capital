@@ -3,6 +3,7 @@ import { formatRub } from "@/lib/domain/pricing";
 import { CANCEL_TERMS } from "@/lib/domain/refund-policy";
 import { formatComposition } from "@/lib/domain/seats";
 import { operator } from "@/lib/legal";
+import { siteUrl } from "@/lib/site-url";
 
 export type TicketData = {
   orderId: number;
@@ -161,7 +162,7 @@ export function cancelledEmail(t: TicketData, refunded: number): Email {
 
 export function sorryEmail(t: TicketData): Email {
   const subject = `Извините, места закончились — заказ ${t.number}`;
-  const catalog = new URL("/#catalog", t.url).href;
+  const catalog = `${siteUrl()}/#catalog`;
   const lead = `К сожалению, пока ваш платёж обрабатывался, места на экскурсию «${t.tourTitle}» закончились. Возвращаем вам полную стоимость заказа — ${formatRub(t.total)}.`;
   const note = "Деньги вернутся тем же способом, которым вы платили, в течение нескольких дней — срок зависит от банка. Приносим извинения.";
   const rows: Row[] = [["Номер заказа", t.number], ...tourRows(t)];

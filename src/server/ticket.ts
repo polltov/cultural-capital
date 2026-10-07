@@ -2,6 +2,7 @@ import { and, eq, isNotNull } from "drizzle-orm";
 import { db as sharedDb, type Db } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
 import { formatOrderNumber } from "@/lib/domain/order-number";
+import { siteUrl } from "@/lib/site-url";
 import { sendMail } from "./mail/send";
 import { cancelledEmail, sorryEmail, ticketEmail, type TicketData } from "./mail/templates";
 
@@ -16,13 +17,12 @@ async function load(orderId: number, db: Db): Promise<Loaded | null> {
     .where(and(eq(orders.id, orderId), isNotNull(orders.accessToken), isNotNull(orders.email)));
   // Старые заявки без email/токена билета не получают.
   if (!row || !row.o.accessToken || !row.o.email) return null;
-  const site = process.env.SITE_URL || "http://localhost:3000";
   return {
     refunded: row.o.refundedAmount,
     ticket: {
       orderId: row.o.id, number: formatOrderNumber(row.o.number), tourTitle: row.title, startsAt: row.startsAt,
       meetingPoint: row.meetingPoint, whatToBring: row.whatToBring, children: row.o.children, adults: row.o.adults,
-      total: row.o.total, name: row.o.customerName, email: row.o.email, url: `${site}/order/${row.o.accessToken}`,
+      total: row.o.total, name: row.o.customerName, email: row.o.email, url: `${siteUrl()}/order/${row.o.accessToken}`,
     },
   };
 }
@@ -34,7 +34,8 @@ export async function loadTicket(orderId: number, db: Db = sharedDb): Promise<Ti
 
 /**
  * Общий путь отправки: загрузка данных → письмо → `onSent`. Вызывается из `after()`, поэтому не бросает:
- * ошибки БД и почты логируются, результат — `false`.
+ * ошибки БД и почты логируются, результат — `false`. В лог — только текст ошибки: объект ошибки может нести ссылку
+ * на страницу заказа (например, `input` у TypeError из `new URL`), а в ней токен.
  */
 async function deliver(
   what: string,
@@ -50,7 +51,7 @@ async function deliver(
     if (ok) await onSent?.();
     return ok;
   } catch (e) {
-    console.error(`Письмо «${what}»: ошибка для заказа ${orderId}`, e);
+    console.error(`Письмо «${what}»: ошибка для заказа ${orderId}:`, e instanceof Error ? e.message : String(e));
     return false;
   }
 }

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cancelledEmail, sorryEmail, ticketEmail, type TicketData } from "@/server/mail/templates";
 import { formatRub } from "@/lib/domain/pricing";
 import { operator } from "@/lib/legal";
@@ -140,13 +140,21 @@ describe("cancelledEmail", () => {
 });
 
 describe("sorryEmail", () => {
-  it("тема, полный возврат и ссылка на каталог", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("тема, полный возврат и ссылка на каталог сайта (от SITE_URL, а не от ссылки на заказ)", () => {
+    vi.stubEnv("SITE_URL", "https://kc.example/");
     const m = sorryEmail(t);
     expect(m.subject).toBe("Извините, места закончились — заказ КС-0057");
     expect(m.html).toContain(formatRub(3270));
-    expect(m.html).toContain("https://x.test/#catalog");
-    expect(m.text).toContain("https://x.test/#catalog");
+    expect(m.html).toContain("https://kc.example/#catalog");
+    expect(m.text).toContain("https://kc.example/#catalog");
     expect(m.html).toContain("Египетский зал Эрмитажа");
+  });
+
+  it("ссылка на заказ не участвует: даже непригодная, письмо собирается", () => {
+    vi.stubEnv("SITE_URL", "https://kc.example");
+    expect(() => sorryEmail({ ...t, url: "не адрес" })).not.toThrow();
   });
 
   it("экранирует имя", () => {

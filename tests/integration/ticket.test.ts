@@ -51,6 +51,12 @@ describe("loadTicket", () => {
     expect((await loadTicket(o.id, db))!.url).toBe("http://localhost:3000/order/tok_abc");
   });
 
+  it("SITE_URL без схемы и со слешем в конце — ссылка всё равно правильная", async () => {
+    vi.stubEnv("SITE_URL", " kc.example/ ");
+    const o = await setup();
+    expect((await loadTicket(o.id, db))!.url).toBe("https://kc.example/order/tok_abc");
+  });
+
   it("null: заказа нет, нет токена или нет email (старые заявки)", async () => {
     expect(await loadTicket(9999, db)).toBeNull();
     const noToken = await setup({ accessToken: null });
@@ -115,6 +121,21 @@ describe("sendTicket", () => {
       expect(await sendTicket(o.id, "paid", db)).toBe(false);
       expect(await sentAt(o.id)).toBeNull();
       expect(error).toHaveBeenCalledTimes(2);
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it("в лог — только текст ошибки: ссылка со страницей заказа (в ней токен) туда не попадает", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const o = await setup();
+      // Так выглядит, например, TypeError из new URL(): адрес лежит в поле `input`.
+      send.mockRejectedValue(Object.assign(new TypeError("Invalid URL"), { input: "https://x.test/order/tok_abc" }));
+      expect(await sendTicket(o.id, "paid", db)).toBe(false);
+      expect(error).toHaveBeenCalledTimes(1);
+      expect(error.mock.calls[0].map(String).join(" ")).toContain("Invalid URL");
+      expect(JSON.stringify(error.mock.calls)).not.toContain("tok_abc");
     } finally {
       error.mockRestore();
     }

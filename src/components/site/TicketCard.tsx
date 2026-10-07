@@ -127,7 +127,7 @@ export function TicketCard({ tour, sessions, number, defaultOpen = false, onBook
               if (open && sessions.length) onBook?.(selected);
             }}
           >
-            Записаться
+            Купить билет
           </button>
         </div>
       </div>

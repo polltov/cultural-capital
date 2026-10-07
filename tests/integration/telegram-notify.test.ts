@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { db } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
 import { formatRub } from "@/lib/domain/pricing";
-import { notifyNewOrder, notifyPaidOrder } from "@/server/telegram";
+import { notifyPaidOrder } from "@/server/telegram";
 
 const fetchMock = vi.fn();
 
@@ -78,13 +78,5 @@ describe("notifyPaidOrder", () => {
     } finally {
       err.mockRestore();
     }
-  });
-});
-
-describe("notifyNewOrder (old request flow)", () => {
-  it("still sends the «new request» message", async () => {
-    const o = await setup();
-    await notifyNewOrder(o.id, db);
-    expect(sentBody().text.split("\n")[0]).toBe("<b>Новая заявка КС-0057</b>");
   });
 });

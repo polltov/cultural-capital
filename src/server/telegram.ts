@@ -8,22 +8,6 @@ import { formatSessionLong } from "@/lib/domain/moscow-time";
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-export function buildOrderMessage(o: {
-  number: string; tourTitle: string; startsAt: Date; children: number; adults: number; total: number;
-  name: string; phone: string; comment: string | null; adminUrl: string;
-}): string {
-  const lines = [
-    `<b>Новая заявка ${esc(o.number)}</b>`,
-    esc(o.tourTitle),
-    formatSessionLong(o.startsAt),
-    `${formatComposition(o.children, o.adults)} — ${formatRub(o.total)}`,
-    `${esc(o.name)}, ${esc(o.phone)}`,
-  ];
-  if (o.comment) lines.push(`Комментарий: ${esc(o.comment)}`);
-  lines.push(esc(o.adminUrl));
-  return lines.join("\n");
-}
-
 function telegramConfig(): { token: string; chatId: string } | null {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -51,7 +35,7 @@ async function sendTelegram(cfg: { token: string; chatId: string }, text: string
 
 type OrderRow = {
   number: string; tourTitle: string; startsAt: Date; children: number; adults: number; total: number;
-  name: string; phone: string; comment: string | null; adminUrl: string;
+  name: string; phone: string; adminUrl: string;
 };
 
 /** Загружает заказ и отправляет сообщение, собранное `compose`. Ссылка в админку без токена страницы заказа. */
@@ -71,17 +55,13 @@ async function notifyOrder(orderId: number, db: Db, compose: (o: OrderRow) => st
     text = compose({
       number: formatOrderNumber(row.o.number), tourTitle: row.title, startsAt: row.startsAt,
       children: row.o.children, adults: row.o.adults, total: row.o.total, name: row.o.customerName,
-      phone: row.o.phone, comment: row.o.comment || null, adminUrl: `${site}/admin/orders/${row.o.id}`,
+      phone: row.o.phone, adminUrl: `${site}/admin/orders/${row.o.id}`,
     });
   } catch (e) {
     console.error("Telegram notify error", e);
     return;
   }
   await sendTelegram(cfg, text);
-}
-
-export function notifyNewOrder(orderId: number, db: Db = sharedDb): Promise<void> {
-  return notifyOrder(orderId, db, buildOrderMessage);
 }
 
 export function buildPaidOrderMessage(o: {

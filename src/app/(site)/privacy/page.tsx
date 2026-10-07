@@ -5,7 +5,7 @@ import { operator, or } from "@/lib/legal";
 
 export const metadata: Metadata = { title: "Политика обработки персональных данных — Культурная Столица" };
 
-// Текст описывает фактическую обработку в коде: форма записи (src/components/site/BookingDialog.tsx),
+// Текст описывает фактическую обработку в коде: форма покупки (src/components/site/CheckoutDialog.tsx),
 // таблицы orders и rate_limit_hits, уведомления в Telegram, хостинг Vercel + Neon во Франкфурте.
 // Меняете обработку — обновите политику, согласие (/consent) и LEGAL_EDITION.
 export default function PrivacyPage() {

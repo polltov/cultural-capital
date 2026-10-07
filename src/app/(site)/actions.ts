@@ -1,12 +1,11 @@
 "use server";
 
-import { after } from "next/server";
-import { createOrder } from "@/server/orders";
-import { notifyNewOrder } from "@/server/telegram";
+import { revalidatePath } from "next/cache";
+import { releaseHold, startCheckout } from "@/server/checkout";
 import { clientIp } from "@/server/client-ip";
-import type { BookingResult } from "@/lib/validation/booking";
+import type { CheckoutResult } from "@/lib/validation/checkout";
 
-export async function submitBooking(_prev: BookingResult | null, formData: FormData): Promise<BookingResult> {
+export async function startCheckoutAction(_prev: CheckoutResult | null, formData: FormData): Promise<CheckoutResult> {
   const ip = await clientIp();
   // Схема сама приводит числа из строк; consent: чекбокс даёт "on" → true.
   const input = {
@@ -16,11 +15,21 @@ export async function submitBooking(_prev: BookingResult | null, formData: FormD
     name: formData.get("name") ?? "",
     phone: formData.get("phone") ?? "",
     email: formData.get("email") ?? "",
-    comment: formData.get("comment") ?? "",
     consent: formData.get("consent") === "on",
     website: formData.get("website") ?? "",
   };
-  const result = await createOrder(input, ip);
-  if (result.ok) after(() => notifyNewOrder(result.orderId));
+  const result = await startCheckout(input, ip);
+  // Удержание занимает места: каталог должен показать новый остаток сразу, а не через 5 минут.
+  if (result.ok) revalidatePath("/");
   return result;
+}
+
+// Токен страницы заказа: 32 случайных байта в base64url.
+const ORDER_TOKEN = /^[A-Za-z0-9_-]{43}$/;
+
+export async function releaseHoldAction(orderToken: string): Promise<void> {
+  // Серверное действие — публичный эндпоинт: аргумент приходит от клиента, типам TypeScript верить нельзя.
+  if (typeof orderToken !== "string" || !ORDER_TOKEN.test(orderToken)) return;
+  await releaseHold(orderToken);
+  revalidatePath("/");
 }

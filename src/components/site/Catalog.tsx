@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { TicketCard } from "./TicketCard";
-import { BookingDialog } from "./BookingDialog";
+import { CheckoutDialog } from "./CheckoutDialog";
 import type { CatalogTour } from "@/server/catalog";
 
 export function Catalog({ items }: { items: CatalogTour[] }) {
@@ -32,7 +32,7 @@ export function Catalog({ items }: { items: CatalogTour[] }) {
         ))}
       </div>
       {booking && current && (
-        <BookingDialog
+        <CheckoutDialog
           key={booking.n}
           tour={current.tour}
           sessions={current.sessions}

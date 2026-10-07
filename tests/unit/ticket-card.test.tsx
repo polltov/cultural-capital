@@ -26,14 +26,14 @@ describe("TicketCard", () => {
   it("shows placeholder and disabled button without sessions", () => {
     render(<TicketCard tour={tour} sessions={[]} />);
     expect(screen.getByText("Даты уточняются")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Записаться" }).getAttribute("aria-disabled")).toBe("true");
+    expect(screen.getByRole("button", { name: "Купить билет" }).getAttribute("aria-disabled")).toBe("true");
   });
   it("expands closed card on button click when no sessions, and does not call onBook", () => {
     const calls: (number | null)[] = [];
     const { container } = render(<TicketCard tour={tour} sessions={[]} onBook={(x) => calls.push(x)} />);
-    fireEvent.click(screen.getByRole("button", { name: "Записаться" }));
+    fireEvent.click(screen.getByRole("button", { name: "Купить билет" }));
     expect(container.querySelector("article")!.className).toContain("open");
-    fireEvent.click(screen.getByRole("button", { name: "Записаться" }));
+    fireEvent.click(screen.getByRole("button", { name: "Купить билет" }));
     expect(calls).toEqual([]);
   });
   it("shows date header and caption for two sessions", () => {
@@ -54,7 +54,7 @@ describe("TicketCard", () => {
     rerender(<TicketCard tour={tour} sessions={[s(3, d1), s(4, d2)]} onBook={(x) => calls.push(x)} />);
     expect(container.querySelector(".t-date-chip.active b")?.textContent).toBe("20 сен");
     fireEvent.click(container.querySelector("article")!);
-    fireEvent.click(screen.getByRole("button", { name: "Записаться" }));
+    fireEvent.click(screen.getByRole("button", { name: "Купить билет" }));
     expect(calls).toEqual([3]);
   });
 });

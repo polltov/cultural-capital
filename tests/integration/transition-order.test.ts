@@ -4,12 +4,12 @@ import { db } from "@/db/client";
 import { tours, tourSessions, orders } from "@/db/schema";
 import { transitionOrder, occupiedSeats } from "@/server/orders";
 
-async function setup(capacity = 8) {
+async function setup(capacity = 8, startsAt = new Date(Date.now() + 86400_000)) {
   const [t] = await db.insert(tours).values({ slug: "a", title: "A", durationLabel: "2 часа", ageLabel: "6+", priceChild: 1000, priceAdult: 1270, published: true }).returning();
-  const [s] = await db.insert(tourSessions).values({ tourId: t.id, startsAt: new Date(Date.now() + 86400_000), capacity }).returning();
+  const [s] = await db.insert(tourSessions).values({ tourId: t.id, startsAt, capacity }).returning();
   return s;
 }
-async function mk(sessionId: number, o: { children?: number; adults?: number; status?: "new" | "confirmed" | "done" | "cancelled" } = {}) {
+async function mk(sessionId: number, o: { children?: number; adults?: number; status?: "new" | "confirmed" | "done" | "cancelled" | "paid" } = {}) {
   const [r] = await db.insert(orders).values({
     sessionId, customerName: "Анна", phone: "+79111234567", priceChildSnapshot: 1, priceAdultSnapshot: 1, total: 1,
     consentAt: new Date(), children: o.children ?? 1, adults: o.adults ?? 1, status: o.status ?? "new",
@@ -61,6 +61,26 @@ describe("transitionOrder", () => {
     await transitionOrder(o.id, "cancelled", db);
     const [r] = await db.select().from(orders).where(eq(orders.id, o.id));
     expect(r.updatedAt.getTime()).toBeGreaterThan(Date.now() - 60_000);
+  });
+
+  it("paid → done is refused before the excursion has started", async () => {
+    const s = await setup(8, new Date(Date.now() + 3600_000));
+    const o = await mk(s.id, { status: "paid" });
+    expect(await transitionOrder(o.id, "done", db)).toEqual({ ok: false, error: "Отметить проведённым можно только после начала экскурсии" });
+    expect(await status(o.id)).toBe("paid");
+  });
+
+  it("paid → done is allowed once the excursion has started", async () => {
+    const s = await setup(8, new Date(Date.now() - 60_000));
+    const o = await mk(s.id, { status: "paid" });
+    expect(await transitionOrder(o.id, "done", db)).toEqual({ ok: true });
+    expect(await status(o.id)).toBe("done");
+  });
+
+  it("old applications: confirmed → done is not restricted by the start time", async () => {
+    const s = await setup();
+    const o = await mk(s.id, { status: "confirmed" });
+    expect(await transitionOrder(o.id, "done", db)).toEqual({ ok: true });
   });
 
   it("race: two confirmations for the last 3 seats → exactly one ok", async () => {

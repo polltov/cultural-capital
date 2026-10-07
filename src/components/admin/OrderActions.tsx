@@ -50,9 +50,12 @@ export function OrderActions({ id, status, total, startsAt, moveTargets, hasTick
   const [mode, setModeState] = useState<Mode>(null);
   const [amount, setAmount] = useState("");
   const [target, setTarget] = useState("");
+  // Время открытия страницы — как в TourForm: в рендере часы не читаем.
+  const [now] = useState(() => Date.now());
 
-  const next = nextStatuses(status);
   const isPaid = status === "paid";
+  // «Отметить проведённым» для оплаченного — только после начала экскурсии (сервер проверяет то же самое).
+  const next = nextStatuses(status).filter((to) => !(isPaid && to === "done" && startsAt.getTime() > now));
   const canResend = hasTicket && (isPaid || status === "done");
   if (!isPaid && next.length === 0 && !canResend) return null;
 

@@ -52,14 +52,21 @@ const click = (name: string | RegExp) => fireEvent.click(screen.getByRole("butto
 const buttonNames = () => screen.queryAllByRole("button").map((b) => b.textContent);
 const amount = () => screen.getByLabelText(/Сумма возврата/) as HTMLInputElement;
 
+const PAID_BEFORE_START = ["Отменить и вернуть", "Перенести", "Отправить билет повторно"];
+
 describe("OrderActions: оплаченный заказ", () => {
-  it("четыре кнопки по порядку", () => {
-    setup();
+  it("до начала экскурсии — три кнопки, «Отметить проведённым» нет", () => {
+    setup({ startsInHours: 48 });
+    expect(buttonNames()).toEqual(PAID_BEFORE_START);
+  });
+
+  it("после начала — четыре кнопки по порядку", () => {
+    setup({ startsInHours: -1 });
     expect(buttonNames()).toEqual(["Отменить и вернуть", "Перенести", "Отметить проведённым", "Отправить билет повторно"]);
   });
 
   it("«Отметить проведённым» меняет статус на done и обновляет страницу", async () => {
-    setup();
+    setup({ startsInHours: -1 });
     click("Отметить проведённым");
     await waitFor(() => expect(changeStatus).toHaveBeenCalledWith(57, "done"));
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/admin/orders/57?saved=1"));
@@ -155,7 +162,7 @@ describe("OrderActions: возврат", () => {
     click("Отменить и вернуть");
     click("Назад");
     expect(screen.queryByLabelText(/Сумма возврата/)).toBeNull();
-    expect(buttonNames()).toHaveLength(4);
+    expect(buttonNames()).toEqual(PAID_BEFORE_START);
     expect(refundAction).not.toHaveBeenCalled();
   });
 
@@ -186,7 +193,7 @@ describe("OrderActions: перенос", () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/admin/orders/57?saved=1"));
     // Заказ остался «Оплачен», страница та же: диалог должен закрыться сам, а не висеть с устаревшим выбором.
     expect(screen.queryByLabelText("Новый сеанс")).toBeNull();
-    expect(buttonNames()).toHaveLength(4);
+    expect(buttonNames()).toEqual(PAID_BEFORE_START);
   });
 
   it("ошибка переноса показывается, диалог остаётся", async () => {

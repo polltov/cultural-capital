@@ -15,18 +15,27 @@ export async function occupiedSeats(db: Db | Tx, sessionId: number): Promise<num
 
 export type TransitionResult = { ok: true } | { ok: false; error: string };
 
-/** Смена статуса. Блокировки в порядке сеанс → заявка (единый порядок, без взаимных дедлоков). */
+/**
+ * Смена статуса. Блокировки в порядке сеанс → заявка (единый порядок, без взаимных дедлоков).
+ * Оплаченный заказ «Проведён» только после начала экскурсии (по часам БД): раньше — это ошибка админа, а ночная задача
+ * и так переводит прошедшие сеансы.
+ */
 export async function transitionOrder(id: number, to: OrderStatus, db: Db = sharedDb): Promise<TransitionResult> {
   return db.transaction(async (tx) => {
     const [ref] = await tx.select({ sessionId: orders.sessionId }).from(orders).where(eq(orders.id, id));
     if (!ref) return { ok: false, error: "Заявка не найдена" } as const;
-    const [session] = await tx.execute<{ capacity: number }>(sql`select capacity from tour_sessions where id = ${ref.sessionId} for update`);
+    const [session] = await tx.execute<{ capacity: number; started: boolean }>(
+      sql`select capacity, starts_at <= now() as started from tour_sessions where id = ${ref.sessionId} for update`,
+    );
     const [o] = await tx.execute<{ status: OrderStatus; children: number; adults: number }>(
       sql`select status, children, adults from orders where id = ${id} for update`,
     );
     if (!o) return { ok: false, error: "Заявка не найдена" } as const;
     if (!canTransition(o.status, to)) {
       return { ok: false, error: `Нельзя перевести заявку из «${STATUS_LABELS[o.status]}» в «${STATUS_LABELS[to]}»` } as const;
+    }
+    if (o.status === "paid" && to === "done" && !session.started) {
+      return { ok: false, error: "Отметить проведённым можно только после начала экскурсии" } as const;
     }
     if (to === "confirmed") {
       const n = o.children + o.adults;

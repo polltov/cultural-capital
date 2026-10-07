@@ -83,6 +83,17 @@ describe("TicketView: не оплачен", () => {
   });
 });
 
+describe("TicketView: оплата не прошла", () => {
+  it("«Оплата не прошла» вместо «время истекло» и та же ссылка «Выбрать дату заново»", () => {
+    render(<TicketView view="declined" ticket={ticket} refunded={0} />);
+    expect(screen.getByRole("heading", { name: "Оплата не прошла" })).toBeTruthy();
+    expect(screen.queryByText("Время на оплату истекло")).toBeNull();
+    expect(screen.getByText(/КС-0057/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Выбрать дату заново" }).getAttribute("href")).toBe("/#catalog");
+    expect(screen.queryByRole("button", { name: "Распечатать" })).toBeNull();
+  });
+});
+
 describe("TicketView: ждёт оплаты", () => {
   it("«Проверяем оплату…» без билета", () => {
     render(<TicketView view="awaiting" ticket={ticket} refunded={0} />);

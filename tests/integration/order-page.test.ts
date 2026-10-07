@@ -69,13 +69,13 @@ describe("loadOrderPage: синк при открытии", () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
-  it("платёж отменён в ЮKassa → «не оплачен»", async () => {
+  it("платёж отменён в ЮKassa (карту отклонили) → «оплата не прошла»", async () => {
     const { token, orderId, paymentId } = await buy();
     gw.setStatus(paymentId, "canceled");
 
     const page = await load(token);
 
-    expect(page?.data.view).toBe("expired");
+    expect(page?.data.view).toBe("declined");
     expect(page?.outcome).toEqual({ kind: "expired", orderId });
   });
 
@@ -178,6 +178,27 @@ describe("loadOrderPage: сбой шлюза", () => {
 
     expect((await loadDefaultGateway(awaiting.token))?.data.view).toBe("awaiting");
     expect(log).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("loadOrderPage: «не оплачен» или «оплата не прошла»", () => {
+  it("expired с отменённым платежом → declined, без запроса к шлюзу", async () => {
+    const { token, orderId } = await buy();
+    await setOrder(orderId, { status: "expired", paymentStatus: "canceled" });
+    const spy = vi.spyOn(gw, "getPayment");
+
+    expect((await load(token))?.data.view).toBe("declined");
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("expired, платёж ещё не завершён или его нет → «время истекло»", async () => {
+    const a = await buy();
+    const b = await buy();
+    await releaseHold(a.token, db); // платёж pending
+    await setOrder(b.orderId, { status: "expired", paymentId: null, paymentStatus: null });
+
+    expect((await load(a.token))?.data.view).toBe("expired");
+    expect((await load(b.token))?.data.view).toBe("expired");
   });
 });
 

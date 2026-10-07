@@ -84,8 +84,19 @@ function CancelledState({ ticket: t, refunded }: Pick<OrderPageData, "ticket" | 
   );
 }
 
+/** «Не оплачен»: истекло время или платёж отклонён — в обоих случаях места освобождены, можно купить заново. */
+function UnpaidState({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="order-state">
+      <h1 className="order-h1">{title}</h1>
+      <p>{text}</p>
+      <Link className="btn-primary" href="/#catalog">Выбрать дату заново</Link>
+    </div>
+  );
+}
+
 /**
- * Страница заказа по состоянию: билет (оплачен/проведён), ожидание оплаты, «не оплачен», «отменён».
+ * Страница заказа по состоянию: билет (оплачен/проведён), ожидание оплаты, «не оплачен» / «оплата не прошла», «отменён».
  * Серверный компонент; клиентские — только опрос (`AwaitPayment`) и печать (`PrintButton`).
  */
 export function TicketView({ view, ticket, refunded }: OrderPageData) {
@@ -99,11 +110,10 @@ export function TicketView({ view, ticket, refunded }: OrderPageData) {
         </>
       )}
       {view === "expired" && (
-        <div className="order-state">
-          <h1 className="order-h1">Время на оплату истекло</h1>
-          <p>Заказ {ticket.number} не оплачен вовремя, места освобождены.</p>
-          <Link className="btn-primary" href="/#catalog">Выбрать дату заново</Link>
-        </div>
+        <UnpaidState title="Время на оплату истекло" text={`Заказ ${ticket.number} не оплачен вовремя, места освобождены.`} />
+      )}
+      {view === "declined" && (
+        <UnpaidState title="Оплата не прошла" text={`Платёж по заказу ${ticket.number} не прошёл, места освобождены. Можно выбрать дату и оплатить заново.`} />
       )}
       {view === "cancelled" && <CancelledState ticket={ticket} refunded={refunded} />}
       <Contacts />

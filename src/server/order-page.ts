@@ -8,7 +8,8 @@ import type { PaymentGateway } from "@/server/payments/types";
 import { loadTicket } from "@/server/ticket";
 import type { TicketData } from "@/server/mail/templates";
 
-export type OrderView = "awaiting" | "paid" | "expired" | "cancelled";
+/** `declined` — тот же «не оплачен» (`expired`), но платёж ЮKassa отменён: карту отклонили или оплату прервали. */
+export type OrderView = "awaiting" | "paid" | "expired" | "declined" | "cancelled";
 export type OrderPageData = { view: OrderView; ticket: TicketData; refunded: number };
 
 /** 32 байта в base64url — ровно то, что выдаёт `startCheckout`. */
@@ -66,7 +67,7 @@ export async function loadOrderPage(
     if (outcome) order = (await findByToken(db, token)) ?? order;
   }
 
-  const view = VIEWS[order.status];
+  const view = order.status === "expired" && order.paymentStatus === "canceled" ? "declined" : VIEWS[order.status];
   if (!view) return null;
   const ticket = await loadTicket(order.id, db);
   if (!ticket) return null;

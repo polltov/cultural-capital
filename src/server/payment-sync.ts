@@ -70,8 +70,8 @@ export async function hasJournalNote(db: Db | Tx, paymentId: string, note: strin
 
 /**
  * Единственное место, где статус заказа меняется по статусу платежа ЮKassa (возвраты мимо сайта сверяет
- * `reconcileExternalRefund`). Объект платежа берётся из API
- * (данным из уведомления не доверяем). Ошибки `getPayment` и БД не глотаем: webhook ответит 500 и ЮKassa повторит.
+ * `reconcileExternalRefund`). Объект платежа берётся из API (данным из уведомления не доверяем).
+ * Ошибки `getPayment` и БД не глотаем: webhook ответит 500 и ЮKassa повторит.
  * Побочные эффекты (письма, Telegram) — отдельно, `runSyncEffects` после коммита.
  */
 export async function syncPayment(

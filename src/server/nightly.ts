@@ -145,7 +145,10 @@ export async function runNightly(deps: { db?: Db; gateway?: PaymentGateway; now?
           if (Number(payment.refundedAmount) > 0) {
             const cancelled = await reconcileExternalRefund(tx, o, payment);
             await recordPaymentEvent(
-              { source: "cron", event: `payment.${payment.status}`, paymentId: o.paymentId, orderId: o.id, payload: withoutConfirmationToken(payment.raw), note: CLOSING_SKIPPED_REFUNDED },
+              {
+                source: "cron", event: `payment.${payment.status}`, paymentId: o.paymentId, orderId: o.id,
+                payload: withoutConfirmationToken(payment.raw), note: CLOSING_SKIPPED_REFUNDED,
+              },
               tx,
             );
             return { refunded: cancelled ? "cancelled" : "done", number: o.number };

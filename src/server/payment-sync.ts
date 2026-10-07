@@ -45,14 +45,14 @@ function parseOrderId(raw: string | undefined): number | null {
 }
 
 /** Ответ API в журнал целиком; токен виджета (`confirmation.confirmation_token`) — одноразовый секрет оплаты, ему там не место. */
-function withoutConfirmationToken(raw: unknown): unknown {
+export function withoutConfirmationToken(raw: unknown): unknown {
   const confirmation = (raw as { confirmation?: unknown } | null | undefined)?.confirmation;
   if (!confirmation || typeof confirmation !== "object" || !("confirmation_token" in confirmation)) return raw;
   return { ...(raw as object), confirmation: { ...confirmation, confirmation_token: null } };
 }
 
 /** Есть ли в журнале запись по платежу с такой пометкой (`note`). */
-async function hasJournalNote(db: Db | Tx, paymentId: string, note: string): Promise<boolean> {
+export async function hasJournalNote(db: Db | Tx, paymentId: string, note: string): Promise<boolean> {
   const [r] = await db
     .select({ id: paymentEvents.id })
     .from(paymentEvents)

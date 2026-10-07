@@ -35,6 +35,7 @@ export async function reconcileExternalRefund(
 
 /**
  * «Отменить и вернуть»: оплаченный заказ → `cancelled`, деньги возвращаются через ЮKassa (`amount` — целые рубли, 0…total).
+ * Если по платежу уже есть возврат (`reconcileExternalRefund`), нового не будет: заказ закрывается с суммой, которую назвала ЮKassa.
  * `0` — отмена без возврата, шлюз не вызывается. Заказ блокируется на всё время вызова шлюза: второй клик админа дождётся
  * и увидит `cancelled`; вторая страховка от двойного возврата — ключ идемпотентности `refund-<id>`.
  * Любой сбой возврата (сеть, отказ ЮKassa, неверная ставка НДС, ключи не заданы) — заказ не меняется.
@@ -69,7 +70,11 @@ export async function refundOrder(
     if (amount > 0) {
       try {
         // Шлюз, чек (email, ставка НДС) и сам вызов — внутри try: ненастроенная ЮKassa или неверная ставка — такой же отказ, как ошибка API.
-        refund = await createReceiptRefund(deps.gateway ?? paymentGateway(), {
+        const gateway = deps.gateway ?? paymentGateway();
+        // Деньги могли уже вернуть мимо сайта (в кабинете ЮKassa; наш прошлый вызов отвалился по таймауту, а возврат прошёл):
+        // второй возврат не создаём, заказ закрывается с фактически возвращённой суммой — её же назовёт письмо клиенту.
+        if (await reconcileExternalRefund(tx, o, await gateway.getPayment(o.paymentId))) return { ok: true };
+        refund = await createReceiptRefund(gateway, {
           idempotenceKey: `refund-${o.id}`,
           paymentId: o.paymentId,
           amount,

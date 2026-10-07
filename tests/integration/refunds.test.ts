@@ -36,7 +36,7 @@ async function addSession(tourId: number, capacity = 8, over: Partial<typeof tou
   return s;
 }
 
-/** Оплаченный заказ на 2 детей + 1 взрослого (3270 ₽), платёж pay-1. */
+/** Оплаченный заказ на 2 детей + 1 взрослого (3270 ₽), платёж pay-1 (он же — в подделке шлюза, без возвратов). */
 async function paidOrder(sessionId: number, over: Partial<typeof orders.$inferInsert> = {}) {
   const [o] = await db
     .insert(orders)
@@ -46,6 +46,7 @@ async function paidOrder(sessionId: number, over: Partial<typeof orders.$inferIn
       paidAt: new Date(), consentAt: new Date(), ...over,
     })
     .returning();
+  if (o.paymentId) gw.addPayment(o.paymentId, { amount: o.total, orderId: o.id });
   return o;
 }
 
@@ -132,6 +133,54 @@ describe("refundOrder", () => {
     result.value = { id: "ref-y", status: "pending" };
     expect(await refund(o.id, 1635)).toEqual({ ok: true });
     expect(await orderOf(o.id)).toMatchObject({ status: "cancelled", refundedAmount: 1635, refundId: "ref-y" });
+  });
+
+  describe("the money was already returned outside the site", () => {
+    it("refunded in the YooKassa dashboard: no second refund, the order is cancelled with the amount YooKassa reports", async () => {
+      const { s } = await setup();
+      const o = await paidOrder(s.id);
+      gw.setRefunded("pay-1", 3270);
+      const createRefund = vi.spyOn(gw, "createRefund");
+
+      expect(await refund(o.id, 1635)).toEqual({ ok: true });
+      expect(createRefund).not.toHaveBeenCalled();
+      expect(await orderOf(o.id)).toMatchObject({ status: "cancelled", refundedAmount: 3270, refundId: null });
+      expect(await occupiedSeats(db, s.id)).toBe(0);
+    });
+
+    it("a partial dashboard refund counts too: the order is closed with that amount", async () => {
+      const { s } = await setup();
+      const o = await paidOrder(s.id);
+      gw.setRefunded("pay-1", 1000);
+
+      expect(await refund(o.id, 3270)).toEqual({ ok: true });
+      expect(gw.refunds).toHaveLength(0);
+      expect(await orderOf(o.id)).toMatchObject({ status: "cancelled", refundedAmount: 1000 });
+    });
+
+    it("our call timed out but YooKassa made the refund: the retry closes the order without refunding twice", async () => {
+      const { s } = await setup();
+      const o = await paidOrder(s.id);
+      gw.failNext("createRefund", new Error("timeout"));
+      expect(await refund(o.id, 1635)).toEqual({ ok: false, error: "Возврат не прошёл: timeout" });
+      expect((await orderOf(o.id)).status).toBe("paid");
+
+      gw.setRefunded("pay-1", 1635); // ЮKassa всё же провела возврат
+      expect(await refund(o.id, 1635)).toEqual({ ok: true });
+      expect(gw.refunds).toHaveLength(0);
+      expect(await orderOf(o.id)).toMatchObject({ status: "cancelled", refundedAmount: 1635 });
+    });
+
+    it("YooKassa cannot be asked (getPayment fails): a refund failure, nothing refunded, the order is unchanged", async () => {
+      const { s } = await setup();
+      const o = await paidOrder(s.id);
+      gw.failNext("getPayment");
+      const createRefund = vi.spyOn(gw, "createRefund");
+
+      expect(await refund(o.id, 1635)).toEqual({ ok: false, error: "Возврат не прошёл: fake failure" });
+      expect(createRefund).not.toHaveBeenCalled();
+      expect(await orderOf(o.id)).toMatchObject({ status: "paid", refundedAmount: 0 });
+    });
   });
 
   it("an invalid VAT code is a refund failure too, the order is unchanged", async () => {

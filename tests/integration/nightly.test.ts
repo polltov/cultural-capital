@@ -2,14 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { orders, paymentEvents, tours, tourSessions } from "@/db/schema";
+import { formatOrderNumber } from "@/lib/domain/order-number";
 import { startCheckout } from "@/server/checkout";
 import { runNightly } from "@/server/nightly";
-import { sendSorry, sendTicket } from "@/server/ticket";
+import { sendCancelled, sendSorry, sendTicket } from "@/server/ticket";
 import { notifyAlert, notifyPaidOrder } from "@/server/telegram";
 import { fakeGateway, type FakeGateway } from "../support/fake-gateway";
 import { lockOrder, whileLocked } from "../support/lock-gate";
 
-vi.mock("@/server/ticket", () => ({ sendTicket: vi.fn(), sendSorry: vi.fn() }));
+vi.mock("@/server/ticket", () => ({ sendTicket: vi.fn(), sendSorry: vi.fn(), sendCancelled: vi.fn() }));
 vi.mock("@/server/telegram", () => ({ notifyPaidOrder: vi.fn(), notifyAlert: vi.fn() }));
 
 const H = 3600_000;
@@ -25,6 +26,7 @@ beforeEach(() => {
   ipSeq = 0;
   vi.mocked(sendTicket).mockReset();
   vi.mocked(sendSorry).mockReset();
+  vi.mocked(sendCancelled).mockReset();
   vi.mocked(notifyPaidOrder).mockReset();
   vi.mocked(notifyAlert).mockReset();
   log = vi.spyOn(console, "error").mockImplementation(() => {}); // сбои по заказам логируются
@@ -56,7 +58,7 @@ async function lapsed(sessionId: number) {
   return { o, paymentId: o.paymentId! };
 }
 
-/** Оплаченный заказ на 2 детей + 1 взрослого (3270 ₽) со слепком цен 1000/1270. */
+/** Оплаченный заказ на 2 детей + 1 взрослого (3270 ₽) со слепком цен 1000/1270; его платёж есть и в подделке шлюза. */
 async function paidOrder(sessionId: number, over: Partial<typeof orders.$inferInsert> = {}) {
   const [o] = await db
     .insert(orders)
@@ -66,6 +68,7 @@ async function paidOrder(sessionId: number, over: Partial<typeof orders.$inferIn
       paidAt: new Date(), consentAt: new Date(), ...over,
     })
     .returning();
+  if (o.paymentId) gw.addPayment(o.paymentId, { amount: o.total, orderId: o.id });
   return o;
 }
 
@@ -372,6 +375,81 @@ describe("runNightly: after the excursion", () => {
 
     expect(await runNightly({ db, closing: true })).toEqual({ ...ZERO, errors: 1 });
     expect((await orderOf(o.id)).status).toBe("paid");
+  });
+});
+
+describe("runNightly: the payment was refunded outside the site before the closing receipt", () => {
+  const past = (hours: number) => new Date(Date.now() - hours * H);
+
+  it("a paid order refunded in the dashboard: no receipt, cancelled with the refunded amount, one alert", async () => {
+    const { s } = await setup({ startsAt: past(4) });
+    const o = await paidOrder(s.id);
+    gw.setRefunded(o.paymentId!, 3270);
+
+    expect(await run({ closing: true })).toEqual(ZERO);
+    expect(gw.receipts).toHaveLength(0);
+    expect(await orderOf(o.id)).toMatchObject({ status: "cancelled", refundedAmount: 3270, closingReceiptAt: null });
+    expect(notifyAlert).toHaveBeenCalledExactlyOnceWith(
+      `Возврат по заказу ${formatOrderNumber(o.number)} оформлен в кабинете ЮKassa — на сайте заказ отменён автоматически`,
+    );
+    expect((await journal()).map((r) => [r.source, r.orderId, r.note])).toEqual([["cron", o.id, "closing_skipped_refunded"]]);
+
+    // отменённый заказ из выборки уходит: ни чека, ни второй тревоги
+    expect(await run({ closing: true })).toEqual(ZERO);
+    expect(notifyAlert).toHaveBeenCalledTimes(1);
+  });
+
+  it("a done order refunded in the dashboard: no receipt, stays done, one alert; later runs skip it without asking YooKassa", async () => {
+    const { s } = await setup({ startsAt: past(4) });
+    const o = await paidOrder(s.id, { status: "done" });
+    gw.setRefunded(o.paymentId!, 1635);
+
+    expect(await run({ closing: true })).toEqual(ZERO);
+    expect(gw.receipts).toHaveLength(0);
+    expect(await orderOf(o.id)).toMatchObject({ status: "done", refundedAmount: 0, closingReceiptAt: null });
+    expect(notifyAlert).toHaveBeenCalledExactlyOnceWith(
+      `Возврат по заказу ${formatOrderNumber(o.number)} оформлен в кабинете ЮKassa — закрывающий чек по нему не выбит`,
+    );
+    expect((await journal()).map((r) => [r.source, r.orderId, r.note])).toEqual([["cron", o.id, "closing_skipped_refunded"]]);
+
+    const getPayment = vi.spyOn(gw, "getPayment");
+    expect(await run({ closing: true })).toEqual(ZERO);
+    expect(getPayment).not.toHaveBeenCalled();
+    expect(gw.receipts).toHaveLength(0);
+    expect(notifyAlert).toHaveBeenCalledTimes(1);
+    expect(await journal()).toHaveLength(1);
+  });
+
+  it("not refunded: the receipt goes out as usual, nothing is journalled", async () => {
+    const { s } = await setup({ startsAt: past(4) });
+    const o = await paidOrder(s.id);
+    const getPayment = vi.spyOn(gw, "getPayment");
+
+    expect(await run({ closing: true })).toEqual({ ...ZERO, closed: 1, done: 1 });
+    expect(getPayment).toHaveBeenCalledExactlyOnceWith(o.paymentId);
+    expect(await journal()).toHaveLength(0);
+    expect(notifyAlert).not.toHaveBeenCalled();
+  });
+
+  it("closing off: YooKassa is not asked, paid → done as before", async () => {
+    const { s } = await setup({ startsAt: past(4) });
+    const o = await paidOrder(s.id);
+    gw.setRefunded(o.paymentId!, 3270);
+    const getPayment = vi.spyOn(gw, "getPayment");
+
+    expect(await run({ closing: false })).toEqual({ ...ZERO, done: 1 });
+    expect(getPayment).not.toHaveBeenCalled();
+    expect((await orderOf(o.id)).status).toBe("done");
+  });
+
+  it("YooKassa cannot be asked before the receipt: error counted, no receipt, the order stays paid", async () => {
+    const { s } = await setup({ startsAt: past(4) });
+    const o = await paidOrder(s.id);
+    gw.failNext("getPayment");
+
+    expect(await run({ closing: true })).toEqual({ ...ZERO, errors: 1 });
+    expect(gw.receipts).toHaveLength(0);
+    expect(await orderOf(o.id)).toMatchObject({ status: "paid", closingReceiptAt: null });
   });
 });
 

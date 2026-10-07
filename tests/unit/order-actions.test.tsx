@@ -123,10 +123,31 @@ describe("OrderActions: возврат", () => {
     click(/^Вернуть/);
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("Возврат не прошёл: нет связи");
-    expect(alert.textContent).toContain("Если возврат не проходит, оформите его в кабинете ЮKassa и отмените заказ с суммой 0.");
+    expect(alert.textContent).toContain(
+      "Если возврат не проходит, оформите его в кабинете ЮKassa, затем снова нажмите «Отменить и вернуть» — сайт увидит возврат и закроет заказ.",
+    );
+    expect(alert.textContent).not.toMatch(/сумм\S* 0/);
     expect(replace).not.toHaveBeenCalled();
     // Диалог остаётся открытым: сумму можно поправить и повторить.
     expect(amount().value).toBe("3270");
+  });
+
+  it("отказ не из-за ЮKassa (заказ уже не оплачен) — только текст ошибки, без подсказки про кабинет", async () => {
+    refundAction.mockResolvedValue({ ok: false, error: "Вернуть деньги можно только по оплаченному заказу" });
+    setup();
+    click("Отменить и вернуть");
+    click(/^Вернуть/);
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toBe("Вернуть деньги можно только по оплаченному заказу");
+  });
+
+  it("у других действий подсказки про кабинет ЮKassa нет", async () => {
+    moveAction.mockResolvedValue({ ok: false, error: "В выбранном сеансе свободно 0, в заказе 3" });
+    setup();
+    click("Перенести");
+    fireEvent.change(screen.getByLabelText("Новый сеанс"), { target: { value: "11" } });
+    click("Перенести");
+    expect((await screen.findByRole("alert")).textContent).not.toContain("кабинете ЮKassa");
   });
 
   it("«Назад» закрывает диалог без вызова действия", () => {

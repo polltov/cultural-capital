@@ -1,16 +1,25 @@
 import { and, asc, eq, isNotNull, isNull, lt, or } from "drizzle-orm";
 import { db as sharedDb, type Db } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
+import { formatOrderNumber } from "@/lib/domain/order-number";
 import { paymentItems } from "@/lib/domain/receipt";
-import { runSyncEffects, syncPayment } from "@/server/payment-sync";
+import { hasJournalNote, recordPaymentEvent, runSyncEffects, syncPayment, withoutConfirmationToken } from "@/server/payment-sync";
 import { closingReceiptsEnabled, paymentGateway, vatCode } from "@/server/payments/gateway";
 import type { PaymentGateway } from "@/server/payments/types";
+import { reconcileExternalRefund } from "@/server/refunds";
+import { notifyAlert } from "@/server/telegram";
 
 /** Сколько заказов обработано за ночь; `errors` — заказы, на которых что-то упало (повтор — следующей ночью). */
 export type NightlyReport = { synced: number; expired: number; closed: number; done: number; errors: number };
 
 /** Заказ считается проведённым, когда с начала сеанса прошло больше этого времени. */
 const AFTER_START_MS = 3 * 3600_000;
+
+/** Пометка журнала: закрывающий чек не выбит, потому что по платежу есть возврат. По ней `done`-заказ больше не проверяется. */
+const CLOSING_SKIPPED_REFUNDED = "closing_skipped_refunded";
+
+/** Исход обработки прошедшего заказа: чек и/или «Проведён» — или пропуск из-за возврата мимо сайта (тревога после коммита). */
+type ClosingResult = { closed: boolean; done: boolean } | { refunded: "cancelled" | "done"; number: number } | null;
 
 /**
  * Ночная уборка платежей. Порядок важен: сначала опрос платежей по заказам с истёкшим удержанием (webhook мог потеряться,
@@ -105,7 +114,7 @@ export async function runNightly(deps: { db?: Db; gateway?: PaymentGateway; now?
   for (const picked of over) {
     let receiptIssued = false;
     try {
-      const result = await db.transaction(async (tx) => {
+      const result = await db.transaction(async (tx): Promise<ClosingResult> => {
         // Блокируется только строка заказа, сеанс не блокируем: порядок «сеанс → заказ» в других местах не нарушаем.
         const [o] = await tx.select().from(orders).where(eq(orders.id, picked.id)).for("update");
         // Заказ изменился после выборки (возврат, перенос, чек уже выбит и т.д.) — пропускаем без ошибки: условия выборки проверяем заново.
@@ -121,6 +130,19 @@ export async function runNightly(deps: { db?: Db; gateway?: PaymentGateway; now?
         if (!session || session.startsAt >= cutoff) return null;
 
         if (needsReceipt) {
+          // Чек «Полный расчёт» по платежу с возвратом выбивать нельзя. Возврат, оформленный в кабинете ЮKassa, сайт мог не увидеть
+          // (уведомление потерялось), поэтому перед чеком спрашиваем ЮKassa: оплаченный заказ отменяем, проведённый оставляем как есть.
+          // Пропуск помечаем в журнале — `done`-заказ с такой пометкой дальше пропускается молча, без запроса и тревоги каждую ночь.
+          if (await hasJournalNote(tx, o.paymentId, CLOSING_SKIPPED_REFUNDED)) return null;
+          const payment = await gatewayOrThrow().getPayment(o.paymentId);
+          if (Number(payment.refundedAmount) > 0) {
+            const cancelled = await reconcileExternalRefund(tx, o, payment);
+            await recordPaymentEvent(
+              { source: "cron", event: `payment.${payment.status}`, paymentId: o.paymentId, orderId: o.id, payload: withoutConfirmationToken(payment.raw), note: CLOSING_SKIPPED_REFUNDED },
+              tx,
+            );
+            return { refunded: cancelled ? "cancelled" : "done", number: o.number };
+          }
           if (!o.email) throw new Error("у заказа нет email для закрывающего чека");
           const items = paymentItems(
             { tourTitle: session.tourTitle, startsAt: session.startsAt, children: o.children, adults: o.adults, priceChild: o.priceChildSnapshot, priceAdult: o.priceAdultSnapshot },
@@ -146,6 +168,15 @@ export async function runNightly(deps: { db?: Db; gateway?: PaymentGateway; now?
         }
         return { closed: needsReceipt, done: markDone };
       });
+      if (result && "refunded" in result) {
+        const n = formatOrderNumber(result.number);
+        await notifyAlert(
+          result.refunded === "cancelled"
+            ? `Возврат по заказу ${n} оформлен в кабинете ЮKassa — на сайте заказ отменён автоматически`
+            : `Возврат по заказу ${n} оформлен в кабинете ЮKassa — закрывающий чек по нему не выбит`,
+        );
+        continue;
+      }
       // Счётчики — после коммита: откат транзакции не должен оставить их завышенными.
       if (result?.closed) report.closed++;
       if (result?.done) report.done++;

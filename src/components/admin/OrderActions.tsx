@@ -19,7 +19,10 @@ const BUTTONS: Record<OrderStatus, { label: string; cls: string }> = {
   expired: { label: "Не оплачен", cls: "btn btn-ghost" },
 };
 
-const REFUND_FALLBACK = "Если возврат не проходит, оформите его в кабинете ЮKassa и отмените заказ с суммой 0.";
+/** Так `refundOrder` начинает ошибки ЮKassa; подсказка про кабинет нужна только им, а не отказам вроде «заказ уже не оплачен». */
+const REFUND_FAILED = "Возврат не прошёл:";
+const REFUND_FALLBACK =
+  "Если возврат не проходит, оформите его в кабинете ЮKassa, затем снова нажмите «Отменить и вернуть» — сайт увидит возврат и закроет заказ.";
 
 export type MoveTarget = { id: number; startsAt: Date; free: number };
 
@@ -34,7 +37,6 @@ type Props = {
   hasTicket: boolean;
 };
 type Mode = "cancel" | "refund" | "move" | null;
-type Failure = { text: string; refund: boolean };
 
 const AMOUNT_RE = /^\d{1,9}$/;
 const targetLabel = (t: MoveTarget) =>
@@ -43,7 +45,7 @@ const targetLabel = (t: MoveTarget) =>
 export function OrderActions({ id, status, total, startsAt, moveTargets, hasTicket }: Props) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [failure, setFailure] = useState<Failure | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [mode, setModeState] = useState<Mode>(null);
   const [amount, setAmount] = useState("");
@@ -60,13 +62,13 @@ export function OrderActions({ id, status, total, startsAt, moveTargets, hasTick
     setModeState(m);
   }
 
-  function run(call: () => Promise<{ ok: true } | { ok: false; error: string }>, onOk: () => void, refund = false) {
+  function run(call: () => Promise<{ ok: true } | { ok: false; error: string }>, onOk: () => void) {
     setFailure(null);
     setNotice(null);
     start(async () => {
       const r = await call();
       if (r.ok) onOk();
-      else setFailure({ text: r.error, refund });
+      else setFailure(r.error);
     });
   }
   // Успех: диалог закрываем сами — после переноса статус заказа прежний, и страница та же.
@@ -98,8 +100,8 @@ export function OrderActions({ id, status, total, startsAt, moveTargets, hasTick
     <div className="order-actions">
       {failure && (
         <div className="banner banner--error" role="alert">
-          <p>{failure.text}</p>
-          {failure.refund && <p>{REFUND_FALLBACK}</p>}
+          <p>{failure}</p>
+          {failure.startsWith(REFUND_FAILED) && <p>{REFUND_FALLBACK}</p>}
         </div>
       )}
       {notice && (
@@ -143,7 +145,7 @@ export function OrderActions({ id, status, total, startsAt, moveTargets, hasTick
               type="button"
               className="btn btn-danger"
               disabled={pending || !refundValid}
-              onClick={() => run(() => refundAction(id, refundSum), saved, true)}
+              onClick={() => run(() => refundAction(id, refundSum), saved)}
             >
               {refundValid ? `Вернуть ${formatRub(refundSum)}` : "Вернуть"}
             </button>

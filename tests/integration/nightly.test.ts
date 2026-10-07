@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { orders, paymentEvents, tours, tourSessions } from "@/db/schema";
 import { formatOrderNumber } from "@/lib/domain/order-number";
-import { startCheckout } from "@/server/checkout";
+import { releaseHold, startCheckout } from "@/server/checkout";
 import { runNightly } from "@/server/nightly";
 import { sendCancelled, sendSorry, sendTicket } from "@/server/ticket";
 import { notifyAlert, notifyPaidOrder } from "@/server/telegram";
@@ -155,12 +155,76 @@ describe("runNightly: the hold lapsed (awaiting_payment)", () => {
     expect((await orderOf(first.o.id)).status).toBe("expired");
   });
 
-  it("a second run changes nothing", async () => {
+  it("a second run only polls the still-pending payment again; once YooKassa cancels it, nothing more", async () => {
     const { s } = await setup();
-    await lapsed(s.id);
+    const { o, paymentId } = await lapsed(s.id);
     await run();
-    // заказ теперь `expired` с платежом `pending` — ни опроса, ни действий
+    // заказ теперь `expired` с платежом `pending`: клиент ещё может оплатить — опрашиваем, но ничего не меняем
+    expect(await run()).toEqual({ ...ZERO, synced: 1 });
+    expect(await orderOf(o.id)).toMatchObject({ status: "expired", paymentStatus: "pending" });
+
+    gw.setStatus(paymentId, "canceled"); // ЮKassa сама отменяет неоплаченный платёж через час
+    expect(await run()).toEqual({ ...ZERO, synced: 1 });
+    expect(await orderOf(o.id)).toMatchObject({ status: "expired", paymentStatus: "canceled" });
     expect(await run()).toEqual(ZERO);
+  });
+});
+
+describe("runNightly: paid after the hold was released («Изменить»), the webhook was lost", () => {
+  /** Заказ через startCheckout, клиент нажал «Изменить» (releaseHold → expired), а потом всё же оплатил — уведомление не дошло. */
+  async function releasedThenPaid(capacity = 20) {
+    const { s } = await setup({ capacity });
+    const r = await startCheckout({ ...valid, sessionId: s.id }, `10.0.0.${++ipSeq}`, { db, gateway: gw });
+    if (!r.ok) throw new Error(`startCheckout: ${JSON.stringify(r)}`);
+    await releaseHold(r.orderToken, db);
+    const [o] = await db.select().from(orders).where(eq(orders.accessToken, r.orderToken));
+    expect(o).toMatchObject({ status: "expired", paymentStatus: "pending" });
+    gw.setStatus(o.paymentId!, "succeeded");
+    return { s, o, paymentId: o.paymentId! };
+  }
+
+  it("seats are still free → paid, the ticket goes out", async () => {
+    const { o } = await releasedThenPaid();
+
+    expect(await run()).toEqual({ ...ZERO, synced: 1 });
+    expect(await orderOf(o.id)).toMatchObject({ status: "paid", paymentStatus: "succeeded" });
+    expect(sendTicket).toHaveBeenCalledWith(o.id, "paid");
+    expect(notifyPaidOrder).toHaveBeenCalledWith(o.id);
+    expect(await run()).toEqual(ZERO);
+  });
+
+  it("the seats were sold meanwhile → full refund, cancelled, apology", async () => {
+    const { s, o } = await releasedThenPaid(3);
+    await paidOrder(s.id, { children: 3, adults: 0, total: 3000 });
+
+    expect(await run()).toEqual({ ...ZERO, synced: 1 });
+    expect(await orderOf(o.id)).toMatchObject({ status: "cancelled", refundedAmount: 3270 });
+    expect(gw.refunds).toHaveLength(1);
+    expect(sendSorry).toHaveBeenCalledWith(o.id);
+  });
+
+  it("a canceled payment of an expired order is polled once and then never again", async () => {
+    const { s } = await setup();
+    const r = await startCheckout({ ...valid, sessionId: s.id }, `10.0.0.${++ipSeq}`, { db, gateway: gw });
+    if (!r.ok) throw new Error("unreachable");
+    await releaseHold(r.orderToken, db);
+    const [o] = await db.select().from(orders).where(eq(orders.accessToken, r.orderToken));
+    gw.setStatus(o.paymentId!, "canceled");
+    const getPayment = vi.spyOn(gw, "getPayment");
+
+    expect(await run()).toEqual({ ...ZERO, synced: 1 });
+    expect(await orderOf(o.id)).toMatchObject({ status: "expired", paymentStatus: "canceled" });
+    expect(await run()).toEqual(ZERO);
+    expect(getPayment).toHaveBeenCalledTimes(1);
+  });
+
+  it("an expired order with no payment status yet is polled too", async () => {
+    const { s } = await setup();
+    const o = await paidOrder(s.id, { status: "expired", paymentStatus: null });
+
+    expect(await run()).toEqual({ ...ZERO, synced: 1 });
+    // платёж в подделке прошёл, места есть — поздняя оплата
+    expect(await orderOf(o.id)).toMatchObject({ status: "paid", paymentStatus: "succeeded" });
   });
 });
 
@@ -206,10 +270,11 @@ describe("runNightly: expired orders left by a failed late refund", () => {
     expect((await orderOf(o.id)).status).toBe("expired");
   });
 
-  it("an expired order whose payment never succeeded is not polled", async () => {
+  it("an expired order whose payment was canceled is not polled", async () => {
     const { s } = await setup();
-    const { o } = await lapsed(s.id);
-    await run(); // → expired, payment_status pending
+    const { o, paymentId } = await lapsed(s.id);
+    gw.setStatus(paymentId, "canceled");
+    await run(); // → expired, payment_status canceled
     const getPayment = vi.spyOn(gw, "getPayment");
     expect(await run()).toEqual(ZERO);
     expect((await orderOf(o.id)).status).toBe("expired");

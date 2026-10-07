@@ -428,13 +428,14 @@ describe("syncPayment: other statuses", () => {
     expect((await journal())[0]).toMatchObject({ event: "payment.canceled", note: "expired" });
   });
 
-  it.each(["paid", "expired", "cancelled"] as const)("canceled payment of a %s order is a noop", async (status) => {
+  it.each(["paid", "expired", "cancelled"] as const)("canceled payment of a %s order is a noop, but the payment status is saved", async (status) => {
     const { s } = await setup();
     const { o, paymentId } = await buy(s.id);
     await db.update(orders).set({ status }).where(eq(orders.id, o.id));
     gw.setStatus(paymentId, "canceled");
     expect(await sync(paymentId)).toEqual({ kind: "noop", orderId: o.id });
-    expect((await orderOf(o.id)).status).toBe(status);
+    // по сохранённому статусу ночная задача и страница заказа перестают опрашивать платёж
+    expect(await orderOf(o.id)).toMatchObject({ status, paymentStatus: "canceled" });
   });
 
   it("pending / waiting_for_capture: only payment_status is updated", async () => {

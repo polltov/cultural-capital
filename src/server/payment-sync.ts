@@ -27,6 +27,13 @@ export type SyncOutcome = {
 type SyncKind = SyncOutcome["kind"];
 type Source = "webhook" | "sync" | "cron";
 
+/**
+ * Конечные статусы платежа ЮKassa. Заказ `expired`, чей платёж ещё не в них (клиент нажал «Изменить» или не успел за 15 минут,
+ * а оплата в банковском приложении всё же могла пройти), опрашивают страница заказа и ночная задача. Набор сам себя ограничивает:
+ * `syncPayment` всегда записывает последний статус платежа, а неоплаченный платёж ЮKassa сама отменяет через час.
+ */
+export const FINAL_PAYMENT_STATUSES: readonly string[] = ["succeeded", "canceled"];
+
 /** Запись в журнал платежей (`payment_events`). Внутри транзакции передаётся её `tx`. */
 export async function recordPaymentEvent(
   e: { source: Source; event: string; paymentId: string; orderId?: number | null; payload: unknown; note?: string },

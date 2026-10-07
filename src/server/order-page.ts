@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db as sharedDb, type Db } from "@/db/client";
 import { orders } from "@/db/schema";
 import type { OrderStatus } from "@/lib/domain/order-status";
-import { syncPayment, type SyncOutcome } from "@/server/payment-sync";
+import { FINAL_PAYMENT_STATUSES, syncPayment, type SyncOutcome } from "@/server/payment-sync";
 import { paymentGateway } from "@/server/payments/gateway";
 import type { PaymentGateway } from "@/server/payments/types";
 import { loadTicket } from "@/server/ticket";
@@ -25,15 +25,22 @@ const VIEWS: Partial<Record<OrderStatus, OrderView>> = {
 
 const findByToken = async (db: Db, token: string) =>
   (await db
-    .select({ id: orders.id, status: orders.status, paymentId: orders.paymentId, refunded: orders.refundedAmount })
+    .select({ id: orders.id, status: orders.status, paymentId: orders.paymentId, paymentStatus: orders.paymentStatus, refunded: orders.refundedAmount })
     .from(orders)
     .where(eq(orders.accessToken, token)))[0];
 
 /**
+ * Платёж, который ещё может завершиться: у заказа «ждёт оплаты» — любой; у снятого с удержания (`expired`: «Изменить»,
+ * 15 минут вышли) — пока ЮKassa не назвала конечный статус: клиент мог оплатить в банковском приложении уже после этого.
+ */
+const mayChange = (o: { status: OrderStatus; paymentStatus: string | null }) =>
+  o.status === "awaiting_payment" || (o.status === "expired" && (o.paymentStatus === null || !FINAL_PAYMENT_STATUSES.includes(o.paymentStatus)));
+
+/**
  * Данные страницы `/order/<token>`; `null` — токен не наш или заказ без страницы (→ `notFound()`).
  *
- * Запасной канал на случай задержки webhook: заказ «ждёт оплаты» с платежом синхронизируется с ЮKassa прямо при открытии.
- * Остальные заказы шлюз не трогают. Сбой синка (ЮKassa недоступна, не настроена) клиенту не показываем: страница
+ * Запасной канал на случай задержки webhook: заказ «ждёт оплаты» с платежом (и снятый с удержания, чей платёж ещё не завершён)
+ * синхронизируется с ЮKassa прямо при открытии. Остальные заказы шлюз не трогают. Сбой синка (ЮKassa недоступна, не настроена) клиенту не показываем: страница
  * рисуется по текущему состоянию БД, то есть «Проверяем оплату…». Исход синка возвращается — письма и Telegram
  * вызывающий запускает после ответа (`runSyncEffects`). Токен — секрет страницы: в лог не пишем.
  */
@@ -48,7 +55,7 @@ export async function loadOrderPage(
   if (!order) return null;
 
   let outcome: SyncOutcome | null = null;
-  if (order.status === "awaiting_payment" && order.paymentId) {
+  if (order.paymentId && mayChange(order)) {
     try {
       // Настоящий шлюз создаётся только здесь, когда синк действительно нужен.
       outcome = await syncPayment(order.paymentId, "sync", { db, gateway: deps.gateway ?? paymentGateway() });

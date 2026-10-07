@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
-import { startCheckout } from "@/server/checkout";
+import { releaseHold, startCheckout } from "@/server/checkout";
 import { loadOrderPage } from "@/server/order-page";
 import { fakeGateway, type FakeGateway } from "../support/fake-gateway";
 
@@ -103,6 +103,51 @@ describe("loadOrderPage: синк при открытии", () => {
     expect(page?.data.view).toBe("awaiting");
     expect(page?.outcome).toBeNull();
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe("loadOrderPage: заказ снят с удержания, а платёж ещё не завершён", () => {
+  it("клиент нажал «Изменить», но всё же оплатил (webhook не дошёл) → синк, поздняя оплата, билет", async () => {
+    const { token, orderId, paymentId } = await buy();
+    await releaseHold(token, db);
+    gw.setStatus(paymentId, "succeeded");
+
+    const page = await load(token);
+
+    expect(page?.outcome).toEqual({ kind: "late_paid", orderId });
+    expect(page?.data.view).toBe("paid");
+  });
+
+  it("платёж ещё не завершён — шлюз спрашиваем, страница «не оплачен»", async () => {
+    const { token } = await buy();
+    await releaseHold(token, db);
+    const spy = vi.spyOn(gw, "getPayment");
+
+    const page = await load(token);
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(page?.outcome?.kind).toBe("noop");
+    expect(page?.data.view).toBe("expired");
+  });
+
+  it("статус платежа ещё не записан (null) — тоже спрашиваем", async () => {
+    const { token, orderId } = await buy();
+    await setOrder(orderId, { status: "expired", paymentStatus: null });
+    const spy = vi.spyOn(gw, "getPayment");
+
+    await load(token);
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["canceled", "succeeded"])("платёж в конечном статусе %s — шлюз не трогаем", async (paymentStatus) => {
+    const { token, orderId } = await buy();
+    await setOrder(orderId, { status: "expired", paymentStatus });
+    const spy = vi.spyOn(gw, "getPayment");
+
+    const page = await load(token);
+
+    expect(spy).not.toHaveBeenCalled();
+    expect(page?.outcome).toBeNull();
   });
 });
 

@@ -1,9 +1,11 @@
-import { and, asc, eq, isNotNull, isNull, lt, or } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull, lt, notInArray, or } from "drizzle-orm";
 import { db as sharedDb, type Db } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
 import { formatOrderNumber } from "@/lib/domain/order-number";
 import { paymentItems } from "@/lib/domain/receipt";
-import { hasJournalNote, recordPaymentEvent, runSyncEffects, syncPayment, withoutConfirmationToken } from "@/server/payment-sync";
+import {
+  FINAL_PAYMENT_STATUSES, hasJournalNote, recordPaymentEvent, runSyncEffects, syncPayment, withoutConfirmationToken,
+} from "@/server/payment-sync";
 import { closingReceiptsEnabled, paymentGateway, vatCode } from "@/server/payments/gateway";
 import type { PaymentGateway } from "@/server/payments/types";
 import { reconcileExternalRefund } from "@/server/refunds";
@@ -41,8 +43,9 @@ export async function runNightly(deps: { db?: Db; gateway?: PaymentGateway; now?
     console.error(`Ночная задача (${what}): сбой для заказа ${orderId}`, e);
   };
 
-  // 1а. Опрос платежей: удержание истекло (подберёт оплаты, чьи уведомления потерялись) и заказы `expired`, по которым платёж
-  // прошёл, а поздний автовозврат не удался (их оставляет syncPayment; клиенту обещан повтор ночью).
+  // 1а. Опрос платежей: удержание истекло (подберёт оплаты, чьи уведомления потерялись); заказы `expired`, по которым платёж
+  // прошёл, а поздний автовозврат не удался (их оставляет syncPayment; клиенту обещан повтор ночью); заказы `expired`, чей платёж
+  // ещё не завершён (удержание сняли «Изменить» или по времени, а клиент мог оплатить позже — и уведомление потерялось).
   const toSync = await db
     .select({ id: orders.id, paymentId: orders.paymentId })
     .from(orders)
@@ -52,6 +55,10 @@ export async function runNightly(deps: { db?: Db; gateway?: PaymentGateway; now?
         or(
           and(eq(orders.status, "awaiting_payment"), lt(orders.holdExpiresAt, now)),
           and(eq(orders.status, "expired"), eq(orders.paymentStatus, "succeeded")),
+          and(
+            eq(orders.status, "expired"),
+            or(isNull(orders.paymentStatus), notInArray(orders.paymentStatus, [...FINAL_PAYMENT_STATUSES])),
+          ),
         ),
       ),
     )

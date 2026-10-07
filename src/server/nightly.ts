@@ -84,20 +84,17 @@ export async function runNightly(deps: { db?: Db; gateway?: PaymentGateway; now?
   // 2. Прошедшие сеансы: закрывающий чек (только при RECEIPT_CLOSING=on) и `paid` → `done`. Сюда попадают и заказы, которые админ
   // отметил проведёнными вручную (им нужен только чек); заказы без `payment_id` (старые заявки) — нет. Оплаченный заказ, чей чек
   // уже выбит, а «Проведён» не записался, всё равно подбирается — иначе он завис бы в `paid`.
+  // Список — снимок: пока идёт обработка, заказ могут вернуть или перенести из админки, поэтому каждый заказ перечитывается и
+  // перепроверяется под блокировкой (как в `refundOrder`), а чек выбивается внутри той же транзакции.
+  const cutoff = new Date(now.getTime() - AFTER_START_MS);
   const over = await db
-    .select({
-      id: orders.id, status: orders.status, paymentId: orders.paymentId, email: orders.email, total: orders.total,
-      closingReceiptAt: orders.closingReceiptAt, children: orders.children, adults: orders.adults,
-      priceChild: orders.priceChildSnapshot, priceAdult: orders.priceAdultSnapshot,
-      startsAt: tourSessions.startsAt, tourTitle: tours.title,
-    })
+    .select({ id: orders.id, sessionId: orders.sessionId })
     .from(orders)
     .innerJoin(tourSessions, eq(orders.sessionId, tourSessions.id))
-    .innerJoin(tours, eq(tourSessions.tourId, tours.id))
     .where(
       and(
         isNotNull(orders.paymentId),
-        lt(tourSessions.startsAt, new Date(now.getTime() - AFTER_START_MS)),
+        lt(tourSessions.startsAt, cutoff),
         or(
           eq(orders.status, "paid"),
           closing ? and(eq(orders.status, "done"), isNull(orders.closingReceiptAt)) : undefined,
@@ -105,32 +102,56 @@ export async function runNightly(deps: { db?: Db; gateway?: PaymentGateway; now?
       ),
     )
     .orderBy(asc(orders.id));
-  for (const o of over) {
+  for (const picked of over) {
+    let receiptIssued = false;
     try {
-      if (closing && o.closingReceiptAt === null) {
-        if (!o.email) throw new Error("у заказа нет email для закрывающего чека");
-        await gatewayOrThrow().createReceipt({
-          idempotenceKey: `closing-${o.id}`,
-          paymentId: o.paymentId!,
-          customerEmail: o.email,
-          items: paymentItems(o, vatCode(), "full_payment"),
-          prepaymentAmount: o.total,
-        });
-        // Метка — только после успеха: при сбое чек повторится следующей ночью (с тем же ключом идемпотентности).
-        await db.update(orders).set({ closingReceiptAt: new Date(), updatedAt: new Date() }).where(eq(orders.id, o.id));
-        report.closed++;
-      }
-      if (o.status === "paid") {
-        // `paid` в условии: заказ могли успеть вернуть из админки.
-        const res = await db
-          .update(orders)
-          .set({ status: "done", updatedAt: new Date() })
-          .where(and(eq(orders.id, o.id), eq(orders.status, "paid")))
-          .returning({ id: orders.id });
-        if (res.length > 0) report.done++;
-      }
+      const result = await db.transaction(async (tx) => {
+        // Блокируется только строка заказа, сеанс не блокируем: порядок «сеанс → заказ» в других местах не нарушаем.
+        const [o] = await tx.select().from(orders).where(eq(orders.id, picked.id)).for("update");
+        // Заказ изменился после выборки (возврат, перенос, чек уже выбит и т.д.) — пропускаем без ошибки: условия выборки проверяем заново.
+        if (!o || o.paymentId === null || o.sessionId !== picked.sessionId) return null;
+        const needsReceipt = closing && o.closingReceiptAt === null;
+        if (o.status !== "paid" && !(o.status === "done" && needsReceipt)) return null;
+        // Сеанс читаем отдельным запросом уже после блокировки: его снимок свежее блокировки заказа.
+        const [session] = await tx
+          .select({ startsAt: tourSessions.startsAt, tourTitle: tours.title })
+          .from(tourSessions)
+          .innerJoin(tours, eq(tourSessions.tourId, tours.id))
+          .where(eq(tourSessions.id, o.sessionId));
+        if (!session || session.startsAt >= cutoff) return null;
+
+        if (needsReceipt) {
+          if (!o.email) throw new Error("у заказа нет email для закрывающего чека");
+          const items = paymentItems(
+            { tourTitle: session.tourTitle, startsAt: session.startsAt, children: o.children, adults: o.adults, priceChild: o.priceChildSnapshot, priceAdult: o.priceAdultSnapshot },
+            vatCode(),
+            "full_payment",
+          );
+          await gatewayOrThrow().createReceipt({
+            idempotenceKey: `closing-${o.id}`,
+            paymentId: o.paymentId,
+            customerEmail: o.email,
+            items,
+            prepaymentAmount: o.total,
+          });
+          receiptIssued = true;
+        }
+        const markDone = o.status === "paid";
+        if (needsReceipt || markDone) {
+          // Метка и «Проведён» — одной записью и только после успешного чека: при сбое чек повторится следующей ночью.
+          await tx
+            .update(orders)
+            .set({ ...(needsReceipt ? { closingReceiptAt: new Date() } : {}), ...(markDone ? { status: "done" as const } : {}), updatedAt: new Date() })
+            .where(eq(orders.id, o.id));
+        }
+        return { closed: needsReceipt, done: markDone };
+      });
+      // Счётчики — после коммита: откат транзакции не должен оставить их завышенными.
+      if (result?.closed) report.closed++;
+      if (result?.done) report.done++;
     } catch (e) {
-      failed("чек и «Проведён»", o.id, e);
+      // Чек мог уйти, а запись — нет: повтор следующей ночью пойдёт с тем же ключом идемпотентности, это стоит отличать в логе.
+      failed(receiptIssued ? "чек выбит, отметка не записана" : "закрывающий чек и «Проведён»", picked.id, e);
     }
   }
 

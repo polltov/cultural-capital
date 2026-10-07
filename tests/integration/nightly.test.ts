@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { orders, paymentEvents, tours, tourSessions } from "@/db/schema";
 import { startCheckout } from "@/server/checkout";
@@ -7,6 +7,7 @@ import { runNightly } from "@/server/nightly";
 import { sendSorry, sendTicket } from "@/server/ticket";
 import { notifyAlert, notifyPaidOrder } from "@/server/telegram";
 import { fakeGateway, type FakeGateway } from "../support/fake-gateway";
+import { lockOrder, whileLocked } from "../support/lock-gate";
 
 vi.mock("@/server/ticket", () => ({ sendTicket: vi.fn(), sendSorry: vi.fn() }));
 vi.mock("@/server/telegram", () => ({ notifyPaidOrder: vi.fn(), notifyAlert: vi.fn() }));
@@ -168,7 +169,7 @@ describe("runNightly: expired orders left by a failed late refund", () => {
     await paidOrder(s.id, { children: 3, adults: 0, total: 3000 });
     gw.setStatus(paymentId, "succeeded");
     gw.failNext("createRefund");
-    // первую попытку делает ночная задача же (или webhook); здесь — как webhook, чтобы проверить повтор отдельно
+    // первую попытку (она падает) делает сама ночная задача; повтор — отдельным запуском в тестах ниже
     expect(await run()).toEqual({ ...ZERO, synced: 1 });
     expect(await orderOf(o.id)).toMatchObject({ status: "expired", paymentStatus: "succeeded", refundedAmount: 0 });
     return { o, paymentId };
@@ -371,5 +372,135 @@ describe("runNightly: after the excursion", () => {
 
     expect(await runNightly({ db, closing: true })).toEqual({ ...ZERO, errors: 1 });
     expect((await orderOf(o.id)).status).toBe("paid");
+  });
+});
+
+describe("runNightly: the order changes after the nightly run selected it", () => {
+  const past = (hours: number) => new Date(Date.now() - hours * H);
+
+  /** Ночная задача выбрала заказ, и до её блокировки заказа его меняют (админка): правка видна задаче только под блокировкой. */
+  const changedMeanwhile = (orderId: number, change: (tx: Parameters<NonNullable<Parameters<typeof whileLocked>[2]>>[0]) => Promise<void>, closing: boolean) =>
+    whileLocked(lockOrder(orderId), () => run({ closing }), change);
+
+  it.each([true, false])("refunded (cancelled) meanwhile: no receipt, not marked done (closing %s)", async (closing) => {
+    const { s } = await setup({ startsAt: past(4) });
+    const o = await paidOrder(s.id);
+
+    const report = await changedMeanwhile(o.id, async (tx) => {
+      await tx.update(orders).set({ status: "cancelled", refundedAmount: 3270, refundId: "ref-x" }).where(eq(orders.id, o.id));
+    }, closing);
+
+    expect(report).toEqual(ZERO);
+    expect(gw.receipts).toHaveLength(0);
+    expect(await orderOf(o.id)).toMatchObject({ status: "cancelled", closingReceiptAt: null, refundedAmount: 3270 });
+  });
+
+  it.each([true, false])("moved to a future session meanwhile: no receipt, not marked done (closing %s)", async (closing) => {
+    const { t, s } = await setup({ startsAt: past(4) });
+    const [future] = await db.insert(tourSessions).values({ tourId: t.id, startsAt: new Date(Date.now() + 48 * H), capacity: 20 }).returning();
+    const o = await paidOrder(s.id);
+
+    const report = await changedMeanwhile(o.id, async (tx) => {
+      await tx.update(orders).set({ sessionId: future.id }).where(eq(orders.id, o.id));
+    }, closing);
+
+    expect(report).toEqual(ZERO);
+    expect(gw.receipts).toHaveLength(0);
+    expect(await orderOf(o.id)).toMatchObject({ status: "paid", sessionId: future.id, closingReceiptAt: null });
+  });
+
+  it("the session itself was rescheduled to the future meanwhile: no receipt, not marked done", async () => {
+    const { s } = await setup({ startsAt: past(4) });
+    const o = await paidOrder(s.id);
+
+    const report = await changedMeanwhile(o.id, async (tx) => {
+      await tx.update(tourSessions).set({ startsAt: new Date(Date.now() + 48 * H) }).where(eq(tourSessions.id, s.id));
+    }, true);
+
+    expect(report).toEqual(ZERO);
+    expect(gw.receipts).toHaveLength(0);
+    expect(await orderOf(o.id)).toMatchObject({ status: "paid", closingReceiptAt: null });
+  });
+
+  it("moved to another session that is also over: skipped this run (the pick is stale), the next run uses the NEW session date", async () => {
+    const { t, s } = await setup({ startsAt: past(4) });
+    const newStart = past(30);
+    const [other] = await db.insert(tourSessions).values({ tourId: t.id, startsAt: newStart, capacity: 20 }).returning();
+    const o = await paidOrder(s.id);
+
+    // Новый сеанс тоже прошёл, но выборка помнила прежний: заказ пропускаем, а чек выбьет следующий запуск — уже с датой нового сеанса.
+    const report = await changedMeanwhile(o.id, async (tx) => {
+      await tx.update(orders).set({ sessionId: other.id }).where(eq(orders.id, o.id));
+    }, true);
+    expect(report).toEqual(ZERO);
+    expect(gw.receipts).toHaveLength(0);
+
+    expect(await run({ closing: true })).toEqual({ ...ZERO, closed: 1, done: 1 });
+    expect(gw.receipts).toHaveLength(1);
+    expect(gw.receipts[0].items[0].description).toContain(newStart.toLocaleDateString("ru-RU", { timeZone: "Europe/Moscow" }));
+  });
+
+  it("the receipt was issued meanwhile (closing_receipt_at set): no second receipt, the order is just marked done", async () => {
+    const { s } = await setup({ startsAt: past(4) });
+    const o = await paidOrder(s.id);
+
+    const report = await changedMeanwhile(o.id, async (tx) => {
+      await tx.update(orders).set({ closingReceiptAt: new Date() }).where(eq(orders.id, o.id));
+    }, true);
+
+    expect(report).toEqual({ ...ZERO, done: 1 });
+    expect(gw.receipts).toHaveLength(0);
+    expect((await orderOf(o.id)).status).toBe("done");
+  });
+
+  it("marked done by the admin meanwhile: it still gets its receipt, and is not counted as done by the nightly run", async () => {
+    const { s } = await setup({ startsAt: past(4) });
+    const o = await paidOrder(s.id);
+
+    const report = await changedMeanwhile(o.id, async (tx) => {
+      await tx.update(orders).set({ status: "done" }).where(eq(orders.id, o.id));
+    }, true);
+
+    expect(report).toEqual({ ...ZERO, closed: 1 });
+    expect(gw.receipts).toHaveLength(1);
+    expect(await orderOf(o.id)).toMatchObject({ status: "done" });
+    expect((await orderOf(o.id)).closingReceiptAt).toBeInstanceOf(Date);
+  });
+});
+
+describe("runNightly: the receipt is issued but cannot be recorded", () => {
+  const past = (hours: number) => new Date(Date.now() - hours * H);
+  const logged = () => log.mock.calls.flat().map(String).join("\n");
+
+  afterEach(async () => {
+    await db.execute(sql`drop trigger if exists nightly_test_no_mark on orders`);
+    await db.execute(sql`drop function if exists nightly_test_no_mark()`);
+  });
+
+  it("is logged distinctly from a receipt failure; the order stays paid, the retry reuses the same key", async () => {
+    const { s } = await setup({ startsAt: past(4) });
+    const o = await paidOrder(s.id);
+    // Отметка о чеке не записывается (имитация сбоя БД после ответа ЮKassa); чек при этом уже выбит.
+    await db.execute(sql`create function nightly_test_no_mark() returns trigger language plpgsql as $$ begin raise exception 'отметка не записывается'; end $$`);
+    await db.execute(sql`create trigger nightly_test_no_mark before update on orders for each row when (new.closing_receipt_at is not null and old.closing_receipt_at is null) execute function nightly_test_no_mark()`);
+
+    expect(await run({ closing: true })).toEqual({ ...ZERO, errors: 1 });
+    expect(gw.receipts).toHaveLength(1);
+    expect(await orderOf(o.id)).toMatchObject({ status: "paid", closingReceiptAt: null });
+    expect(logged()).toContain("чек выбит");
+    expect(logged()).not.toContain("anna@example.com");
+
+    await db.execute(sql`drop trigger nightly_test_no_mark on orders`);
+    expect(await run({ closing: true })).toEqual({ ...ZERO, closed: 1, done: 1 });
+    expect(gw.receipts.map((r) => r.idempotenceKey)).toEqual([`closing-${o.id}`, `closing-${o.id}`]);
+  });
+
+  it("a receipt that failed is not reported as issued", async () => {
+    const { s } = await setup({ startsAt: past(4) });
+    await paidOrder(s.id);
+    gw.failNext("createReceipt");
+
+    expect(await run({ closing: true })).toEqual({ ...ZERO, errors: 1 });
+    expect(logged()).not.toContain("чек выбит");
   });
 });

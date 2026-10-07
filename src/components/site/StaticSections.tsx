@@ -68,13 +68,13 @@ export function Route() {
       <ol className="route-steps">
         <li className="route-step">
           <span className="route-num">1</span>
-          <h3>Выбираете экскурсию</h3>
-          <p>Находите дату в каталоге и бронируете места.</p>
+          <h3>Покупаете билет онлайн</h3>
+          <p>Выбираете дату и оплачиваете картой или по СБП.</p>
         </li>
         <li className="route-step">
           <span className="route-num">2</span>
-          <h3>Получаете письмо</h3>
-          <p>Присылаем точку встречи, время и что взять с собой.</p>
+          <h3>Получаете билет на почту</h3>
+          <p>С точкой встречи, временем и списком, что взять с собой.</p>
         </li>
         <li className="route-step">
           <span className="route-num">3</span>

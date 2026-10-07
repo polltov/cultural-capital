@@ -3,9 +3,9 @@ import { db as sharedDb, type Db, type Tx } from "@/db/client";
 import { orders, paymentEvents, tours, tourSessions } from "@/db/schema";
 import { formatOrderNumber } from "@/lib/domain/order-number";
 import { toApiAmount } from "@/lib/domain/pricing";
-import { refundItems } from "@/lib/domain/receipt";
 import { occupiedSeats } from "@/server/orders";
-import { paymentGateway, vatCode } from "@/server/payments/gateway";
+import { paymentGateway } from "@/server/payments/gateway";
+import { createReceiptRefund } from "@/server/payments/refund";
 import type { GatewayRefund, PaymentGateway } from "@/server/payments/types";
 import { notifyAlert, notifyPaidOrder } from "@/server/telegram";
 import { sendSorry, sendTicket } from "@/server/ticket";
@@ -145,15 +145,14 @@ export async function syncPayment(
     // с тем же ключом идемпотентности. Тревогу (`late_refund_failed`) поднимает только первый сбой, дальше — `noop`.
     let refund: GatewayRefund;
     try {
-      if (!o.email) throw new Error("у заказа нет email для чека возврата");
-      refund = await gateway.createRefund({
+      refund = await createReceiptRefund(gateway, {
         idempotenceKey: `late-refund-${o.id}`,
         paymentId,
         amount: o.total,
-        customerEmail: o.email,
-        items: refundItems({ tourTitle: session.tourTitle, startsAt: session.startsAt }, o.total, vatCode()),
+        email: o.email,
+        tourTitle: session.tourTitle,
+        startsAt: session.startsAt,
       });
-      if (refund.status === "canceled") throw new Error("ЮKassa отклонила возврат");
     } catch (e) {
       console.error(`Поздняя оплата: автовозврат заказа ${o.id} не прошёл`, e);
       // Оплатить такой заказ уже нельзя, а возврат ждёт повтора: `expired` + `payment_status = succeeded` (по ним его найдёт ночная задача).

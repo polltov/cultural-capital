@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
-import { eq, sql, type SQL } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
 import { formatRub } from "@/lib/domain/pricing";
@@ -7,6 +7,7 @@ import { moveOrder, listMoveTargets, refundOrder } from "@/server/refunds";
 import { occupiedSeats } from "@/server/orders";
 import type { GatewayRefund } from "@/server/payments/types";
 import { fakeGateway, type FakeGateway } from "../support/fake-gateway";
+import { lockOrder, lockSession, whileLocked } from "../support/lock-gate";
 
 const H = 3600_000;
 const CANT_REFUND = "Вернуть деньги можно только по оплаченному заказу";
@@ -52,30 +53,6 @@ async function paidOrder(sessionId: number, over: Partial<typeof orders.$inferIn
 async function occupy(sessionId: number, n: number) {
   return paidOrder(sessionId, { customerName: "X", children: n, adults: 0, total: 1, paymentId: null });
 }
-
-/**
- * Запускает `run`, пока снаружи удерживается блокировка `lock`: все вызовы доходят до неё одновременно.
- * Без собственных блокировок в коде вызовы не стали бы ждать и разошлись бы по гонке.
- */
-async function whileLocked<T>(lock: SQL, run: () => Promise<T>): Promise<T> {
-  let release!: () => void;
-  let locked!: () => void;
-  const gate = new Promise<void>((r) => (release = r));
-  const isLocked = new Promise<void>((r) => (locked = r));
-  const holder = db.transaction(async (tx) => {
-    await tx.execute(lock);
-    locked();
-    await gate;
-  });
-  await isLocked;
-  const result = run();
-  await new Promise((r) => setTimeout(r, 300));
-  release();
-  await holder;
-  return result;
-}
-const lockOrder = (id: number) => sql`select id from orders where id = ${id} for update`;
-const lockSession = (id: number) => sql`select id from tour_sessions where id = ${id} for update`;
 
 const orderOf = async (id: number) => (await db.select().from(orders).where(eq(orders.id, id)))[0];
 const refund = (id: number, amount: number, g: FakeGateway = gw) => refundOrder(id, amount, { db, gateway: g });
@@ -338,7 +315,8 @@ describe("moveOrder", () => {
     const a = await paidOrder(s.id, { paymentId: "pay-a" });
     const b = await paidOrder(other.id, { paymentId: "pay-b" });
 
-    // Сеанс с меньшим id занят снаружи: оба переноса успевают взять свою первую блокировку до его освобождения.
+    // Сеанс с меньшим id занят снаружи, пока оба переноса дойдут до блокировок. Блокируя «свой» сеанс первым, они взяли бы по одному
+    // и ждали бы друг друга по кругу; по возрастанию id оба встают в очередь за меньшим и проходят по одному.
     const results = await whileLocked(lockSession(s.id), () => Promise.all([moveOrder(a.id, other.id, db), moveOrder(b.id, s.id, db)]));
     expect(results).toEqual([{ ok: true }, { ok: true }]);
     expect((await orderOf(a.id)).sessionId).toBe(other.id);

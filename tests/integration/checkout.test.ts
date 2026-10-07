@@ -1,10 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { tours, tourSessions, orders, rateLimitHits } from "@/db/schema";
 import { occupiedSeats } from "@/server/orders";
 import { startCheckout, releaseHold } from "@/server/checkout";
 import { fakeGateway } from "../support/fake-gateway";
+import { lockSession, whileLocked } from "../support/lock-gate";
 
 const H = 3600_000;
 const valid = { children: 2, adults: 1, name: "Анна", phone: "8 (999) 123-45-67", email: "anna@example.com", consent: true, website: "" };
@@ -147,24 +148,12 @@ describe("startCheckout", () => {
     await occupy(s.id, 4);
     const d = deps();
     // Держим блокировку сеанса снаружи, пока обе покупки дойдут до своих транзакций: без FOR UPDATE обе прошли бы проверку мест.
-    let release!: () => void;
-    let locked!: () => void;
-    const gate = new Promise<void>((r) => (release = r));
-    const isLocked = new Promise<void>((r) => (locked = r));
-    const holder = db.transaction(async (tx) => {
-      await tx.execute(sql`select id from tour_sessions where id = ${s.id} for update`);
-      locked();
-      await gate;
-    });
-    await isLocked;
-    const both = Promise.all([
-      startCheckout({ ...valid, sessionId: s.id, children: 3, adults: 0 }, "1.1.1.1", d),
-      startCheckout({ ...valid, sessionId: s.id, children: 3, adults: 0 }, "2.2.2.2", d),
-    ]);
-    await new Promise((r) => setTimeout(r, 300));
-    release();
-    await holder;
-    const results = await both;
+    const results = await whileLocked(lockSession(s.id), () =>
+      Promise.all([
+        startCheckout({ ...valid, sessionId: s.id, children: 3, adults: 0 }, "1.1.1.1", d),
+        startCheckout({ ...valid, sessionId: s.id, children: 3, adults: 0 }, "2.2.2.2", d),
+      ]),
+    );
     expect(results.filter((r) => r.ok)).toHaveLength(1);
     expect(results.filter((r) => !r.ok)).toEqual([{ ok: false, error: "Осталось мест: 1" }]);
     expect(await occupiedSeats(db, s.id)).toBe(7);

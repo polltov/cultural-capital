@@ -2,9 +2,9 @@ import { and, asc, eq, gt, ne, sql } from "drizzle-orm";
 import { db as sharedDb, type Db } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
 import { formatRub } from "@/lib/domain/pricing";
-import { refundItems } from "@/lib/domain/receipt";
 import { occupiedSeats } from "@/server/orders";
-import { paymentGateway, vatCode } from "@/server/payments/gateway";
+import { paymentGateway } from "@/server/payments/gateway";
+import { createReceiptRefund } from "@/server/payments/refund";
 import type { GatewayRefund, PaymentGateway } from "@/server/payments/types";
 import { seatsTakenSql } from "@/server/seats-sql";
 
@@ -47,17 +47,15 @@ export async function refundOrder(
     let refund: GatewayRefund | null = null;
     if (amount > 0) {
       try {
-        // Шлюз, ставка НДС и позиции чека — внутри try: ненастроенная ЮKassa или неверная ставка — такой же отказ, как ошибка API.
-        if (!o.email) throw new Error("у заказа нет email для чека возврата");
-        const gateway = deps.gateway ?? paymentGateway();
-        refund = await gateway.createRefund({
+        // Шлюз, чек (email, ставка НДС) и сам вызов — внутри try: ненастроенная ЮKassa или неверная ставка — такой же отказ, как ошибка API.
+        refund = await createReceiptRefund(deps.gateway ?? paymentGateway(), {
           idempotenceKey: `refund-${o.id}`,
           paymentId: o.paymentId,
           amount,
-          customerEmail: o.email,
-          items: refundItems({ tourTitle: row.tourTitle, startsAt: row.startsAt }, amount, vatCode()),
+          email: o.email,
+          tourTitle: row.tourTitle,
+          startsAt: row.startsAt,
         });
-        if (refund.status === "canceled") throw new Error("ЮKassa отклонила возврат");
       } catch (e) {
         console.error(`Возврат: заказ ${o.id} не возвращён`, e);
         return { ok: false, error: `Возврат не прошёл: ${e instanceof Error ? e.message : String(e)}` };

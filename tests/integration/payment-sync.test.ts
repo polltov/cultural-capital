@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { orders, paymentEvents, tours, tourSessions } from "@/db/schema";
 import { formatOrderNumber } from "@/lib/domain/order-number";
@@ -8,6 +8,7 @@ import { recordPaymentEvent, runSyncEffects, syncPayment, type SyncOutcome } fro
 import { sendSorry, sendTicket } from "@/server/ticket";
 import { notifyAlert, notifyPaidOrder } from "@/server/telegram";
 import { fakeGateway, type FakeGateway } from "../support/fake-gateway";
+import { lockSession, whileLocked } from "../support/lock-gate";
 
 vi.mock("@/server/ticket", () => ({ sendTicket: vi.fn(), sendSorry: vi.fn() }));
 vi.mock("@/server/telegram", () => ({ notifyPaidOrder: vi.fn(), notifyAlert: vi.fn() }));
@@ -60,21 +61,8 @@ const journal = () => db.select().from(paymentEvents).orderBy(paymentEvents.id);
  * без `FOR UPDATE` оба прочитали бы старый статус заказа.
  */
 async function syncTwice(sessionId: number, paymentId: string): Promise<SyncOutcome["kind"][]> {
-  let release!: () => void;
-  let locked!: () => void;
-  const gate = new Promise<void>((r) => (release = r));
-  const isLocked = new Promise<void>((r) => (locked = r));
-  const holder = db.transaction(async (tx) => {
-    await tx.execute(sql`select id from tour_sessions where id = ${sessionId} for update`);
-    locked();
-    await gate;
-  });
-  await isLocked;
-  const both = Promise.all([sync(paymentId), sync(paymentId, "sync")]);
-  await new Promise((r) => setTimeout(r, 300));
-  release();
-  await holder;
-  return (await both).map((r) => r.kind).sort();
+  const both = await whileLocked(lockSession(sessionId), () => Promise.all([sync(paymentId), sync(paymentId, "sync")]));
+  return both.map((r) => r.kind).sort();
 }
 
 describe("syncPayment: succeeded", () => {

@@ -7,11 +7,21 @@ import { occupiedSeats } from "@/server/orders";
 import { paymentGateway } from "@/server/payments/gateway";
 import { createReceiptRefund } from "@/server/payments/refund";
 import type { GatewayRefund, PaymentGateway } from "@/server/payments/types";
+import { reconcileExternalRefund } from "@/server/refunds";
 import { notifyAlert, notifyPaidOrder } from "@/server/telegram";
-import { sendSorry, sendTicket } from "@/server/ticket";
+import { sendCancelled, sendSorry, sendTicket } from "@/server/ticket";
 
 export type SyncOutcome = {
-  kind: "paid" | "late_paid" | "late_refunded" | "late_refund_failed" | "expired" | "mismatch" | "noop" | "unknown";
+  kind:
+    | "paid"
+    | "late_paid"
+    | "late_refunded"
+    | "late_refund_failed"
+    | "refunded_externally"
+    | "expired"
+    | "mismatch"
+    | "noop"
+    | "unknown";
   orderId?: number;
 };
 type SyncKind = SyncOutcome["kind"];
@@ -52,7 +62,8 @@ async function hasJournalNote(db: Db | Tx, paymentId: string, note: string): Pro
 }
 
 /**
- * Единственное место, где статус заказа меняется по данным ЮKassa. Объект платежа берётся из API
+ * Единственное место, где статус заказа меняется по статусу платежа ЮKassa (возвраты мимо сайта сверяет
+ * `reconcileExternalRefund`). Объект платежа берётся из API
  * (данным из уведомления не доверяем). Ошибки `getPayment` и БД не глотаем: webhook ответит 500 и ЮKassa повторит.
  * Побочные эффекты (письма, Telegram) — отдельно, `runSyncEffects` после коммита.
  */
@@ -162,6 +173,43 @@ export async function syncPayment(
   });
 }
 
+/**
+ * Уведомление `refund.succeeded` — только проверенные роутом поля: `id` и `payment_id` прошли проверку формата,
+ * остальные строки обрезаны (тело не подписано, целиком в журнал его не пишем).
+ */
+export type RefundNotice = {
+  id: string;
+  payment_id: string;
+  status: string | null;
+  amount: { value: string | null; currency: string | null };
+};
+
+/**
+ * `refund.succeeded`: возврат по нашему платежу. Возвраты сайта (`refundOrder`, автовозврат поздней оплаты) к этому моменту
+ * уже отражены в заказе; новость — только возврат, оформленный в кабинете ЮKassa. Сколько возвращено, берём из API
+ * (`getPayment`), а не из тела уведомления, и сверяем под блокировкой заказа (`reconcileExternalRefund`).
+ * Чужой платёж — ничего не пишем: журнал не должен расти от неподписанных запросов. Ошибки шлюза и БД не глотаем
+ * (webhook ответит 500, ЮKassa повторит); журнал пишется в той же транзакции, так что повтор не оставит дубля.
+ */
+export async function syncRefund(
+  notice: RefundNotice,
+  deps: { db?: Db; gateway?: PaymentGateway } = {},
+): Promise<SyncOutcome> {
+  const db = deps.db ?? sharedDb;
+  const paymentId = notice.payment_id;
+  const [ref] = await db.select({ id: orders.id }).from(orders).where(eq(orders.paymentId, paymentId));
+  if (!ref) return { kind: "unknown" };
+
+  return db.transaction(async (tx): Promise<SyncOutcome> => {
+    // Блокируется только строка заказа, как в `refundOrder`: идущий из админки возврат уведомление дождётся.
+    const [o] = await tx.select().from(orders).where(eq(orders.id, ref.id)).for("update");
+    if (!o || o.paymentId !== paymentId) return { kind: "unknown" };
+    await recordPaymentEvent({ source: "webhook", event: "refund.succeeded", paymentId, orderId: o.id, payload: notice, note: "refund.succeeded" }, tx);
+    const payment = await (deps.gateway ?? paymentGateway()).getPayment(paymentId);
+    return { kind: (await reconcileExternalRefund(tx, o, payment)) ? "refunded_externally" : "noop", orderId: o.id };
+  });
+}
+
 /** «КС-0057»; если заказ не прочитался — «#id»: тревога важнее красивого номера. Не бросает. */
 async function orderLabel(orderId: number, db: Db): Promise<string> {
   try {
@@ -203,6 +251,12 @@ export async function runSyncEffects(o: SyncOutcome, db: Db = sharedDb): Promise
       return;
     case "late_refund_failed":
       await alert((n) => `Поздняя оплата ${n}: мест нет, автовозврат не прошёл. Сайт повторит попытку ночью; если вернёте деньги вручную в кабинете ЮKassa, заказ закроется автоматически.`);
+      return;
+    case "refunded_externally":
+      await Promise.all([
+        attempt("письмо об отмене", () => sendCancelled(id)),
+        alert((n) => `Возврат по заказу ${n} оформлен в кабинете ЮKassa — на сайте заказ отменён автоматически`),
+      ]);
       return;
     case "mismatch":
       await alert((n) => `Сумма платежа не совпала с заказом ${n}`);

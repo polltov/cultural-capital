@@ -16,6 +16,8 @@ export type FakeGateway = PaymentGateway & {
   refunds: CreateRefundInput[];
   receipts: CreateReceiptInput[];
   setStatus(id: string, s: PaymentStatus): void;
+  /** Платёж заказа, вставленного в БД напрямую (мимо `createPayment`): по умолчанию `succeeded` на `amount` рублей. */
+  addPayment(id: string, p: { amount: number; orderId: number; status?: PaymentStatus }): void;
   /** Задаёт уже возвращённую по платежу сумму (целые рубли) — как будто владелец вернул деньги вручную в кабинете ЮKassa. */
   setRefunded(id: string, amount: number): void;
   /** Следующий вызов метода бросит `err` (по умолчанию PaymentGatewayError("fake failure")); повторные вызовы встают в очередь. */
@@ -99,6 +101,16 @@ export function fakeGateway(): FakeGateway {
       const payment = payments.get(id);
       if (!payment) throw new Error(`fakeGateway: платёж ${id} не найден`);
       payments.set(id, { ...payment, status: s });
+    },
+
+    addPayment(id, p) {
+      payments.set(id, {
+        id,
+        status: p.status ?? "succeeded",
+        amount: { value: toApiAmount(p.amount), currency: "RUB" },
+        metadata: { order_id: String(p.orderId) },
+        confirmationToken: null,
+      });
     },
 
     setRefunded(id, amount) {

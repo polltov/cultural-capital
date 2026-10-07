@@ -1,16 +1,37 @@
 import { and, asc, eq, gt, ne, sql } from "drizzle-orm";
-import { db as sharedDb, type Db } from "@/db/client";
+import { db as sharedDb, type Db, type Tx } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
+import type { OrderStatus } from "@/lib/domain/order-status";
 import { formatRub } from "@/lib/domain/pricing";
 import { occupiedSeats } from "@/server/orders";
 import { paymentGateway } from "@/server/payments/gateway";
 import { createReceiptRefund } from "@/server/payments/refund";
-import type { GatewayRefund, PaymentGateway } from "@/server/payments/types";
+import type { GatewayPayment, GatewayRefund, PaymentGateway } from "@/server/payments/types";
 import { seatsTakenSql } from "@/server/seats-sql";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 const NOT_FOUND = "Заказ не найден";
+
+/**
+ * Возврат, который прошёл мимо сайта (оформлен в кабинете ЮKassa или наш вызов отвалился по таймауту, а ЮKassa его провела):
+ * если по платежу (`payment` — свежий объект из API) уже что-то возвращено, оплаченный заказ отменяется с фактически
+ * возвращённой суммой — места освобождаются, билет больше не действует. Возвращает `true`, если заказ отменён.
+ * Вызывающий держит блокировку строки заказа и сам решает, что сказать клиенту и владельцу.
+ */
+export async function reconcileExternalRefund(
+  tx: Tx,
+  order: { id: number; status: OrderStatus },
+  payment: GatewayPayment,
+): Promise<boolean> {
+  const refunded = Number(payment.refundedAmount);
+  if (order.status !== "paid" || !(refunded > 0)) return false;
+  await tx
+    .update(orders)
+    .set({ status: "cancelled", refundedAmount: Math.round(refunded), updatedAt: new Date() })
+    .where(eq(orders.id, order.id));
+  return true;
+}
 
 /**
  * «Отменить и вернуть»: оплаченный заказ → `cancelled`, деньги возвращаются через ЮKassa (`amount` — целые рубли, 0…total).

@@ -5,12 +5,12 @@ import { orders, paymentEvents, tours, tourSessions } from "@/db/schema";
 import { formatOrderNumber } from "@/lib/domain/order-number";
 import { releaseHold, startCheckout } from "@/server/checkout";
 import { recordPaymentEvent, runSyncEffects, syncPayment, type SyncOutcome } from "@/server/payment-sync";
-import { sendSorry, sendTicket } from "@/server/ticket";
+import { sendCancelled, sendSorry, sendTicket } from "@/server/ticket";
 import { notifyAlert, notifyPaidOrder } from "@/server/telegram";
 import { fakeGateway, type FakeGateway } from "../support/fake-gateway";
 import { lockSession, whileLocked } from "../support/lock-gate";
 
-vi.mock("@/server/ticket", () => ({ sendTicket: vi.fn(), sendSorry: vi.fn() }));
+vi.mock("@/server/ticket", () => ({ sendTicket: vi.fn(), sendSorry: vi.fn(), sendCancelled: vi.fn() }));
 vi.mock("@/server/telegram", () => ({ notifyPaidOrder: vi.fn(), notifyAlert: vi.fn() }));
 
 const H = 3600_000;
@@ -24,6 +24,7 @@ beforeEach(() => {
   ipSeq = 0;
   vi.mocked(sendTicket).mockReset();
   vi.mocked(sendSorry).mockReset();
+  vi.mocked(sendCancelled).mockReset();
   vi.mocked(notifyPaidOrder).mockReset();
   vi.mocked(notifyAlert).mockReset();
 });
@@ -526,6 +527,16 @@ describe("runSyncEffects", () => {
     expect(sendTicket).not.toHaveBeenCalled();
   });
 
+  it("refunded_externally: cancellation e-mail and an alert that the refund came from the dashboard", async () => {
+    const { id, number } = await paidOrder();
+    await run("refunded_externally", id);
+    expect(sendCancelled).toHaveBeenCalledExactlyOnceWith(id);
+    expect(notifyAlert).toHaveBeenCalledExactlyOnceWith(`Возврат по заказу ${number} оформлен в кабинете ЮKassa — на сайте заказ отменён автоматически`);
+    expect(sendSorry).not.toHaveBeenCalled();
+    expect(sendTicket).not.toHaveBeenCalled();
+    expect(notifyPaidOrder).not.toHaveBeenCalled();
+  });
+
   it("mismatch: an alert with the order number", async () => {
     const { id, number } = await paidOrder();
     await run("mismatch", id);
@@ -536,12 +547,12 @@ describe("runSyncEffects", () => {
   it.each(["expired", "noop", "unknown"] as const)("%s: nothing to do", async (kind) => {
     const { id } = await paidOrder();
     await run(kind, kind === "unknown" ? undefined : id);
-    for (const f of [sendTicket, sendSorry, notifyPaidOrder, notifyAlert]) expect(f).not.toHaveBeenCalled();
+    for (const f of [sendTicket, sendSorry, sendCancelled, notifyPaidOrder, notifyAlert]) expect(f).not.toHaveBeenCalled();
   });
 
   it("an outcome without an order does nothing", async () => {
     await run("paid");
-    for (const f of [sendTicket, sendSorry, notifyPaidOrder, notifyAlert]) expect(f).not.toHaveBeenCalled();
+    for (const f of [sendTicket, sendSorry, sendCancelled, notifyPaidOrder, notifyAlert]) expect(f).not.toHaveBeenCalled();
   });
 
   it("never throws: a failing step is logged and the next one still runs", async () => {

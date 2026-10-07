@@ -43,8 +43,12 @@ async function buy(sessionId: number, over: Record<string, unknown> = {}) {
 }
 
 /** Занять `n` мест чужим оплаченным заказом. */
-async function occupy(sessionId: number, n: number) {
-  await db.insert(orders).values({ sessionId, customerName: "X", phone: "+7", priceChildSnapshot: 1, priceAdultSnapshot: 1, total: 1, consentAt: new Date(), children: n, adults: 0, status: "paid" });
+async function occupy(sessionId: number, n: number): Promise<number> {
+  const [r] = await db
+    .insert(orders)
+    .values({ sessionId, customerName: "X", phone: "+7", priceChildSnapshot: 1, priceAdultSnapshot: 1, total: 1, consentAt: new Date(), children: n, adults: 0, status: "paid" })
+    .returning({ id: orders.id });
+  return r.id;
 }
 
 const sync = (paymentId: string, source: "webhook" | "sync" | "cron" = "webhook") => syncPayment(paymentId, source, { db, gateway: gw });
@@ -99,11 +103,16 @@ describe("syncPayment: succeeded", () => {
     expect((await orderOf(o.id)).paidAt).toEqual(paid.paidAt);
   });
 
-  it("the confirmation token of the widget does not reach the journal", async () => {
+  it("the journal keeps the whole API response, with the widget confirmation token blanked", async () => {
     const { s } = await setup();
-    const { paymentId } = await buy(s.id);
+    const { o, paymentId } = await buy(s.id);
     await sync(paymentId);
-    expect(JSON.stringify((await journal())[0].payload)).not.toContain("ct-1");
+    const payload = (await journal())[0].payload;
+    expect(payload).toEqual({
+      id: paymentId, status: "pending", amount: { value: "3270.00", currency: "RUB" }, metadata: { order_id: String(o.id) },
+      confirmation: { type: "embedded", confirmation_token: null },
+    });
+    expect(JSON.stringify(payload)).not.toContain("ct-1");
   });
 
   it("an admin changing tour prices after checkout does not matter: total is the snapshot", async () => {
@@ -307,6 +316,84 @@ describe("syncPayment: late payment (order is expired)", () => {
     }
   });
 
+  describe("after late_refund_failed the decision is sticky", () => {
+    /** Поздняя оплата, мест нет, первый возврат упал. */
+    async function failedOnce() {
+      const { s } = await setup(8);
+      const { o, token, paymentId } = await buy(s.id);
+      await releaseHold(token, db);
+      const occupier = await occupy(s.id, 8);
+      gw.setStatus(paymentId, "succeeded");
+      gw.failNext("createRefund");
+      const first = await sync(paymentId);
+      expect(first).toEqual({ kind: "late_refund_failed", orderId: o.id });
+      return { s, o, paymentId, first, freeSeats: () => db.delete(orders).where(eq(orders.id, occupier)) };
+    }
+
+    let log: ReturnType<typeof vi.spyOn>;
+    beforeEach(() => {
+      log = vi.spyOn(console, "error").mockImplementation(() => {});
+    });
+    afterEach(() => log.mockRestore());
+
+    it("seats freed meanwhile: the retry refunds with the same key, never marks the order paid", async () => {
+      const { o, paymentId, freeSeats } = await failedOnce();
+      await freeSeats();
+      expect(await sync(paymentId, "cron")).toEqual({ kind: "late_refunded", orderId: o.id });
+      expect(await orderOf(o.id)).toMatchObject({ status: "cancelled", refundedAmount: 3270, refundId: "ref-1", paidAt: null });
+      expect(gw.refunds).toHaveLength(1);
+      expect(gw.refunds[0]).toMatchObject({ idempotenceKey: `late-refund-${o.id}`, paymentId, amount: 3270 });
+      expect((await journal()).map((r) => r.note)).toEqual(["late_refund_failed", "late_refunded"]);
+    });
+
+    it("refunded by hand in the YooKassa dashboard: the order is closed without calling the API", async () => {
+      const { o, paymentId, freeSeats } = await failedOnce();
+      await freeSeats(); // даже со свободными местами заказ не становится оплаченным
+      gw.setRefunded(paymentId, 3270);
+      const createRefund = vi.spyOn(gw, "createRefund");
+
+      expect(await sync(paymentId, "cron")).toEqual({ kind: "late_refunded", orderId: o.id });
+      expect(createRefund).not.toHaveBeenCalled();
+      expect(gw.refunds).toHaveLength(0);
+      expect(await orderOf(o.id)).toMatchObject({ status: "cancelled", refundedAmount: 3270, refundId: null, paidAt: null });
+      expect((await journal()).map((r) => r.note)).toEqual(["late_refund_failed", "refunded_externally"]);
+    });
+
+    it("a refund that went through on the gateway side after our timeout is picked up the same way", async () => {
+      const { o, paymentId } = await failedOnce();
+      // наш вызов упал по таймауту, но ЮKassa возврат провела
+      gw.setRefunded(paymentId, 3270);
+      expect(await sync(paymentId, "sync")).toEqual({ kind: "late_refunded", orderId: o.id });
+      expect((await orderOf(o.id)).status).toBe("cancelled");
+      expect(gw.refunds).toHaveLength(0);
+    });
+
+    it("a partial manual refund does not close the order: the full refund is retried", async () => {
+      const { o, paymentId } = await failedOnce();
+      gw.setRefunded(paymentId, 1000);
+      expect(await sync(paymentId, "sync")).toEqual({ kind: "late_refunded", orderId: o.id });
+      expect(gw.refunds).toHaveLength(1);
+      expect((await orderOf(o.id)).refundedAmount).toBe(3270);
+    });
+
+    it("the retry fails again: noop (no second alert), the order stays expired, the failure is journalled", async () => {
+      const { o, paymentId, first } = await failedOnce();
+      gw.failNext("createRefund");
+      const second = await sync(paymentId, "cron");
+      expect(second).toEqual({ kind: "noop", orderId: o.id });
+      expect(await orderOf(o.id)).toMatchObject({ status: "expired", refundedAmount: 0, refundId: null });
+      expect((await journal()).map((r) => r.note)).toEqual(["late_refund_failed", "late_refund_failed"]);
+
+      await runSyncEffects(first);
+      await runSyncEffects(second);
+      expect(notifyAlert).toHaveBeenCalledTimes(1);
+
+      // и третья попытка всё ещё может пройти
+      expect(await sync(paymentId, "cron")).toEqual({ kind: "late_refunded", orderId: o.id });
+      expect(gw.refunds).toHaveLength(1);
+    });
+  });
+
   it("a misconfigured VAT code (vatCode() throws) is a refund failure too, no gateway call", async () => {
     const { s } = await setup(8);
     const { o, token, paymentId } = await buy(s.id);
@@ -446,7 +533,7 @@ describe("runSyncEffects", () => {
   it("late_refund_failed: only an alert asking for a manual refund", async () => {
     const { id, number } = await paidOrder();
     await run("late_refund_failed", id);
-    expect(notifyAlert).toHaveBeenCalledExactlyOnceWith(`Поздняя оплата ${number}: мест нет, автовозврат не прошёл — оформите возврат вручную в кабинете ЮKassa`);
+    expect(notifyAlert).toHaveBeenCalledExactlyOnceWith(`Поздняя оплата ${number}: мест нет, автовозврат не прошёл. Сайт повторит попытку ночью; если вернёте деньги вручную в кабинете ЮKassa, заказ закроется автоматически.`);
     expect(sendSorry).not.toHaveBeenCalled();
     expect(sendTicket).not.toHaveBeenCalled();
   });

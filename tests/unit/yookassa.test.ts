@@ -34,10 +34,11 @@ const paymentInput: CreatePaymentInput = {
 
 describe("yookassaGateway", () => {
   it("createPayment: POST /payments с Basic-авторизацией, ключом идемпотентности и встроенным подтверждением", async () => {
-    const { gw, call } = stub(200, {
+    const response = {
       id: "p1", status: "pending", amount: { value: "3270.00", currency: "RUB" },
       metadata: { order_id: "7" }, confirmation: { type: "embedded", confirmation_token: "ct-1" },
-    });
+    };
+    const { gw, call } = stub(200, response);
     const p = await gw.createPayment(paymentInput);
 
     const c = call();
@@ -56,7 +57,7 @@ describe("yookassaGateway", () => {
     });
     expect(p).toEqual({
       id: "p1", status: "pending", amount: { value: "3270.00", currency: "RUB" },
-      metadata: { order_id: "7" }, confirmationToken: "ct-1",
+      metadata: { order_id: "7" }, confirmationToken: "ct-1", refundedAmount: null, raw: response,
     });
   });
 
@@ -79,7 +80,18 @@ describe("yookassaGateway", () => {
     expect(c.init.body).toBeUndefined();
     expect(c.headers.get("Authorization")).toBe(`Basic ${Buffer.from("shop:secret").toString("base64")}`);
     expect(c.headers.has("Idempotence-Key")).toBe(false);
-    expect(p).toMatchObject({ id: "p1", status: "succeeded", confirmationToken: null });
+    expect(p).toMatchObject({ id: "p1", status: "succeeded", confirmationToken: null, refundedAmount: null });
+  });
+
+  it("getPayment: refunded_amount.value → refundedAmount, raw — разобранный ответ API как получен", async () => {
+    const response = {
+      id: "p1", status: "succeeded", paid: true, amount: { value: "3270.00", currency: "RUB" }, metadata: { order_id: "7" },
+      refunded_amount: { value: "1635.00", currency: "RUB" }, income_amount: { value: "3171.90", currency: "RUB" },
+    };
+    const { gw } = stub(200, response);
+    const p = await gw.getPayment("p1");
+    expect(p.refundedAmount).toBe("1635.00");
+    expect(p.raw).toEqual(response);
   });
 
   it("createRefund: POST /refunds с чеком возврата", async () => {
@@ -210,7 +222,11 @@ describe("fakeGateway", () => {
     const p2 = await gw.createPayment({ ...paymentInput, orderId: 8, amount: 100 });
     expect(p1).toEqual({
       id: "pay-1", status: "pending", amount: { value: "3270.00", currency: "RUB" },
-      metadata: { order_id: "7" }, confirmationToken: "ct-1",
+      metadata: { order_id: "7" }, confirmationToken: "ct-1", refundedAmount: null,
+      raw: {
+        id: "pay-1", status: "pending", amount: { value: "3270.00", currency: "RUB" }, metadata: { order_id: "7" },
+        confirmation: { type: "embedded", confirmation_token: "ct-1" },
+      },
     });
     expect(p2).toMatchObject({ id: "pay-2", confirmationToken: "ct-2", amount: { value: "100.00", currency: "RUB" }, metadata: { order_id: "8" } });
     expect(await gw.getPayment("pay-1")).toEqual(p1);
@@ -229,8 +245,20 @@ describe("fakeGateway", () => {
     expect(() => gw.setStatus("nope", "canceled")).toThrow();
   });
 
+  it("raw подделки следует за состоянием платежа: статус и возвращённая сумма", async () => {
+    const gw = fakeGateway();
+    const p = await gw.createPayment(paymentInput);
+    gw.setStatus(p.id, "succeeded");
+    gw.setRefunded(p.id, 1000);
+    const got = await gw.getPayment(p.id);
+    expect(got.refundedAmount).toBe("1000.00");
+    expect(got.raw).toMatchObject({ status: "succeeded", refunded_amount: { value: "1000.00", currency: "RUB" } });
+    expect(() => gw.setRefunded("nope", 1)).toThrow();
+  });
+
   it("createRefund и createReceipt записывают вход", async () => {
     const gw = fakeGateway();
+    await gw.createPayment(paymentInput); // pay-1
     const refund = { idempotenceKey: "k", paymentId: "pay-1", amount: 1635, customerEmail: "a@b.c", items };
     const receipt = { idempotenceKey: "k2", paymentId: "pay-1", customerEmail: "a@b.c", items, prepaymentAmount: 3270 };
     expect(await gw.createRefund(refund)).toEqual({ id: "ref-1", status: "succeeded" });
@@ -238,6 +266,8 @@ describe("fakeGateway", () => {
     expect(await gw.createReceipt(receipt)).toBeUndefined();
     expect(gw.refunds).toEqual([refund, refund]);
     expect(gw.receipts).toEqual([receipt]);
+    // успешный возврат виден в следующем getPayment (возвраты складываются)
+    expect((await gw.getPayment("pay-1")).refundedAmount).toBe("3270.00");
   });
 
   it("failNext: следующий вызов метода падает (по умолчанию PaymentGatewayError), остальные не затронуты", async () => {

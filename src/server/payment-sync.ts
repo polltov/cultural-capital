@@ -34,6 +34,23 @@ function parseOrderId(raw: string | undefined): number | null {
   return id <= 2_147_483_647 ? id : null;
 }
 
+/** Ответ API в журнал целиком; токен виджета (`confirmation.confirmation_token`) — одноразовый секрет оплаты, ему там не место. */
+function withoutConfirmationToken(raw: unknown): unknown {
+  const confirmation = (raw as { confirmation?: unknown } | null | undefined)?.confirmation;
+  if (!confirmation || typeof confirmation !== "object" || !("confirmation_token" in confirmation)) return raw;
+  return { ...(raw as object), confirmation: { ...confirmation, confirmation_token: null } };
+}
+
+/** Есть ли в журнале запись по платежу с такой пометкой (`note`). */
+async function hasJournalNote(db: Db | Tx, paymentId: string, note: string): Promise<boolean> {
+  const [r] = await db
+    .select({ id: paymentEvents.id })
+    .from(paymentEvents)
+    .where(and(eq(paymentEvents.paymentId, paymentId), eq(paymentEvents.note, note)))
+    .limit(1);
+  return r !== undefined;
+}
+
 /**
  * Единственное место, где статус заказа меняется по данным ЮKassa. Объект платежа берётся из API
  * (данным из уведомления не доверяем). Ошибки `getPayment` и БД не глотаем: webhook ответит 500 и ЮKassa повторит.
@@ -48,10 +65,9 @@ export async function syncPayment(
   const gateway = deps.gateway ?? paymentGateway();
   const payment = await gateway.getPayment(paymentId);
 
-  // Токен виджета — одноразовый секрет оплаты, в журнале ему не место.
-  const payload = { ...payment, confirmationToken: null };
-  const journal = (d: Db | Tx, orderId: number | null, kind: SyncKind) =>
-    recordPaymentEvent({ source, event: `payment.${payment.status}`, paymentId, orderId, payload, note: kind }, d);
+  const payload = withoutConfirmationToken(payment.raw);
+  const journal = (d: Db | Tx, orderId: number | null, note: string) =>
+    recordPaymentEvent({ source, event: `payment.${payment.status}`, paymentId, orderId, payload, note }, d);
 
   const orderId = parseOrderId(payment.metadata.order_id);
   const [ref] = orderId === null ? [] : await db.select({ sessionId: orders.sessionId }).from(orders).where(eq(orders.id, orderId));
@@ -87,10 +103,11 @@ export async function syncPayment(
     const patch: Partial<typeof orders.$inferInsert> = {};
     if (o.paymentId === null) patch.paymentId = paymentId;
     if (o.paymentStatus !== payment.status) patch.paymentStatus = payment.status;
-    const finish = async (kind: SyncKind, extra: typeof patch = {}): Promise<SyncOutcome> => {
+    /** `note` журнала по умолчанию равна исходу; отличается там, где исход и событие — разные вещи. */
+    const finish = async (kind: SyncKind, extra: typeof patch = {}, note: string = kind): Promise<SyncOutcome> => {
       const set = { ...patch, ...extra };
       if (Object.keys(set).length > 0) await tx.update(orders).set({ ...set, updatedAt: new Date() }).where(eq(orders.id, o.id));
-      await journal(tx, o.id, kind);
+      await journal(tx, o.id, note);
       return { kind, orderId: o.id };
     };
 
@@ -102,12 +119,7 @@ export async function syncPayment(
     // Сумма — только по заказу (слепок цен), не по текущим ценам экскурсии. Алерт («mismatch») — один раз на платёж:
     // дальше (страница заказа опрашивает каждые 3 с, ночная задача) — `noop`, но в журнал событие всё равно пишется.
     if (payment.amount.value !== toApiAmount(o.total) || payment.amount.currency !== "RUB") {
-      const [seen] = await tx
-        .select({ id: paymentEvents.id })
-        .from(paymentEvents)
-        .where(and(eq(paymentEvents.paymentId, paymentId), eq(paymentEvents.note, "mismatch")))
-        .limit(1);
-      return finish(seen ? "noop" : "mismatch");
+      return finish((await hasJournalNote(tx, paymentId, "mismatch")) ? "noop" : "mismatch");
     }
 
     if (o.status !== "awaiting_payment" && o.status !== "expired") return finish("noop"); // paid / done / cancelled — повторное уведомление
@@ -116,12 +128,21 @@ export async function syncPayment(
 
     // Поздняя оплата (заказ `expired` или удержание уже истекло): такой заказ мест не занимает и их могли купить другие,
     // поэтому свободные места под его участников проверяем заново — под блокировкой сеанса, места не перепродаём.
-    if (o.children + o.adults <= session.capacity - (await occupiedSeats(tx, o.sessionId))) {
+    // Исключение — платёж, по которому автовозврат уже падал: решение «возвращаем» необратимо. Деньги могли вернуться
+    // (наш вызов завис, а ЮKassa его провела; владелец вернул вручную) — повторная проверка мест, нашедшая места,
+    // выдала бы билет за возвращённые деньги.
+    const refundFailedBefore = await hasJournalNote(tx, paymentId, "late_refund_failed");
+    if (refundFailedBefore) {
+      if (payment.refundedAmount !== null && Number(payment.refundedAmount) >= o.total) {
+        return finish("late_refunded", { status: "cancelled", refundedAmount: o.total }, "refunded_externally");
+      }
+    } else if (o.children + o.adults <= session.capacity - (await occupiedSeats(tx, o.sessionId))) {
       return finish("late_paid", { status: "paid", paidAt: new Date() });
     }
 
-    // Мест нет — полный возврат. Вызов шлюза идёт под блокировкой: параллельный синк дождётся и увидит `cancelled`.
-    // При сбое заказ остаётся (становится) `expired`; повторный синк повторит возврат с тем же ключом идемпотентности.
+    // Мест нет (или возврат уже пробовали) — полный возврат. Вызов шлюза идёт под блокировкой: параллельный синк
+    // дождётся и увидит `cancelled`. При сбое заказ остаётся (становится) `expired`; повторный синк повторит возврат
+    // с тем же ключом идемпотентности. Тревогу (`late_refund_failed`) поднимает только первый сбой, дальше — `noop`.
     let refund: GatewayRefund;
     try {
       if (!o.email) throw new Error("у заказа нет email для чека возврата");
@@ -136,7 +157,7 @@ export async function syncPayment(
     } catch (e) {
       console.error(`Поздняя оплата: автовозврат заказа ${o.id} не прошёл`, e);
       // Оплатить такой заказ уже нельзя, а возврат ждёт повтора: `expired` + `payment_status = succeeded` (по ним его найдёт ночная задача).
-      return finish("late_refund_failed", o.status === "awaiting_payment" ? { status: "expired" } : {});
+      return finish(refundFailedBefore ? "noop" : "late_refund_failed", o.status === "awaiting_payment" ? { status: "expired" } : {}, "late_refund_failed");
     }
     return finish("late_refunded", { status: "cancelled", refundedAmount: o.total, refundId: refund.id });
   });
@@ -182,7 +203,7 @@ export async function runSyncEffects(o: SyncOutcome, db: Db = sharedDb): Promise
       ]);
       return;
     case "late_refund_failed":
-      await alert((n) => `Поздняя оплата ${n}: мест нет, автовозврат не прошёл — оформите возврат вручную в кабинете ЮKassa`);
+      await alert((n) => `Поздняя оплата ${n}: мест нет, автовозврат не прошёл. Сайт повторит попытку ночью; если вернёте деньги вручную в кабинете ЮKassa, заказ закроется автоматически.`);
       return;
     case "mismatch":
       await alert((n) => `Сумма платежа не совпала с заказом ${n}`);

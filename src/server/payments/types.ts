@@ -9,6 +9,10 @@ export type GatewayPayment = {
   metadata: Record<string, string>;
   /** Токен для виджета оплаты; у платежа не в статусе `pending` его нет. */
   confirmationToken: string | null;
+  /** Сумма, уже возвращённая по платежу (`refunded_amount.value`, «1700.00»); `null` — поле не пришло (возвратов нет). */
+  refundedAmount: string | null;
+  /** Разобранный ответ API как получен: в журнал платежей идёт целиком. */
+  raw: unknown;
 };
 
 /** Суммы во входах — целые рубли; в строку для API их переводит клиент. */

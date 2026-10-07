@@ -16,6 +16,7 @@ type ApiPayment = {
   amount: { value: string; currency: string };
   metadata?: Record<string, string>;
   confirmation?: { type: string; confirmation_token?: string };
+  refunded_amount?: { value: string; currency: string };
 };
 
 const money = (rub: number) => ({ value: toApiAmount(rub), currency: "RUB" });
@@ -27,6 +28,8 @@ function toPayment(p: ApiPayment): GatewayPayment {
     amount: p.amount,
     metadata: p.metadata ?? {},
     confirmationToken: p.confirmation?.confirmation_token ?? null,
+    refundedAmount: p.refunded_amount?.value ?? null,
+    raw: p,
   };
 }
 

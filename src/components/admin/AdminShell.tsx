@@ -14,7 +14,7 @@ const svg = (d: string) => (
 
 const ITEMS: Item[] = [
   { href: "/admin", label: "Сводка", exact: true, icon: svg("M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-3H4zM14 7h6V4h-6z") },
-  { href: "/admin/orders", label: "Заявки", icon: svg("M7 4h10l3 3v13H4V7zM8 11h8M8 15h5") },
+  { href: "/admin/orders", label: "Заказы", icon: svg("M7 4h10l3 3v13H4V7zM8 11h8M8 15h5") },
   { href: "/admin/tours", label: "Экскурсии", icon: svg("M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z") },
   { href: "/admin/news", label: "Новости", icon: svg("M5 5h11v14H6a1 1 0 0 1-1-1zM16 9h3v9a1 1 0 0 1-1 1h-2M8 9h5M8 13h5") },
   { href: "/admin/faq", label: "Вопросы", icon: svg("M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM9.4 9.3a2.7 2.7 0 0 1 5.2.9c0 1.7-2.6 2.2-2.6 3.8M12 17h.01") },

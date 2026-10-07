@@ -11,6 +11,18 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
   expired: "Не оплачен",
 };
 
+/** Статус платежа ЮKassa (`orders.payment_status`) словами для админки; незнакомый статус показываем как есть. */
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  pending: "Ждёт оплаты",
+  waiting_for_capture: "Платёж на проверке",
+  succeeded: "Платёж прошёл",
+  canceled: "Платёж отклонён",
+};
+
+export function paymentStatusLabel(status: string | null): string {
+  return status === null ? "—" : (PAYMENT_STATUS_LABELS[status] ?? status);
+}
+
 // Только ручные переходы админа. Отмена оплаченного — через refundOrder; системные переходы
 // (awaiting_payment → paid/expired/cancelled) делают syncPayment, releaseHold и ночная задача.
 const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {

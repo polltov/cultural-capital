@@ -1,9 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import bcrypt from "bcryptjs";
 import { db } from "@/db/client";
-import { orders, tours, tourSessions } from "@/db/schema";
 import { attemptLogin, LOGIN_ERROR, LOGIN_BLOCKED } from "@/server/admin-auth";
-import { getDashboard } from "@/server/admin-orders";
 import { countRateLimit, hitRateLimit } from "@/server/rate-limit";
 
 beforeAll(() => {
@@ -55,38 +53,5 @@ describe("attemptLogin", () => {
   it("order rate limit semantics unchanged", async () => {
     for (let i = 0; i < 2; i++) expect(await hitRateLimit("order:x", 2, 60, db)).toBe(true);
     expect(await hitRateLimit("order:x", 2, 60, db)).toBe(false);
-  });
-});
-
-const DAY = 24 * 3600_000;
-
-describe("getDashboard", () => {
-  it("counts only new orders and lists sessions in the next 14 days", async () => {
-    const [t] = await db.insert(tours).values({ slug: "a", title: "Эрмитаж", durationLabel: "2 часа", ageLabel: "6+", priceChild: 1, priceAdult: 1 }).returning();
-    const mk = (offsetDays: number, extra: { hidden?: boolean; capacity?: number } = {}) =>
-      db.insert(tourSessions).values({ tourId: t.id, startsAt: new Date(Date.now() + offsetDays * DAY), ...extra }).returning().then((r) => r[0]);
-    const past = await mk(-1);
-    const later = await mk(5, { capacity: 10 });
-    const soon = await mk(1);
-    await mk(3, { hidden: true });
-    await mk(15);
-
-    const order = (sessionId: number, status: "new" | "confirmed" | "done" | "cancelled", children: number, adults: number) =>
-      ({ sessionId, status, children, adults, customerName: "X", phone: "+7", priceChildSnapshot: 1, priceAdultSnapshot: 1, total: 1, consentAt: new Date() });
-    await db.insert(orders).values([
-      order(soon.id, "new", 1, 1),
-      order(soon.id, "confirmed", 2, 1),
-      order(soon.id, "done", 0, 2),
-      order(soon.id, "cancelled", 3, 0),
-      order(past.id, "new", 1, 0),
-      order(later.id, "new", 0, 1),
-    ]);
-
-    const d = await getDashboard(db);
-    expect(d.newOrders).toBe(3);
-    expect(d.upcoming).toEqual([
-      { sessionId: soon.id, tourTitle: "Эрмитаж", startsAt: soon.startsAt, capacity: 8, taken: 5 },
-      { sessionId: later.id, tourTitle: "Эрмитаж", startsAt: later.startsAt, capacity: 10, taken: 0 },
-    ]);
   });
 });

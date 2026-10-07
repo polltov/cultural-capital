@@ -41,14 +41,49 @@ describe("listOrders", () => {
   });
 });
 
+describe("listOrders: платёжные поля", () => {
+  it("returns payment status and refunded amount, filters paid orders", async () => {
+    const { s } = await setup();
+    await db.insert(orders).values([
+      { ...base, sessionId: s.id, customerName: "Анна", phone: "+79111234567", status: "paid", paymentId: "pay-1", paymentStatus: "succeeded", paidAt: new Date() },
+      { ...base, sessionId: s.id, customerName: "Борис", phone: "+79990000000", status: "cancelled", paymentId: "pay-2", paymentStatus: "succeeded", refundedAmount: 500 },
+      { ...base, sessionId: s.id, customerName: "Вера", phone: "+79990000001", status: "new" },
+    ]);
+    const { rows } = await listOrders({ status: "all" }, db);
+    const by = Object.fromEntries(rows.map((r) => [r.customerName, r]));
+    expect(by["Анна"]).toMatchObject({ paymentStatus: "succeeded", refundedAmount: 0 });
+    expect(by["Борис"]).toMatchObject({ paymentStatus: "succeeded", refundedAmount: 500 });
+    expect(by["Вера"]).toMatchObject({ paymentStatus: null, refundedAmount: 0 });
+    expect((await listOrders({ status: "paid" }, db)).rows.map((r) => r.customerName)).toEqual(["Анна"]);
+    expect((await listOrders({ status: "awaiting_payment" }, db)).total).toBe(0);
+  });
+});
+
 describe("getOrder / setAdminNote", () => {
   it("returns detail with session info, null for unknown", async () => {
     const { s } = await setup();
     const [o] = await db.insert(orders).values({ ...base, sessionId: s.id, customerName: "Анна", phone: "+79111234567" }).returning();
     const d = await getOrder(o.id, db);
     expect(d).toMatchObject({ id: o.id, tourTitle: "A", sessionId: s.id, status: "new" });
+    expect(d).toMatchObject({ paymentId: null, paymentStatus: null, paidAt: null, refundedAmount: 0, ticketSentAt: null, accessToken: null });
     expect(await getOrder(9999, db)).toBeNull();
     await setAdminNote(o.id, "перезвонить", db);
     expect((await getOrder(o.id, db))!.adminNote).toBe("перезвонить");
+  });
+
+  it("returns the payment block fields of an online order", async () => {
+    const { s } = await setup();
+    const paidAt = new Date(Date.now() - 3600_000);
+    const ticketSentAt = new Date(Date.now() - 3000_000);
+    const [o] = await db
+      .insert(orders)
+      .values({
+        ...base, sessionId: s.id, customerName: "Анна", phone: "+79111234567", status: "paid", paymentId: "pay-1",
+        paymentStatus: "succeeded", paidAt, ticketSentAt, refundedAmount: 0, accessToken: "t".repeat(43),
+      })
+      .returning();
+    expect(await getOrder(o.id, db)).toMatchObject({
+      paymentId: "pay-1", paymentStatus: "succeeded", paidAt, ticketSentAt, refundedAmount: 0, accessToken: "t".repeat(43),
+    });
   });
 });

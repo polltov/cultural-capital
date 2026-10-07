@@ -3,25 +3,29 @@ import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/session";
 import { getDashboard } from "@/server/admin-orders";
 import { formatDayMonth, formatTime, formatWeekday } from "@/lib/domain/moscow-time";
+import { formatRub } from "@/lib/domain/pricing";
+import { pluralRu } from "@/lib/domain/seats";
 
 export const metadata: Metadata = { title: "Сводка" };
 
 export default async function DashboardPage() {
   await requireAdmin();
-  const { newOrders, upcoming } = await getDashboard();
+  const { paid7d, upcoming } = await getDashboard();
   return (
     <>
       <h1 className="page-title">Сводка</h1>
 
-      <Link href="/admin/orders?status=new" className={`stat-card${newOrders > 0 ? " stat-card--hot" : ""}`}>
-        <span className="stat-label">Новые заявки</span>
-        <span className="stat-value">{newOrders}</span>
+      <Link href="/admin/orders?status=paid" className="stat-card stat-card--paid">
+        <span className="stat-label">Оплачено за 7 дней</span>
+        <span className="stat-value">
+          {paid7d.count} {pluralRu(paid7d.count, ["заказ", "заказа", "заказов"])} · {formatRub(paid7d.sum)}
+        </span>
         <span className="stat-link">Открыть список →</span>
       </Link>
 
       <section className="panel-section">
         <h2 className="section-title">Ближайшие сеансы</h2>
-        <p className="muted section-sub">На 14 дней вперёд, заполненность по подтверждённым заявкам</p>
+        <p className="muted section-sub">На 14 дней вперёд, заполненность по оплаченным заказам и подтверждённым заявкам</p>
         {upcoming.length === 0 ? (
           <p className="empty">В ближайшие две недели сеансов нет.</p>
         ) : (

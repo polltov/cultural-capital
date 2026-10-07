@@ -8,10 +8,12 @@ import type { Roster } from "@/lib/domain/roster-csv";
 import { seatsTakenSql } from "@/server/seats-sql";
 
 const UPCOMING_DAYS = 14;
+const PAID_DAYS = 7;
 
 export type DashboardSession = { sessionId: number; tourTitle: string; startsAt: Date; capacity: number; taken: number };
-export type Dashboard = { newOrders: number; upcoming: DashboardSession[] };
+export type Dashboard = { paid7d: { count: number; sum: number }; upcoming: DashboardSession[] };
 
+/** Старые заявки `new` (бейдж в меню): новых заявок сайт больше не создаёт, но разобрать остаток нужно. */
 export async function countNewOrders(db: Db = sharedDb): Promise<number> {
   const [{ n }] = await db.select({ n: sql<number>`count(*)::int` }).from(orders).where(eq(orders.status, "new"));
   return n;
@@ -20,9 +22,14 @@ export async function countNewOrders(db: Db = sharedDb): Promise<number> {
 export async function getDashboard(db: Db = sharedDb): Promise<Dashboard> {
   const now = new Date();
   const until = new Date(now.getTime() + UPCOMING_DAYS * 24 * 3600_000);
+  const since = new Date(now.getTime() - PAID_DAYS * 24 * 3600_000);
 
-  const [newOrders, upcoming] = await Promise.all([
-    countNewOrders(db),
+  const [[paid7d], upcoming] = await Promise.all([
+    // Оплаченные за неделю: `paid` и проведённые `done` (по `paid_at`, сумма — по `total`); возвращённые (`cancelled`) не входят.
+    db
+      .select({ count: sql<number>`count(*)::int`, sum: sql<number>`coalesce(sum(${orders.total}), 0)::int` })
+      .from(orders)
+      .where(and(inArray(orders.status, ["paid", "done"]), gte(orders.paidAt, since))),
     db
       .select({
         sessionId: tourSessions.id,
@@ -38,7 +45,7 @@ export async function getDashboard(db: Db = sharedDb): Promise<Dashboard> {
       .groupBy(tourSessions.id, tours.title)
       .orderBy(asc(tourSessions.startsAt), asc(tourSessions.id)),
   ]);
-  return { newOrders, upcoming };
+  return { paid7d, upcoming };
 }
 
 export const ORDERS_PAGE_SIZE = 30;
@@ -47,9 +54,11 @@ export type OrderFilters = { status?: OrderStatus | "all"; tourId?: number; sess
 export type OrderRow = {
   id: number; number: number; createdAt: Date; status: OrderStatus; customerName: string; phone: string;
   children: number; adults: number; total: number; sessionId: number; startsAt: Date; tourId: number; tourTitle: string;
+  paymentStatus: string | null; refundedAmount: number;
 };
 export type OrderDetail = OrderRow & {
   email: string | null; comment: string; adminNote: string; priceChildSnapshot: number; priceAdultSnapshot: number; updatedAt: Date;
+  paymentId: string | null; paidAt: Date | null; ticketSentAt: Date | null; accessToken: string | null;
 };
 
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
@@ -77,6 +86,7 @@ export async function listOrders(f: OrderFilters, db: Db = sharedDb): Promise<{ 
         customerName: orders.customerName, phone: orders.phone, children: orders.children, adults: orders.adults,
         total: orders.total, sessionId: orders.sessionId, startsAt: tourSessions.startsAt,
         tourId: tourSessions.tourId, tourTitle: tours.title,
+        paymentStatus: orders.paymentStatus, refundedAmount: orders.refundedAmount,
       })
       .from(orders)
       .innerJoin(tourSessions, eq(orders.sessionId, tourSessions.id))
@@ -102,6 +112,8 @@ export async function getOrder(id: number, db: Db = sharedDb): Promise<OrderDeta
       adminNote: orders.adminNote, children: orders.children, adults: orders.adults, total: orders.total,
       priceChildSnapshot: orders.priceChildSnapshot, priceAdultSnapshot: orders.priceAdultSnapshot,
       sessionId: orders.sessionId, startsAt: tourSessions.startsAt, tourId: tourSessions.tourId, tourTitle: tours.title,
+      paymentId: orders.paymentId, paymentStatus: orders.paymentStatus, paidAt: orders.paidAt, refundedAmount: orders.refundedAmount,
+      ticketSentAt: orders.ticketSentAt, accessToken: orders.accessToken,
     })
     .from(orders)
     .innerJoin(tourSessions, eq(orders.sessionId, tourSessions.id))

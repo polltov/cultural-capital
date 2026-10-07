@@ -3,67 +3,228 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { nextStatuses, type OrderStatus } from "@/lib/domain/order-status";
-import { changeStatus } from "@/app/admin/(panel)/orders/actions";
+import { formatDayMonth, formatTime, formatWeekday } from "@/lib/domain/moscow-time";
+import { formatRub } from "@/lib/domain/pricing";
+import { defaultRefundAmount } from "@/lib/domain/refund-policy";
+import { changeStatus, moveAction, refundAction, resendTicketAction } from "@/app/admin/(panel)/orders/actions";
 
 const BUTTONS: Record<OrderStatus, { label: string; cls: string }> = {
   confirmed: { label: "Подтвердить", cls: "btn btn-accent" },
   done: { label: "Отметить проведённым", cls: "btn btn-accent" },
   cancelled: { label: "Отменить", cls: "btn btn-ghost" },
   new: { label: "Вернуть в новые", cls: "btn btn-ghost" },
-  // Системные статусы и оплаченные: админ ими вручную не управляет (возврат оплаченного — отдельное действие); записи нужны для типов
+  // Системные статусы и оплаченные: админ ими вручную не управляет (отмена оплаченного — «Отменить и вернуть»); записи нужны для типов
   awaiting_payment: { label: "Ждёт оплаты", cls: "btn btn-ghost" },
   paid: { label: "Оплачен", cls: "btn btn-ghost" },
   expired: { label: "Не оплачен", cls: "btn btn-ghost" },
 };
 
-export function OrderActions({ id, status }: { id: number; status: OrderStatus }) {
+const REFUND_FALLBACK = "Если возврат не проходит, оформите его в кабинете ЮKassa и отмените заказ с суммой 0.";
+
+export type MoveTarget = { id: number; startsAt: Date; free: number };
+
+type Props = {
+  id: number;
+  status: OrderStatus;
+  total: number;
+  startsAt: Date;
+  /** Сеансы, куда можно перенести оплаченный заказ (`listMoveTargets`); для остальных статусов пусто. */
+  moveTargets: MoveTarget[];
+  /** У заказа есть токен страницы и email, то есть билет можно отправить. */
+  hasTicket: boolean;
+};
+type Mode = "cancel" | "refund" | "move" | null;
+type Failure = { text: string; refund: boolean };
+
+const AMOUNT_RE = /^\d{1,9}$/;
+const targetLabel = (t: MoveTarget) =>
+  `${formatDayMonth(t.startsAt)}, ${formatWeekday(t.startsAt)}, ${formatTime(t.startsAt)} · свободно ${t.free}`;
+
+export function OrderActions({ id, status, total, startsAt, moveTargets, hasTicket }: Props) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [confirmCancel, setConfirmCancel] = useState(false);
-  const next = nextStatuses(status);
-  if (next.length === 0) return null;
+  const [failure, setFailure] = useState<Failure | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [mode, setModeState] = useState<Mode>(null);
+  const [amount, setAmount] = useState("");
+  const [target, setTarget] = useState("");
 
-  function go(to: OrderStatus) {
-    setError(null);
-    setConfirmCancel(false);
+  const next = nextStatuses(status);
+  const isPaid = status === "paid";
+  const canResend = hasTicket && (isPaid || status === "done");
+  if (!isPaid && next.length === 0 && !canResend) return null;
+
+  function setMode(m: Mode) {
+    setFailure(null);
+    setNotice(null);
+    setModeState(m);
+  }
+
+  function run(call: () => Promise<{ ok: true } | { ok: false; error: string }>, onOk: () => void, refund = false) {
+    setFailure(null);
+    setNotice(null);
     start(async () => {
-      const r = await changeStatus(id, to);
-      if (r.ok) router.replace(`/admin/orders/${id}?saved=1`);
-      else setError(r.error);
+      const r = await call();
+      if (r.ok) onOk();
+      else setFailure({ text: r.error, refund });
     });
   }
+  // Успех: диалог закрываем сами — после переноса статус заказа прежний, и страница та же.
+  const saved = () => {
+    setModeState(null);
+    router.replace(`/admin/orders/${id}?saved=1`);
+  };
+
+  function go(to: OrderStatus) {
+    setModeState(null);
+    run(() => changeStatus(id, to), saved);
+  }
+
+  function openRefund() {
+    setMode("refund");
+    // Сумма по правилу считается в момент открытия диалога, а не при загрузке страницы: страница могла простоять открытой.
+    setAmount(String(defaultRefundAmount(total, startsAt, new Date())));
+  }
+
+  function openMove() {
+    setMode("move");
+    setTarget("");
+  }
+
+  const refundValid = AMOUNT_RE.test(amount.trim()) && Number(amount) <= total;
+  const refundSum = refundValid ? Number(amount) : 0;
 
   return (
     <div className="order-actions">
-      {error && (
-        <p className="banner banner--error" role="alert">
-          {error}
+      {failure && (
+        <div className="banner banner--error" role="alert">
+          <p>{failure.text}</p>
+          {failure.refund && <p>{REFUND_FALLBACK}</p>}
+        </div>
+      )}
+      {notice && (
+        <p className="banner banner--ok" role="status">
+          {notice}
         </p>
       )}
-      {confirmCancel ? (
+
+      {mode === "cancel" && (
         <div className="confirm-row" role="alertdialog" aria-label="Подтверждение отмены">
           <span>Отменить заявку? Места освободятся.</span>
           <button type="button" className="btn btn-danger" disabled={pending} onClick={() => go("cancelled")}>
             Да, отменить
           </button>
-          <button type="button" className="btn btn-ghost" disabled={pending} onClick={() => setConfirmCancel(false)}>
+          <button type="button" className="btn btn-ghost" disabled={pending} onClick={() => setMode(null)}>
             Нет
           </button>
         </div>
-      ) : (
+      )}
+
+      {mode === "refund" && (
+        <div className="order-panel" role="dialog" aria-label="Отмена и возврат">
+          <label className="field">
+            <span className="field-label">Сумма возврата, ₽</span>
+            <input
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              inputMode="numeric"
+              autoComplete="off"
+              aria-invalid={!refundValid}
+              aria-describedby="refund-rule"
+            />
+          </label>
+          <p id="refund-rule" className="muted">
+            По правилу: за 24 ч и раньше — 100%, позже — 50%
+          </p>
+          {!refundValid && <p className="form-error">Сумма — целое число от 0 до {formatRub(total)}</p>}
+          <p className="muted">Заказ будет отменён, места освободятся, клиент получит письмо об отмене.</p>
+          <div className="btn-row">
+            <button
+              type="button"
+              className="btn btn-danger"
+              disabled={pending || !refundValid}
+              onClick={() => run(() => refundAction(id, refundSum), saved, true)}
+            >
+              {refundValid ? `Вернуть ${formatRub(refundSum)}` : "Вернуть"}
+            </button>
+            <button type="button" className="btn btn-ghost" disabled={pending} onClick={() => setMode(null)}>
+              Назад
+            </button>
+          </div>
+        </div>
+      )}
+
+      {mode === "move" && (
+        <div className="order-panel" role="dialog" aria-label="Перенос заказа">
+          {moveTargets.length === 0 ? (
+            <p className="muted">Нет подходящих сеансов: нужен будущий сеанс этой экскурсии, где хватит мест на всех участников.</p>
+          ) : (
+            <>
+              <label className="field">
+                <span className="field-label">Новый сеанс</span>
+                <select value={target} onChange={(e) => setTarget(e.target.value)}>
+                  <option value="">Выберите сеанс</option>
+                  {moveTargets.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {targetLabel(t)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="muted">Оплата не меняется, клиент получит обновлённый билет на почту.</p>
+            </>
+          )}
+          <div className="btn-row">
+            {moveTargets.length > 0 && (
+              <button
+                type="button"
+                className="btn btn-accent"
+                disabled={pending || target === ""}
+                onClick={() => run(() => moveAction(id, Number(target)), saved)}
+              >
+                Перенести
+              </button>
+            )}
+            <button type="button" className="btn btn-ghost" disabled={pending} onClick={() => setMode(null)}>
+              Назад
+            </button>
+          </div>
+        </div>
+      )}
+
+      {mode === null && (
         <div className="btn-row">
+          {isPaid && (
+            <>
+              <button type="button" className="btn btn-ghost" disabled={pending} onClick={openRefund}>
+                Отменить и вернуть
+              </button>
+              <button type="button" className="btn btn-ghost" disabled={pending} onClick={openMove}>
+                Перенести
+              </button>
+            </>
+          )}
           {next.map((to) => (
             <button
               key={to}
               type="button"
               className={BUTTONS[to].cls}
               disabled={pending}
-              onClick={() => (to === "cancelled" ? setConfirmCancel(true) : go(to))}
+              onClick={() => (to === "cancelled" ? setMode("cancel") : go(to))}
             >
               {BUTTONS[to].label}
             </button>
           ))}
+          {canResend && (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={pending}
+              onClick={() => run(() => resendTicketAction(id), () => setNotice("Билет отправлен на почту клиента"))}
+            >
+              Отправить билет повторно
+            </button>
+          )}
         </div>
       )}
     </div>

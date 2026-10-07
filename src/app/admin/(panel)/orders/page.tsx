@@ -4,14 +4,14 @@ import { requireAdmin } from "@/lib/auth/session";
 import { db } from "@/db/client";
 import { tours, tourSessions } from "@/db/schema";
 import { asc, desc } from "drizzle-orm";
-import { ORDER_STATUSES, STATUS_LABELS, type OrderStatus } from "@/lib/domain/order-status";
+import { ORDER_STATUSES, STATUS_LABELS, paymentStatusLabel, type OrderStatus } from "@/lib/domain/order-status";
 import { formatOrderNumber } from "@/lib/domain/order-number";
 import { formatRub } from "@/lib/domain/pricing";
 import { formatDayMonth, formatTime } from "@/lib/domain/moscow-time";
 import { listOrders, ORDERS_PAGE_SIZE, type OrderFilters, type OrderRow } from "@/server/admin-orders";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 
-export const metadata: Metadata = { title: "Заявки" };
+export const metadata: Metadata = { title: "Заказы" };
 
 type SP = Record<string, string | string[] | undefined>;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
@@ -19,13 +19,24 @@ const posInt = (v: string | undefined) => (v && /^\d{1,9}$/.test(v) && Number(v)
 
 function parse(sp: SP) {
   const s = one(sp.status);
-  const status: OrderStatus | "all" = s === "all" ? "all" : (ORDER_STATUSES as readonly string[]).includes(s ?? "") ? (s as OrderStatus) : "new";
+  const status: OrderStatus | "all" = s === "all" ? "all" : (ORDER_STATUSES as readonly string[]).includes(s ?? "") ? (s as OrderStatus) : "paid";
   const q = (one(sp.q) ?? "").trim().slice(0, 100);
   return { status, tourId: posInt(one(sp.tourId)), sessionId: posInt(one(sp.sessionId)), q, page: posInt(one(sp.page)) ?? 1 };
 }
 
 const who = (r: OrderRow) => [r.children ? `дети ${r.children}` : "", r.adults ? `взр. ${r.adults}` : ""].filter(Boolean).join(", ");
 const created = (d: Date) => `${formatDayMonth(d)}, ${formatTime(d)}`;
+
+/** Колонка «Оплата»: статус платежа и сколько возвращено; у старых заявок платежа нет. */
+function Payment({ r }: { r: OrderRow }) {
+  if (r.paymentStatus === null) return <span className="muted">—</span>;
+  return (
+    <>
+      {paymentStatusLabel(r.paymentStatus)}
+      {r.refundedAmount > 0 && <span className="muted block">Возвращено {formatRub(r.refundedAmount)}</span>}
+    </>
+  );
+}
 
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<SP> }) {
   await requireAdmin();
@@ -55,7 +66,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
 
   return (
     <>
-      <h1 className="page-title">Заявки</h1>
+      <h1 className="page-title">Заказы</h1>
 
       <form method="get" className="filters" role="search">
         <label className="field">
@@ -101,49 +112,55 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       </form>
 
       {rows.length === 0 ? (
-        <p className="empty">{f.status === "new" && !f.q && !f.tourId && !f.sessionId ? "Новых заявок нет." : "Заявок не найдено."}</p>
+        <p className="empty">{f.status === "paid" && !f.q && !f.tourId && !f.sessionId ? "Оплаченных заказов нет." : "Заказов не найдено."}</p>
       ) : (
         <>
-          <table className="orders-table">
-            <thead>
-              <tr>
-                <th>№</th>
-                <th>Создана</th>
-                <th>Экскурсия и сеанс</th>
-                <th>Клиент</th>
-                <th>Состав</th>
-                <th className="num">Сумма</th>
-                <th>Статус</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id}>
-                  <td>
-                    <Link href={`/admin/orders/${r.id}`} className="order-link">
-                      {formatOrderNumber(r.number)}
-                    </Link>
-                  </td>
-                  <td className="muted">{created(r.createdAt)}</td>
-                  <td>
-                    {r.tourTitle}
-                    <span className="muted block">
-                      {formatDayMonth(r.startsAt)}, {formatTime(r.startsAt)}
-                    </span>
-                  </td>
-                  <td>
-                    {r.customerName}
-                    <span className="muted block">{r.phone}</span>
-                  </td>
-                  <td>{who(r)}</td>
-                  <td className="num">{formatRub(r.total)}</td>
-                  <td>
-                    <StatusBadge status={r.status} />
-                  </td>
+          <div className="table-scroll">
+            <table className="orders-table">
+              <thead>
+                <tr>
+                  <th>№</th>
+                  <th>Создана</th>
+                  <th>Экскурсия и сеанс</th>
+                  <th>Клиент</th>
+                  <th>Состав</th>
+                  <th className="num">Сумма</th>
+                  <th>Статус</th>
+                  <th>Оплата</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id}>
+                    <td>
+                      <Link href={`/admin/orders/${r.id}`} className="order-link">
+                        {formatOrderNumber(r.number)}
+                      </Link>
+                    </td>
+                    <td className="muted">{created(r.createdAt)}</td>
+                    <td>
+                      {r.tourTitle}
+                      <span className="muted block">
+                        {formatDayMonth(r.startsAt)}, {formatTime(r.startsAt)}
+                      </span>
+                    </td>
+                    <td>
+                      {r.customerName}
+                      <span className="muted block">{r.phone}</span>
+                    </td>
+                    <td>{who(r)}</td>
+                    <td className="num">{formatRub(r.total)}</td>
+                    <td>
+                      <StatusBadge status={r.status} />
+                    </td>
+                    <td>
+                      <Payment r={r} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <ul className="order-cards">
             {rows.map((r) => (
@@ -161,6 +178,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                     <span className="muted">{who(r)}</span>
                     <span>{formatRub(r.total)}</span>
                   </span>
+                  {r.refundedAmount > 0 && <span className="muted">Возвращено {formatRub(r.refundedAmount)}</span>}
                 </Link>
               </li>
             ))}

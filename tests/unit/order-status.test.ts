@@ -1,5 +1,5 @@
 import { describe, it, expect, expectTypeOf } from "vitest";
-import { ORDER_STATUSES, STATUS_LABELS, canTransition, nextStatuses, type OrderStatus } from "@/lib/domain/order-status";
+import { ORDER_STATUSES, STATUS_LABELS, canTransition, nextStatuses, paymentStatusLabel, type OrderStatus } from "@/lib/domain/order-status";
 import { orderStatus } from "@/db/schema";
 
 describe("order-status", () => {
@@ -45,5 +45,13 @@ describe("order-status", () => {
     expect(nextStatuses("paid")).toEqual(["done"]);
     expect(nextStatuses("awaiting_payment")).toEqual([]);
     expect(nextStatuses("expired")).toEqual([]);
+  });
+  it("paymentStatusLabel: статусы ЮKassa словами, пустой — прочерк, незнакомый — как есть", () => {
+    expect(paymentStatusLabel("pending")).toBe("Ждёт оплаты");
+    expect(paymentStatusLabel("waiting_for_capture")).toBe("Платёж на проверке");
+    expect(paymentStatusLabel("succeeded")).toBe("Платёж прошёл");
+    expect(paymentStatusLabel("canceled")).toBe("Платёж отклонён");
+    expect(paymentStatusLabel(null)).toBe("—");
+    expect(paymentStatusLabel("weird")).toBe("weird");
   });
 });

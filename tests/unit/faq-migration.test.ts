@@ -56,13 +56,13 @@ describe("0004_faq_payment_texts", () => {
     expect(answer(DISCOUNT)).toBe(
       "Для семей от 4 человек и для двух экскурсий в один визит есть специальные условия — напишите нам, подберём вариант.",
     );
-    // Старый ответ, только «по запросу через форму или в личном сообщении» → «по запросу — напишите или позвоните нам».
+    // Старый ответ, только «по запросу через форму или в личном сообщении» → «по запросу: напишите или позвоните нам».
     expect(answer(INDIVIDUAL)).toBe(
-      seeded.get(INDIVIDUAL)!.replace("по запросу через форму или в личном сообщении", "по запросу — напишите или позвоните нам"),
+      seeded.get(INDIVIDUAL)!.replace("по запросу через форму или в личном сообщении", "по запросу: напишите или позвоните нам"),
     );
     expect(answer(PAYMENT)).toContain("картой, по СБП, SberPay или T-Pay");
     expect(answer(DISCOUNT)).toContain("напишите нам, подберём вариант");
-    expect(answer(INDIVIDUAL)).toContain("напишите или позвоните нам");
+    expect(answer(INDIVIDUAL)).toContain("по запросу: напишите или позвоните нам");
   });
 
   it("does not touch the order_status enum (new values are not usable in the same transaction)", () => {

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db as sharedDb, type Db, type Tx } from "@/db/client";
 import { orders, paymentEvents, tours, tourSessions } from "@/db/schema";
 import { formatOrderNumber } from "@/lib/domain/order-number";
@@ -69,10 +69,16 @@ export async function syncPayment(
       .innerJoin(tours, eq(tourSessions.tourId, tours.id))
       .where(eq(tourSessions.id, ref.sessionId))
       .for("update", { of: tourSessions });
-    const [o] = await tx.select().from(orders).where(eq(orders.id, orderId)).for("update");
+    // Истечение удержания — по часам БД, как в `seatsTakenSql`: ровно тогда заказ перестаёт занимать места.
+    const [row] = await tx
+      .select({ o: orders, holdLapsed: sql<boolean>`(${orders.holdExpiresAt} is null or ${orders.holdExpiresAt} <= now())` })
+      .from(orders)
+      .where(eq(orders.id, orderId))
+      .for("update");
+    const o = row?.o;
 
     // Заказ привязан к другому платёжу — это не наш платёж (и записывать в него `payment_id` нельзя).
-    if (!session || !o || (o.paymentId !== null && o.paymentId !== paymentId)) {
+    if (!session || !row || !o || (o.paymentId !== null && o.paymentId !== paymentId)) {
       await journal(tx, null, "unknown");
       return { kind: "unknown" };
     }
@@ -93,22 +99,29 @@ export async function syncPayment(
     }
     if (payment.status !== "succeeded") return finish("noop");
 
-    // Сумма — только по заказу (слепок цен), не по текущим ценам экскурсии.
-    if (payment.amount.value !== toApiAmount(o.total) || payment.amount.currency !== "RUB") return finish("mismatch");
-
-    if (o.status === "awaiting_payment") {
-      // Деньги уже списаны: места и время удержания не проверяем.
-      return finish("paid", { status: "paid", paidAt: new Date() });
+    // Сумма — только по заказу (слепок цен), не по текущим ценам экскурсии. Алерт («mismatch») — один раз на платёж:
+    // дальше (страница заказа опрашивает каждые 3 с, ночная задача) — `noop`, но в журнал событие всё равно пишется.
+    if (payment.amount.value !== toApiAmount(o.total) || payment.amount.currency !== "RUB") {
+      const [seen] = await tx
+        .select({ id: paymentEvents.id })
+        .from(paymentEvents)
+        .where(and(eq(paymentEvents.paymentId, paymentId), eq(paymentEvents.note, "mismatch")))
+        .limit(1);
+      return finish(seen ? "noop" : "mismatch");
     }
-    if (o.status !== "expired") return finish("noop"); // paid / done / cancelled — повторное уведомление
 
-    // Поздняя оплата: заказ `expired` места не занимает, поэтому свободные места сравниваем с его участниками.
+    if (o.status !== "awaiting_payment" && o.status !== "expired") return finish("noop"); // paid / done / cancelled — повторное уведомление
+    // Без проверки мест оплачивается только заказ с действующим удержанием: его места за ним.
+    if (o.status === "awaiting_payment" && !row.holdLapsed) return finish("paid", { status: "paid", paidAt: new Date() });
+
+    // Поздняя оплата (заказ `expired` или удержание уже истекло): такой заказ мест не занимает и их могли купить другие,
+    // поэтому свободные места под его участников проверяем заново — под блокировкой сеанса, места не перепродаём.
     if (o.children + o.adults <= session.capacity - (await occupiedSeats(tx, o.sessionId))) {
       return finish("late_paid", { status: "paid", paidAt: new Date() });
     }
 
     // Мест нет — полный возврат. Вызов шлюза идёт под блокировкой: параллельный синк дождётся и увидит `cancelled`.
-    // При сбое заказ остаётся `expired`; повторный синк повторит возврат с тем же ключом идемпотентности.
+    // При сбое заказ остаётся (становится) `expired`; повторный синк повторит возврат с тем же ключом идемпотентности.
     let refund: GatewayRefund;
     try {
       if (!o.email) throw new Error("у заказа нет email для чека возврата");
@@ -122,7 +135,8 @@ export async function syncPayment(
       if (refund.status === "canceled") throw new Error("ЮKassa отклонила возврат");
     } catch (e) {
       console.error(`Поздняя оплата: автовозврат заказа ${o.id} не прошёл`, e);
-      return finish("late_refund_failed");
+      // Оплатить такой заказ уже нельзя, а возврат ждёт повтора: `expired` + `payment_status = succeeded` (по ним его найдёт ночная задача).
+      return finish("late_refund_failed", o.status === "awaiting_payment" ? { status: "expired" } : {});
     }
     return finish("late_refunded", { status: "cancelled", refundedAmount: o.total, refundId: refund.id });
   });

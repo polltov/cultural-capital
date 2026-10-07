@@ -124,13 +124,13 @@ describe("syncPayment: succeeded", () => {
     expect(await orderOf(o.id)).toMatchObject({ status: "paid", paymentId, paymentStatus: "succeeded" });
   });
 
-  it("an awaiting_payment order is paid even when its hold has already lapsed (money is taken: no seat check)", async () => {
+  it("an awaiting_payment order with an active hold is paid without a seat check", async () => {
     const { s } = await setup(3);
     const { o, paymentId } = await buy(s.id);
-    await db.update(orders).set({ holdExpiresAt: new Date(Date.now() - 60_000) }).where(eq(orders.id, o.id));
-    await occupy(s.id, 3);
+    // удержание активно: заказ сам занимает все 3 места, проверка свободных мест ему не нужна (и дала бы отказ)
     gw.setStatus(paymentId, "succeeded");
     expect(await sync(paymentId, "cron")).toEqual({ kind: "paid", orderId: o.id });
+    expect(gw.refunds).toHaveLength(0);
   });
 
   it("amount mismatch: status unchanged, outcome mismatch, journalled", async () => {
@@ -153,6 +153,19 @@ describe("syncPayment: succeeded", () => {
     gw.payments.get(paymentId)!.amount = { value: "3270.00", currency: "USD" };
     expect(await sync(paymentId)).toEqual({ kind: "mismatch", orderId: o.id });
     expect((await orderOf(o.id)).status).toBe("awaiting_payment");
+  });
+
+  it("a mismatched payment raises «mismatch» (the alert) only the first time; repeats are noop but journalled", async () => {
+    const { s } = await setup();
+    const { o, paymentId } = await buy(s.id);
+    gw.setStatus(paymentId, "succeeded");
+    gw.payments.get(paymentId)!.amount = { value: "100.00", currency: "RUB" };
+
+    expect(await sync(paymentId)).toEqual({ kind: "mismatch", orderId: o.id });
+    expect(await sync(paymentId, "sync")).toEqual({ kind: "noop", orderId: o.id });
+    expect(await sync(paymentId, "cron")).toEqual({ kind: "noop", orderId: o.id });
+    expect((await orderOf(o.id)).status).toBe("awaiting_payment");
+    expect((await journal()).map((r) => [r.source, r.note])).toEqual([["webhook", "mismatch"], ["sync", "noop"], ["cron", "noop"]]);
   });
 
   it.each(["paid", "done", "cancelled"] as const)("an order that is already %s is left alone (noop)", async (status) => {
@@ -226,6 +239,47 @@ describe("syncPayment: late payment (order is expired)", () => {
     expect(await syncTwice(s.id, paymentId)).toEqual(["late_refunded", "noop"]);
     expect(gw.refunds).toHaveLength(1);
     expect((await orderOf(o.id)).status).toBe("cancelled");
+  });
+
+  async function lapsedHold(capacity: number, occupied: number) {
+    const { s } = await setup(capacity);
+    const { o, paymentId } = await buy(s.id);
+    await db.update(orders).set({ holdExpiresAt: new Date(Date.now() - 60_000) }).where(eq(orders.id, o.id));
+    if (occupied > 0) await occupy(s.id, occupied);
+    gw.setStatus(paymentId, "succeeded");
+    return { o, paymentId };
+  }
+
+  it("a lapsed hold (still awaiting_payment) with the seats still free → late_paid", async () => {
+    const { o, paymentId } = await lapsedHold(8, 5); // свободно ровно 3 = участникам заказа
+    expect(await sync(paymentId, "cron")).toEqual({ kind: "late_paid", orderId: o.id });
+    expect(await orderOf(o.id)).toMatchObject({ status: "paid", paymentStatus: "succeeded" });
+    expect((await orderOf(o.id)).paidAt).toBeInstanceOf(Date);
+    expect(gw.refunds).toHaveLength(0);
+    expect((await journal())[0].note).toBe("late_paid");
+  });
+
+  it("a lapsed hold whose seats were taken meanwhile → full auto-refund, cancelled (late_refunded)", async () => {
+    const { o, paymentId } = await lapsedHold(8, 6);
+    expect(await sync(paymentId, "cron")).toEqual({ kind: "late_refunded", orderId: o.id });
+    expect(await orderOf(o.id)).toMatchObject({ status: "cancelled", refundedAmount: 3270, refundId: "ref-1", paidAt: null });
+    expect(gw.refunds).toHaveLength(1);
+    expect(gw.refunds[0]).toMatchObject({ idempotenceKey: `late-refund-${o.id}`, paymentId, amount: 3270 });
+    expect((await journal())[0].note).toBe("late_refunded");
+  });
+
+  it("a lapsed hold, seats taken, refund fails → late_refund_failed, the order is expired (not awaiting) and retried later", async () => {
+    const { o, paymentId } = await lapsedHold(8, 8);
+    gw.failNext("createRefund");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect(await sync(paymentId, "cron")).toEqual({ kind: "late_refund_failed", orderId: o.id });
+      expect(await orderOf(o.id)).toMatchObject({ status: "expired", paymentStatus: "succeeded", refundedAmount: 0 });
+      expect(await sync(paymentId, "sync")).toEqual({ kind: "late_refunded", orderId: o.id });
+      expect((await orderOf(o.id)).status).toBe("cancelled");
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it("refund failure: order stays expired, late_refund_failed, journalled; the next sync retries with the same key", async () => {

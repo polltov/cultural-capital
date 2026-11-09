@@ -1,13 +1,15 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Markdown } from "@/components/Markdown";
 import { ogrnLabel, operator } from "@/lib/legal";
+import { writeUsHref } from "@/lib/contacts";
 
 export function Hero() {
   return (
     <div className="hero">
       <div>
         <div className="eyebrow">Санкт-Петербург · экскурсии для семьи</div>
-        <div className="h-title">Петербург, <em>вдохновляющий</em><br />с первого шага</div>
+        <h1 className="h-title">Петербург, <em>вдохновляющий</em><br />с первого шага</h1>
         <div className="h-sub">Авторские маршруты для детей и взрослых. Историки и искусствоведы, которые умеют говорить с детьми на одном языке.</div>
         <div className="h-actions">
           <a className="btn-primary" href="#catalog">Выбрать экскурсию →</a>
@@ -15,8 +17,13 @@ export function Hero() {
         </div>
       </div>
       <div className="h-visual">
-        <div className="h-photo"></div>
-        <div className="h-photo-2"></div>
+        {/* фото — настоящие картинки: браузер находит их сразу и берёт размер под экран */}
+        <div className="h-photo">
+          <Image src="/assets/dvortsovaya.jpg" alt="Дворцовая площадь и Александровская колонна" fill preload sizes="(max-width: 900px) 264px, 390px" />
+        </div>
+        <div className="h-photo-2">
+          <Image src="/assets/spas.jpg" alt="Спас на Крови" fill sizes="(max-width: 900px) 220px, 280px" />
+        </div>
       </div>
     </div>
   );
@@ -107,7 +114,7 @@ export function Faq({ items }: { items: { id: number; question: string; answer: 
     <div className="faq" id="faq">
       <div className="faq-head">
         <div className="kicker">Часто спрашивают</div>
-        <div className="stitle">Ответы на <em>популярные вопросы</em></div>
+        <h2 className="stitle">Ответы на <em>популярные вопросы</em></h2>
       </div>
       <div className="faq-list">
         {items.map((q) => (
@@ -122,15 +129,20 @@ export function Faq({ items }: { items: { id: number; question: string; answer: 
 }
 
 export function Footer() {
+  const writeUs = writeUsHref();
   return (
     <footer className="foot">
       <div className="foot-row">
         <div>
-          <Link className="logo" href="/#top"><span className="logo-blob"></span><span className="logo-txt">Культурная Столица</span></Link>
+          <Link className="logo" href="/#top">
+            <Image className="logo-mark" src="/assets/logo-icon.png" width={33} height={36} alt="" />
+            <span className="logo-txt">Культурная Столица</span>
+          </Link>
           <p className="foot-tag">Экскурсии по Петербургу для детей и взрослых: маленькие группы, авторские маршруты, история через игру.</p>
         </div>
         <nav className="foot-nav" aria-label="Разделы">
           <Link href="/#catalog">Экскурсии</Link><Link href="/#about">О нас</Link><Link href="/#reviews">Отзывы</Link><Link href="/news">Новости</Link><Link href="/#faq">Вопросы</Link>
+          {writeUs && <a href={writeUs} {...(writeUs.startsWith("http") ? { target: "_blank", rel: "noopener" } : {})}>Написать нам</a>}
         </nav>
       </div>
       <div className="foot-legal">

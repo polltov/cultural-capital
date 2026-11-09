@@ -36,6 +36,15 @@ describe("TicketCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Купить билет" }));
     expect(calls).toEqual([]);
   });
+  it("books the nearest session on the first click of a closed card", () => {
+    const calls: (number | null)[] = [];
+    const { container } = render(
+      <TicketCard tour={tour} sessions={[{ id: 1, startsAt: d1, free: 8 }, { id: 2, startsAt: d2, free: 8 }]} onBook={(x) => calls.push(x)} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Купить билет" }));
+    expect(calls).toEqual([1]);
+    expect(container.querySelector("article")!.className).not.toContain("open");
+  });
   it("shows date header and caption for two sessions", () => {
     const { container } = render(<TicketCard tour={tour} sessions={[{ id: 1, startsAt: d1, free: 8 }, { id: 2, startsAt: d2, free: 8 }]} />);
     expect(container.querySelector(".t-date b")?.textContent).toBe("20 сен / 4 окт");

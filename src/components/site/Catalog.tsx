@@ -14,7 +14,7 @@ export function Catalog({ items }: { items: CatalogTour[] }) {
     <>
       <div className="section-h" id="catalog">
         <div className="kicker">каталог</div>
-        <div className="stitle">Наши <em>экскурсии</em></div>
+        <h2 className="stitle">Наши <em>экскурсии</em></h2>
         <div className="sdesc">Каждая прогулка — как маленький спектакль: сюжет, герои и город, который открывается заново.</div>
       </div>
       <div className="catalog">

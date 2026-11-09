@@ -27,7 +27,7 @@ export function ReviewsCarousel() {
     <div className="reviews" id="reviews">
       <div className="reviews-head">
         <div className="kicker">Что говорят</div>
-        <div className="stitle">Отзывы <em>наших гостей</em></div>
+        <h2 className="stitle">Отзывы <em>наших гостей</em></h2>
       </div>
       <div
         className="reviews-track"

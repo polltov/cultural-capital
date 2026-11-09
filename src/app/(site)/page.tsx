@@ -15,12 +15,6 @@ export default async function HomePage() {
   const [catalog, latestNews, faq] = await Promise.all([getPublishedCatalog(), getLatestNews(3), listPublishedFaq()]);
   return (
     <div className="mock" id="top">
-      <div className="blob b1"></div>
-      <div className="blob b2"></div>
-      <div className="blob b3"></div>
-      <div className="blob b4"></div>
-      <div className="blob b5"></div>
-      <div className="blob b6"></div>
       <SiteHeader />
       <Hero />
       <Catalog items={catalog} />

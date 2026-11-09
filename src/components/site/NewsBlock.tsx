@@ -26,7 +26,7 @@ export function NewsBlock({ items }: { items: NewsCard[] }) {
     <>
       <div className="section-h" id="news">
         <div className="kicker">Новости</div>
-        <div className="stitle">Что <em>нового</em></div>
+        <h2 className="stitle">Что <em>нового</em></h2>
       </div>
       <NewsCards items={items} />
       <div className="news-more">

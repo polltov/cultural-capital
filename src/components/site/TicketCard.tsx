@@ -123,8 +123,11 @@ export function TicketCard({ tour, sessions, number, defaultOpen = false, onBook
             className="t-btn"
             type="button"
             aria-disabled={sessions.length === 0}
-            onClick={() => {
-              if (open && sessions.length) onBook?.(selected);
+            onClick={(e) => {
+              // Есть даты — покупка сразу, даже из закрытой карточки; нет дат — нажатие раскрывает описание.
+              if (!sessions.length) return;
+              e.stopPropagation();
+              onBook?.(selected);
             }}
           >
             Купить билет

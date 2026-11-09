@@ -21,7 +21,7 @@ describe("Faq", () => {
     expect(shape(root)).toEqual(["div.faq-head", "div.faq-list"]);
 
     const head = root.querySelector(".faq-head")!;
-    expect(shape(head)).toEqual(["div.kicker", "div.stitle"]);
+    expect(shape(head)).toEqual(["div.kicker", "h2.stitle"]);
     expect(head.querySelector(".kicker")?.textContent).toBe("Часто спрашивают");
     expect(head.querySelector(".stitle")?.textContent).toBe("Ответы на популярные вопросы");
     expect(head.querySelector(".stitle em")?.textContent).toBe("популярные вопросы");

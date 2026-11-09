@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
+import { writeUsHref } from "@/lib/contacts";
 
 export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
+  const writeUs = writeUsHref();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -16,7 +19,7 @@ export function SiteHeader() {
   return (
     <div className={scrolled ? "top scrolled" : "top"}>
       <Link className="logo" href="/#top" aria-label="Культурная Столица">
-        <span className="logo-blob"></span>
+        <Image className="logo-mark" src="/assets/logo-icon.png" width={33} height={36} alt="" loading="eager" />
         <span className="logo-txt">Культурная Столица</span>
       </Link>
       <div className="nav">
@@ -24,7 +27,11 @@ export function SiteHeader() {
         <Link href="/#about">О нас</Link>
         <Link href="/#reviews">Отзывы</Link>
         <Link href="/news">Новости</Link>
-        <button className="btn" type="button">Написать</button>
+        {writeUs && (
+          <a className="btn" href={writeUs} {...(writeUs.startsWith("http") ? { target: "_blank", rel: "noopener" } : {})}>
+            Написать
+          </a>
+        )}
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  experimental: { serverActions: { bodySizeLimit: "10mb" } },
+  // globalNotFound: фирменная 404 для несуществующих адресов при двух корневых layout (сайт и админка)
+  experimental: { serverActions: { bodySizeLimit: "10mb" }, globalNotFound: true },
   images: { remotePatterns: [{ protocol: "https", hostname: "*.public.blob.vercel-storage.com" }] },
   async redirects() {
     return [

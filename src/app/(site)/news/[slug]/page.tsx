@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { SiteHeader } from "@/components/site/SiteHeader";
-import { Footer } from "@/components/site/StaticSections";
+import { SiteShell } from "@/components/site/SiteShell";
 import { Markdown } from "@/components/Markdown";
+import { TourCover } from "@/components/site/TourCover";
 import { formatDateLong } from "@/lib/domain/moscow-time";
 import { getNewsBySlug } from "@/server/news";
 
 export const revalidate = 300;
-// Страницы строятся по первому запросу и дальше кэшируются (ISR); мутации в админке вызывают revalidatePath.
+// Страницы строятся по первому запросу и дальше кэшируются (ISR); мутации в админке сбрасывают кэш.
 export const generateStaticParams = async () => [];
 
 type Props = { params: Promise<{ slug: string }> };
@@ -18,9 +18,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!n) return { title: "Новость не найдена" };
   const image = n.coverUrl ?? undefined;
   return {
-    title: `${n.title} — Культурная Столица`,
+    title: n.title,
     description: n.excerpt || undefined,
-    openGraph: { type: "article", title: n.title, description: n.excerpt || undefined, ...(image ? { images: [image] } : {}) },
+    alternates: { canonical: `/news/${n.slug}` },
+    openGraph: { type: "article", title: n.title, description: n.excerpt || undefined, publishedTime: n.publishedAt.toISOString(), ...(image ? { images: [image] } : {}) },
   };
 }
 
@@ -28,20 +29,25 @@ export default async function NewsArticlePage({ params }: Props) {
   const n = await getNewsBySlug((await params).slug);
   if (!n) notFound();
   return (
-    <div className="mock">
-      <SiteHeader />
-      <main className="article">
-        <p className="article-back"><Link href="/news">← Все новости</Link></p>
-        <time className="news-date" dateTime={n.publishedAt.toISOString()}>{formatDateLong(n.publishedAt)}</time>
-        <h1 className="article-title">{n.title}</h1>
-        {n.coverUrl && (
-          // eslint-disable-next-line @next/next/no-img-element -- обложка из Blob, как и на карточках
-          <img className="article-cover" src={n.coverUrl} alt="" />
-        )}
-        <Markdown className="md">{n.body}</Markdown>
-        <p className="article-back article-back--end"><Link href="/news">← Все новости</Link></p>
-      </main>
-      <Footer />
-    </div>
+    <SiteShell>
+      <div className="wrap">
+        <article className="article">
+          <nav className="crumbs" aria-label="Навигационная цепочка">
+            <ol><li><Link href="/">Главная</Link></li><li><Link href="/news">Новости</Link></li></ol>
+          </nav>
+          <header className="article-head">
+            <time className="news-date" dateTime={n.publishedAt.toISOString()}>{formatDateLong(n.publishedAt)}</time>
+            <h1 className="article-title">{n.title}</h1>
+          </header>
+          {n.coverUrl && (
+            <div className="article-cover">
+              <TourCover src={n.coverUrl} alt="" seed={n.slug} sizes="(max-width: 800px) 100vw, 760px" preload />
+            </div>
+          )}
+          <Markdown className="md">{n.body}</Markdown>
+          <p className="article-back"><Link href="/news">← Все новости</Link></p>
+        </article>
+      </div>
+    </SiteShell>
   );
 }

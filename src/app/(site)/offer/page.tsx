@@ -3,7 +3,7 @@ import Link from "next/link";
 import { LegalPage } from "@/components/site/LegalPage";
 import { ogrnLabel, operator, or } from "@/lib/legal";
 
-export const metadata: Metadata = { title: "Договор-оферта — Культурная Столица" };
+export const metadata: Metadata = { title: "Договор-оферта" };
 
 // TODO(юрист): проверить текст.
 // Текст описывает порядок онлайн-покупки на сайте. Правило возврата (24 часа / 50%) должно совпадать с тем,

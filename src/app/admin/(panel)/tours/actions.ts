@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidatePublicSite } from "@/server/revalidate";
 import { requireAdmin } from "@/lib/auth/session";
 import { idSchema } from "@/lib/validation/tour";
 import {
@@ -10,7 +11,7 @@ import {
 import { uploadImage, UploadError } from "@/server/upload";
 
 function revalidateAll() {
-  revalidatePath("/");
+  revalidatePublicSite();
   revalidatePath("/admin");
   revalidatePath("/admin/tours");
   revalidatePath("/admin/tours/[id]", "page");

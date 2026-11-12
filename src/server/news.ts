@@ -90,6 +90,11 @@ export async function listPublishedNews(page: number, db: Db = sharedDb) {
   return { items: rows as NewsCard[], page: p, pages, total: n };
 }
 
+/** Адреса опубликованных новостей и время последней правки — для карты сайта. */
+export async function listPublishedNewsSlugs(db: Db = sharedDb): Promise<{ slug: string; updatedAt: Date }[]> {
+  return db.select({ slug: news.slug, updatedAt: news.updatedAt }).from(news).where(published).orderBy(desc(news.publishedAt));
+}
+
 export async function getNewsBySlug(slug: string, db: Db = sharedDb) {
   const [row] = await db.select().from(news).where(and(eq(news.slug, slug), published));
   return row ? { ...row, publishedAt: row.publishedAt as Date } : null;

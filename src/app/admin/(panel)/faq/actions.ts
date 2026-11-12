@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidatePublicSite } from "@/server/revalidate";
 import { requireAdmin } from "@/lib/auth/session";
 import { deleteFaqItem, reorderFaq, saveFaqItem, setFaqPublished, type FaqResult, type SaveFaqResult } from "@/server/faq";
 
 function revalidateFaq(id?: number) {
-  revalidatePath("/");
+  revalidatePublicSite();
   revalidatePath("/admin/faq");
   if (id !== undefined) revalidatePath(`/admin/faq/${id}`);
 }

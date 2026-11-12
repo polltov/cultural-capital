@@ -1,19 +1,25 @@
 import Link from "next/link";
 import { formatDateLong } from "@/lib/domain/moscow-time";
 import type { NewsCard } from "@/server/news";
+import { SectionHead } from "./SectionHead";
+import { TourCover } from "./TourCover";
 
-export function NewsCards({ items }: { items: NewsCard[] }) {
+/** Карточки новостей; `level` — уровень заголовка карточки: h3 внутри секции главной, h2 на странице «Новости». */
+export function NewsCards({ items, level = 3 }: { items: NewsCard[]; level?: 2 | 3 }) {
+  const H = level === 2 ? "h2" : "h3";
   return (
     <div className="news-grid">
       {items.map((n) => (
-        <Link key={n.id} href={`/news/${n.slug}`} className="news-card">
-          <div className="news-cover" style={n.coverUrl ? { backgroundImage: `url("${n.coverUrl}")` } : undefined} aria-hidden="true" />
+        <article key={n.id} className="news-card">
+          <div className="news-cover">
+            <TourCover src={n.coverUrl} alt="" seed={n.slug} sizes="(max-width: 760px) 100vw, (max-width: 1100px) 50vw, 384px" />
+          </div>
           <div className="news-body">
             <time className="news-date" dateTime={n.publishedAt.toISOString()}>{formatDateLong(n.publishedAt)}</time>
-            <h3 className="news-title">{n.title}</h3>
+            <H className="news-title"><Link href={`/news/${n.slug}`}>{n.title}</Link></H>
             {n.excerpt && <p className="news-excerpt">{n.excerpt}</p>}
           </div>
-        </Link>
+        </article>
       ))}
     </div>
   );
@@ -23,15 +29,17 @@ export function NewsCards({ items }: { items: NewsCard[] }) {
 export function NewsBlock({ items }: { items: NewsCard[] }) {
   if (items.length === 0) return null;
   return (
-    <>
-      <div className="section-h" id="news">
-        <div className="kicker">Новости</div>
-        <h2 className="stitle">Что <em>нового</em></h2>
+    <section className="news-sec" id="news" aria-labelledby="news-title">
+      <div className="wrap">
+        <SectionHead
+          kicker="Новости"
+          id="news-title"
+          title={<>Что <em>нового</em></>}
+          align="start"
+          action={<Link href="/news" className="link-more">Все новости <span aria-hidden="true">→</span></Link>}
+        />
+        <NewsCards items={items} />
       </div>
-      <NewsCards items={items} />
-      <div className="news-more">
-        <Link href="/news" className="btn-ghost">Все новости →</Link>
-      </div>
-    </>
+    </section>
   );
 }

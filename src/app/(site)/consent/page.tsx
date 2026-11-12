@@ -3,7 +3,7 @@ import Link from "next/link";
 import { LegalPage } from "@/components/site/LegalPage";
 import { ogrnLabel, operator, or } from "@/lib/legal";
 
-export const metadata: Metadata = { title: "Согласие на обработку персональных данных — Культурная Столица" };
+export const metadata: Metadata = { title: "Согласие на обработку персональных данных" };
 
 // Отдельный документ согласия (ч. 1 ст. 9 152-ФЗ в редакции с 01.09.2025): не входит в политику и другие документы.
 export default function ConsentPage() {

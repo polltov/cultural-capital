@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { IconArrow, IconStar } from "./icons";
 
 const REVIEWS = [
   { quote: "Дочь теперь ищет львов по всему Петербургу. Экскурсия была не про даты и цифры, а про историю, которую она проживала.", name: "Ольга", about: "мама двоих детей" },
@@ -9,57 +10,56 @@ const REVIEWS = [
   { quote: "Не ожидала, что вечерняя прогулка по мостам может быть настолько атмосферной. Не туристический пересказ Википедии, а живой рассказ.", name: "Елена", about: "гостья из Калининграда" },
 ];
 
+/** Отзывы лентой: на компьютере видно три, на телефоне листаются пальцем; стрелки сдвигают на один отзыв. */
 export function ReviewsCarousel() {
-  const track = useRef<HTMLDivElement>(null);
-  const [active, setActive] = useState(0);
-  const count = REVIEWS.length;
+  const track = useRef<HTMLUListElement>(null);
+  const [edge, setEdge] = useState({ start: true, end: false });
 
-  const current = () => {
-    const el = track.current!;
-    return Math.round(el.scrollLeft / el.clientWidth);
+  const update = () => {
+    const el = track.current;
+    if (!el) return;
+    setEdge({ start: el.scrollLeft <= 4, end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 });
   };
-  const goTo = (i: number) => {
-    const el = track.current!;
-    el.scrollTo({ left: el.clientWidth * i, behavior: "smooth" });
+  useEffect(() => {
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  const step = (dir: 1 | -1) => {
+    const el = track.current;
+    const card = el?.querySelector("li");
+    if (!el || !card) return;
+    const gap = parseFloat(getComputedStyle(el).columnGap) || 0;
+    el.scrollBy({ left: dir * (card.getBoundingClientRect().width + gap), behavior: "smooth" });
   };
 
   return (
-    <div className="reviews" id="reviews">
-      <div className="reviews-head">
-        <div className="kicker">Что говорят</div>
-        <h2 className="stitle">Отзывы <em>наших гостей</em></h2>
-      </div>
-      <div
-        className="reviews-track"
-        id="revTrack"
-        ref={track}
-        onScroll={() => setActive(current())}
-      >
-        <div className="reviews-list">
+    <section className="reviews" id="reviews" aria-labelledby="reviews-title">
+      <div className="wrap">
+        <div className="shead shead--start">
+          <div className="shead-text">
+            <p className="kicker">Что говорят</p>
+            <h2 className="stitle" id="reviews-title">Отзывы <em>наших гостей</em></h2>
+          </div>
+          <div className="reviews-nav">
+            <button type="button" className="rev-arrow rev-arrow--prev" aria-label="Предыдущий отзыв" disabled={edge.start} onClick={() => step(-1)}><IconArrow /></button>
+            <button type="button" className="rev-arrow" aria-label="Следующий отзыв" disabled={edge.end} onClick={() => step(1)}><IconArrow /></button>
+          </div>
+        </div>
+        {/* лента прокручивается — с клавиатуры тоже: фокус на ней и стрелки ← → */}
+        <ul className="reviews-track" ref={track} onScroll={update} aria-label="Отзывы" tabIndex={0}>
           {REVIEWS.map((r) => (
-            <div className="review" key={r.name}>
-              <div className="stars">★★★★★</div>
-              <div className="quote">{r.quote}</div>
-              <div className="who"><b>{r.name}</b> · {r.about}</div>
-            </div>
+            <li className="review" key={r.name}>
+              <figure>
+                <p className="stars" role="img" aria-label="Оценка 5 из 5">{[0, 1, 2, 3, 4].map((i) => <IconStar key={i} />)}</p>
+                <blockquote className="quote">{r.quote}</blockquote>
+                <figcaption className="who"><b>{r.name}</b>{r.about}</figcaption>
+              </figure>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
-      <div className="reviews-nav">
-        <button className="rev-arrow" id="revPrev" aria-label="Предыдущий отзыв" onClick={() => goTo((current() - 1 + count) % count)}>←</button>
-        <div className="reviews-dots" id="revDots">
-          {REVIEWS.map((r, i) => (
-            <button
-              key={r.name}
-              className={i === active ? "rd active" : "rd"}
-              data-i={i}
-              aria-label={`Отзыв ${i + 1}`}
-              onClick={() => goTo(i)}
-            ></button>
-          ))}
-        </div>
-        <button className="rev-arrow" id="revNext" aria-label="Следующий отзыв" onClick={() => goTo((current() + 1) % count)}>→</button>
-      </div>
-    </div>
+    </section>
   );
 }

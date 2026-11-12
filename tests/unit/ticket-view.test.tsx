@@ -75,10 +75,10 @@ describe("TicketView: отменён", () => {
 });
 
 describe("TicketView: не оплачен", () => {
-  it("«Время на оплату истекло» и ссылка «Выбрать дату заново» на каталог", () => {
+  it("«Время на оплату истекло» и ссылка «Выбрать дату заново» на афишу", () => {
     render(<TicketView view="expired" ticket={ticket} refunded={0} />);
     expect(screen.getByRole("heading", { name: "Время на оплату истекло" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Выбрать дату заново" }).getAttribute("href")).toBe("/#catalog");
+    expect(screen.getByRole("link", { name: "Выбрать дату заново" }).getAttribute("href")).toBe("/afisha");
     expect(screen.queryByRole("button", { name: "Распечатать" })).toBeNull();
   });
 });
@@ -89,7 +89,7 @@ describe("TicketView: оплата не прошла", () => {
     expect(screen.getByRole("heading", { name: "Оплата не прошла" })).toBeTruthy();
     expect(screen.queryByText("Время на оплату истекло")).toBeNull();
     expect(screen.getByText(/КС-0057/)).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Выбрать дату заново" }).getAttribute("href")).toBe("/#catalog");
+    expect(screen.getByRole("link", { name: "Выбрать дату заново" }).getAttribute("href")).toBe("/afisha");
     expect(screen.queryByRole("button", { name: "Распечатать" })).toBeNull();
   });
 });

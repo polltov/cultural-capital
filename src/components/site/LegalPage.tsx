@@ -1,20 +1,19 @@
 import Link from "next/link";
-import { SiteHeader } from "@/components/site/SiteHeader";
-import { Footer } from "@/components/site/StaticSections";
+import { SiteShell } from "@/components/site/SiteShell";
 import { LEGAL_EDITION, ogrnLabel, operator, or } from "@/lib/legal";
 
 export function LegalPage({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mock">
-      <SiteHeader />
-      <main className="legal">
-        <h1>{title}</h1>
-        <p className="legal-meta">Редакция от {LEGAL_EDITION}</p>
-        {children}
-        <p className="legal-back"><Link href="/">← На главную</Link></p>
-      </main>
-      <Footer />
-    </div>
+    <SiteShell>
+      <div className="wrap">
+        <div className="legal">
+          <h1>{title}</h1>
+          <p className="legal-meta">Редакция от {LEGAL_EDITION}</p>
+          {children}
+          <p className="legal-back"><Link href="/">← На главную</Link></p>
+        </div>
+      </div>
+    </SiteShell>
   );
 }
 

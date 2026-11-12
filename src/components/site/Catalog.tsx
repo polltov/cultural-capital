@@ -1,49 +1,43 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { TicketCard } from "./TicketCard";
-import { CheckoutDialog } from "./CheckoutDialog";
+import { coverVariants } from "@/lib/domain/tour-text";
 import type { CatalogTour } from "@/server/catalog";
+import { useBooking } from "./Booking";
+import { SectionHead } from "./SectionHead";
+import { TicketCard } from "./TicketCard";
 
+/** Каталог «Наши экскурсии»: карточка ведёт на страницу экскурсии, «Купить билет» — сразу в покупку. */
 export function Catalog({ items }: { items: CatalogTour[] }) {
-  const [booking, setBooking] = useState<{ tourId: number; sessionId: number | null; n: number } | null>(null);
-  const opener = useRef<Element | null>(null);
-  const current = booking ? items.find((i) => i.tour.id === booking.tourId) : undefined;
-
+  const open = useBooking();
+  const variants = coverVariants(items.map((i) => i.tour));
   return (
-    <>
-      <div className="section-h" id="catalog">
-        <div className="kicker">каталог</div>
-        <h2 className="stitle">Наши <em>экскурсии</em></h2>
-        <div className="sdesc">Каждая прогулка — как маленький спектакль: сюжет, герои и город, который открывается заново.</div>
-      </div>
-      <div className="catalog">
-        {items.map(({ tour, sessions }, i) => (
-          <TicketCard
-            key={tour.id}
-            tour={tour}
-            sessions={sessions}
-            number={i + 1}
-            onBook={(sessionId) => {
-              opener.current = document.activeElement;
-              setBooking((b) => ({ tourId: tour.id, sessionId, n: (b?.n ?? 0) + 1 }));
-            }}
-          />
-        ))}
-      </div>
-      {booking && current && (
-        <CheckoutDialog
-          key={booking.n}
-          tour={current.tour}
-          sessions={current.sessions}
-          initialSessionId={booking.sessionId}
-          onClose={() => {
-            setBooking(null);
-            const el = opener.current;
-            if (el instanceof HTMLElement && el.isConnected) el.focus();
-          }}
+    <section className="catalog-sec" id="catalog" aria-labelledby="catalog-title">
+      <div className="wrap">
+        <SectionHead
+          kicker="Каталог"
+          id="catalog-title"
+          title={<>Наши <em>экскурсии</em></>}
+          lead="Каждая прогулка — как маленький спектакль: сюжет, герои и город, который открывается заново."
         />
-      )}
-    </>
+        {items.length === 0 ? (
+          <p className="empty">Скоро здесь появятся новые маршруты.</p>
+        ) : (
+          <div className="catalog">
+            {items.map(({ tour, sessions }, i) => (
+              <TicketCard
+                key={tour.id}
+                tour={tour}
+                sessions={sessions}
+                number={i + 1}
+                href={`/tours/${tour.slug}`}
+                seed={tour.slug}
+                coverVariant={variants.get(tour.slug)}
+                onBook={(sessionId) => open(tour.id, sessionId)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

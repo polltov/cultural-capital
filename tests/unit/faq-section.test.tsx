@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
 import { Faq } from "@/components/site/StaticSections";
+import { contacts } from "@/lib/contacts";
+import { operator } from "@/lib/legal";
 
 afterEach(cleanup);
 
@@ -13,18 +15,12 @@ const items = [
 const shape = (el: Element) => Array.from(el.children).map((c) => `${c.tagName.toLowerCase()}.${c.className}`);
 
 describe("Faq", () => {
-  it("keeps the markup the site styles rely on", () => {
+  it("is a labelled section with the heading and a list of closed questions", () => {
     const { container } = render(<Faq items={items} />);
-    expect(container.children).toHaveLength(1);
     const root = container.firstElementChild as HTMLElement;
-    expect(`${root.tagName.toLowerCase()}.${root.className}#${root.id}`).toBe("div.faq#faq");
-    expect(shape(root)).toEqual(["div.faq-head", "div.faq-list"]);
-
-    const head = root.querySelector(".faq-head")!;
-    expect(shape(head)).toEqual(["div.kicker", "h2.stitle"]);
-    expect(head.querySelector(".kicker")?.textContent).toBe("Часто спрашивают");
-    expect(head.querySelector(".stitle")?.textContent).toBe("Ответы на популярные вопросы");
-    expect(head.querySelector(".stitle em")?.textContent).toBe("популярные вопросы");
+    expect(`${root.tagName.toLowerCase()}#${root.id}`).toBe("section#faq");
+    expect(screen.getByRole("region", { name: "Ответы на популярные вопросы" })).toBe(root);
+    expect(root.querySelector(".stitle em")?.textContent).toBe("популярные вопросы");
 
     const list = root.querySelector(".faq-list")!;
     expect(shape(list)).toEqual(["details.faq-item", "details.faq-item"]);
@@ -34,15 +30,12 @@ describe("Faq", () => {
     }
   });
 
-  it("puts the question and the plus sign in the summary", () => {
+  it("puts the question and a decorative plus in the summary", () => {
     const { container } = render(<Faq items={items} />);
     const summaries = Array.from(container.querySelectorAll("summary"));
-    expect(summaries.map((s) => s.textContent)).toEqual(["Можно ли с собакой?+", "Есть ли туалет?+"]);
-    const first = summaries[0];
-    expect(first.childNodes).toHaveLength(2);
-    expect(first.firstChild?.nodeType).toBe(Node.TEXT_NODE);
-    expect(shape(first)).toEqual(["span.plus"]);
-    expect(first.querySelector(".plus")?.textContent).toBe("+");
+    expect(summaries.map((s) => s.textContent)).toEqual(["Можно ли с собакой?", "Есть ли туалет?"]);
+    const plus = summaries[0].querySelector(".plus")!;
+    expect(plus.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("renders each answer as Markdown directly inside div.answer", () => {
@@ -51,6 +44,24 @@ describe("Faq", () => {
     expect(first.innerHTML).toBe("<p>Да, <strong>на поводке</strong>.</p>");
     expect(shape(second)).toEqual(["p.", "p.", "ul."]);
     expect(second.querySelectorAll("li")).toHaveLength(2);
+  });
+
+  it("offers to write only when there is somewhere to write", () => {
+    const saved = { tg: contacts.telegram, email: operator.email };
+    try {
+      contacts.telegram = "";
+      operator.email = "";
+      render(<Faq items={items} />);
+      expect(screen.queryByText(/Не нашли ответ/)).toBeNull();
+      cleanup();
+      contacts.telegram = "kultstolica";
+      render(<Faq items={items} />);
+      expect(screen.getByText(/Не нашли ответ/)).toBeTruthy();
+      expect(screen.getByRole("link", { name: "Написать в Telegram" }).getAttribute("href")).toBe("https://t.me/kultstolica");
+    } finally {
+      contacts.telegram = saved.tg;
+      operator.email = saved.email;
+    }
   });
 
   it("renders nothing when there are no questions", () => {

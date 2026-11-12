@@ -1,0 +1,18 @@
+/* Обложка экскурсии: фото или фирменная гравюра. Общая для сайта и превью в админке — без глобальных сбросов и переменных сайта. */
+.cover-img{object-fit:cover}
+.cover-art{position:absolute;inset:0;display:block;overflow:hidden;background:var(--cover-bg)}
+/* гравюра — маска по контурам знака: линии берут цвет фона ::before, а картинка остаётся одной для всех вариантов */
+.cover-art::before{content:"";position:absolute;inset:0;background:rgba(251,246,240,.34);
+  -webkit-mask:url("/brand/mark.svg") no-repeat;mask:url("/brand/mark.svg") no-repeat;
+  -webkit-mask-size:var(--cover-size);mask-size:var(--cover-size);
+  -webkit-mask-position:var(--cover-pos);mask-position:var(--cover-pos)}
+/* лёгкое свечение сверху — как свет на бумаге */
+.cover-art::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 80% at 70% 0%,rgba(255,255,255,.12),transparent 60%)}
+/* портал целиком */
+.cover-art--0{--cover-bg:linear-gradient(160deg,#ad5233,#8a3c25);--cover-size:auto 88%;--cover-pos:50% 115%}
+/* атлант крупно */
+.cover-art--1{--cover-bg:linear-gradient(160deg,#323c50,#1f2635);--cover-size:auto 190%;--cover-pos:4% 30%}
+/* дверь — «вход в историю» */
+.cover-art--2{--cover-bg:linear-gradient(160deg,#66775a,#4a5840);--cover-size:auto 210%;--cover-pos:50% 72%}
+/* фриз с венками */
+.cover-art--3{--cover-bg:linear-gradient(160deg,#b78c47,#93702f);--cover-size:auto 260%;--cover-pos:50% 2%}

@@ -32,7 +32,7 @@ function PaidTicket({ ticket: t }: { ticket: TicketData }) {
   const bring = t.whatToBring.trim();
   return (
     <>
-      <article className="ticket open order-ticket">
+      <article className="ticket order-ticket">
         <div className="ticket-photo">
           <span className="t-cat">Билет</span>
           <span className="t-date">
@@ -90,7 +90,7 @@ function UnpaidState({ title, text }: { title: string; text: string }) {
     <div className="order-state">
       <h1 className="order-h1">{title}</h1>
       <p>{text}</p>
-      <Link className="btn-primary" href="/#catalog">Выбрать дату заново</Link>
+      <Link className="btn btn--dark" href="/afisha">Выбрать дату заново</Link>
     </div>
   );
 }

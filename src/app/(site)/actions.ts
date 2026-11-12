@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePublicSite } from "@/server/revalidate";
 import { releaseHold, startCheckout } from "@/server/checkout";
 import { clientIp } from "@/server/client-ip";
 import type { CheckoutResult } from "@/lib/validation/checkout";
@@ -19,8 +19,8 @@ export async function startCheckoutAction(_prev: CheckoutResult | null, formData
     website: formData.get("website") ?? "",
   };
   const result = await startCheckout(input, ip);
-  // Удержание занимает места: каталог должен показать новый остаток сразу, а не через 5 минут.
-  if (result.ok) revalidatePath("/");
+  // Удержание занимает места: главная, афиша и страница экскурсии должны показать новый остаток сразу, а не через 5 минут.
+  if (result.ok) revalidatePublicSite();
   return result;
 }
 
@@ -31,5 +31,5 @@ export async function releaseHoldAction(orderToken: string): Promise<void> {
   // Серверное действие — публичный эндпоинт: аргумент приходит от клиента, типам TypeScript верить нельзя.
   if (typeof orderToken !== "string" || !ORDER_TOKEN.test(orderToken)) return;
   await releaseHold(orderToken);
-  revalidatePath("/");
+  revalidatePublicSite();
 }

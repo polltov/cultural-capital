@@ -49,7 +49,7 @@ describe("startCheckoutAction", () => {
     const result = { ok: true, orderToken: TOKEN, confirmationToken: "ct", holdSeconds: 900 };
     startCheckout.mockResolvedValue(result);
     expect(await startCheckoutAction(null, form(fields))).toEqual(result);
-    expect(revalidatePath).toHaveBeenCalledWith("/");
+    expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
   });
 
   it("отказ и ошибки полей каталог не трогают и возвращаются как есть", async () => {
@@ -66,7 +66,7 @@ describe("releaseHoldAction", () => {
     releaseHold.mockResolvedValue(undefined);
     await releaseHoldAction(TOKEN);
     expect(releaseHold).toHaveBeenCalledWith(TOKEN);
-    expect(revalidatePath).toHaveBeenCalledWith("/");
+    expect(revalidatePath).toHaveBeenCalledWith("/", "layout");
   });
 
   // Серверные действия — публичные эндпоинты: аргумент приходит от клиента как есть.

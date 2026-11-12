@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       locale: "ru_RU",
       title: `${tour.title} — экскурсия по Петербургу`,
       description,
-      images: [tour.coverUrl ?? "/brand/og.jpg"],
+      // картинка превью — opengraph-image.tsx рядом: название и обложка экскурсии в фирменном стиле
     },
   };
 }

@@ -2,12 +2,17 @@
 .ticket{
   --tk-paper:#fbf6f0;--tk-ink:#22293a;--tk-text:#3d4756;--tk-muted:#5c6672;--tk-terra:#a34a2f;--tk-gold:#c29a5b;
   --tk-r:8px;
+  /* шрифты с подогнанными запасными (fonts.css) — те же списки, что в токенах сайта */
+  --tk-display:"Prata","Prata Fallback","Prata Fallback Android",Georgia,serif;
+  --tk-accent:"Playfair Display","Playfair Fallback","Playfair Fallback Android",Georgia,serif;
+  --tk-serif:"PT Serif","PT Serif Fallback","PT Serif Fallback Android",Georgia,serif;
+  --tk-sans:"PT Sans","PT Sans Fallback","PT Sans Fallback Android",system-ui,sans-serif;
   position:relative;display:flex;flex-direction:column;min-width:0;
   border-radius:var(--tk-r);
   /* тень повторяет вырезы перфорации (drop-shadow, а не box-shadow); анимируется только transform */
   filter:drop-shadow(0 1px 1px rgba(34,41,58,.08)) drop-shadow(0 14px 18px rgba(34,41,58,.13));
   transition:transform .35s cubic-bezier(.2,.7,.2,1);
-  font-family:"PT Sans",system-ui,sans-serif;color:var(--tk-ink);text-align:left
+  font-family:var(--tk-sans);color:var(--tk-ink);text-align:left
 }
 .ticket *{box-sizing:border-box}
 /* сброс без веса: собственные отступы элементов карточки ниже всегда сильнее */
@@ -24,7 +29,7 @@
 .ticket-photo{position:relative;aspect-ratio:4/3;overflow:hidden;border-radius:var(--tk-r) var(--tk-r) 0 0;background:#26303b;isolation:isolate}
 .ticket-photo::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(0deg,rgba(18,23,31,.72),rgba(18,23,31,.18) 42%,transparent 62%)}
 .t-date{position:absolute;left:16px;bottom:14px;right:16px;z-index:2;color:#fbf6f0;font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;line-height:1.35}
-.t-date b{display:block;font-family:"Prata",Georgia,serif;font-size:21px;font-weight:400;letter-spacing:.01em;text-transform:none;line-height:1.15;margin-bottom:3px}
+.t-date b{display:block;font-family:var(--tk-display);font-size:21px;font-weight:400;letter-spacing:.01em;text-transform:none;line-height:1.15;margin-bottom:3px}
 .t-date em{display:block;font-style:normal;font-weight:400;letter-spacing:.06em;text-transform:none;font-size:12.5px;opacity:.82;margin-top:2px}
 .t-seats{position:absolute;top:14px;left:14px;z-index:2;font-size:11px;font-weight:700;letter-spacing:.08em;color:#fbf6f0;background:rgba(163,74,47,.96);padding:6px 10px;border-radius:2px}
 
@@ -40,21 +45,21 @@
 /* блок текста не позиционирован: растянутая ссылка названия отсчитывается от всей карточки, а не от него */
 .ticket-info{flex:1;display:flex;flex-direction:column;padding:16px 20px 20px;border-radius:0 0 var(--tk-r) var(--tk-r);
   background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/></svg>"),var(--tk-paper)}
-.t-tag{font-family:"Playfair Display",Georgia,serif;font-style:italic;font-size:14px;color:var(--tk-terra);margin-bottom:6px}
-.t-title{font-family:"Prata",Georgia,serif;font-weight:400;font-size:21px;line-height:1.2;color:var(--tk-ink);margin-bottom:8px;transition:color .2s}
-.t-route{font-family:"PT Serif",Georgia,serif;font-size:13.5px;line-height:1.5;color:var(--tk-muted);margin-bottom:14px}
+.t-tag{font-family:var(--tk-accent);font-style:italic;font-size:14px;color:var(--tk-terra);margin-bottom:6px}
+.t-title{font-family:var(--tk-display);font-weight:400;font-size:21px;line-height:1.2;color:var(--tk-ink);margin-bottom:8px;transition:color .2s}
+.t-route{font-family:var(--tk-serif);font-size:13.5px;line-height:1.5;color:var(--tk-muted);margin-bottom:14px}
 .t-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tk-muted);margin-bottom:16px}
 .t-meta i{width:4px;height:4px;border-radius:50%;background:var(--tk-gold)}
 /* цена и кнопка в одну строку; не помещаются (две цены в узкой карточке) — кнопка переносится, а не вылезает за край */
 .t-foot{margin-top:auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;border-top:1px solid rgba(194,154,91,.42)}
-.t-price{font-family:"Prata",Georgia,serif;font-size:23px;line-height:1.1;color:var(--tk-ink)}
-.t-price small{display:block;font-family:"PT Sans",system-ui,sans-serif;font-size:11.5px;letter-spacing:.02em;color:var(--tk-muted);margin-top:4px}
+.t-price{font-family:var(--tk-display);font-size:23px;line-height:1.1;color:var(--tk-ink)}
+.t-price small{display:block;font-family:var(--tk-sans);font-size:11.5px;letter-spacing:.02em;color:var(--tk-muted);margin-top:4px}
 .t-prices{display:flex;gap:22px}
 .t-prices dt{font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--tk-muted);margin-bottom:3px}
-.t-prices dd{font-family:"Prata",Georgia,serif;font-size:23px;line-height:1.1}
+.t-prices dd{font-family:var(--tk-display);font-size:23px;line-height:1.1}
 
 /* кнопка — поверх растянутой ссылки */
-.t-btn{position:relative;z-index:2;flex:none;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border:1px solid var(--tk-ink);border-radius:2px;background:var(--tk-ink);color:#fbf6f0;font-family:"PT Sans",system-ui,sans-serif;font-size:13px;font-weight:700;letter-spacing:.05em;text-decoration:none;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
+.t-btn{position:relative;z-index:2;flex:none;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border:1px solid var(--tk-ink);border-radius:2px;background:var(--tk-ink);color:#fbf6f0;font-family:var(--tk-sans);font-size:13px;font-weight:700;letter-spacing:.05em;text-decoration:none;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
 .t-btn:hover{background:var(--tk-terra);border-color:var(--tk-terra)}
 .t-btn:focus-visible{outline:2px solid var(--tk-terra);outline-offset:3px}
 .t-btn--ghost{background:transparent;color:var(--tk-ink);border-color:rgba(34,41,58,.32)}
@@ -63,7 +68,7 @@
 .t-btn[aria-disabled="true"]:hover{background:var(--tk-ink);border-color:var(--tk-ink)}
 
 /* описание (только у крупной карточки): вступление и список «что будет» */
-.t-desc{font-family:"PT Serif",Georgia,serif;font-size:14.5px;line-height:1.6;color:var(--tk-text);margin-bottom:16px}
+.t-desc{font-family:var(--tk-serif);font-size:14.5px;line-height:1.6;color:var(--tk-text);margin-bottom:16px}
 .t-desc>*+*{margin-top:8px}
 .t-desc p{margin:0}
 .t-desc ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px 24px}

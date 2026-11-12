@@ -96,6 +96,26 @@ export function breadcrumbLd(items: { name: string; path: string }[]) {
   };
 }
 
+/** Markdown ответа → обычный текст для микроразметки: без звёздочек, решёток, маркеров списков и адресов ссылок. */
+export function plainText(markdown: string): string {
+  return markdown
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+[.)])\s+/gm, "")
+    .replace(/(\*\*|__|\*|_|`|~~)(?=\S)(.+?)(?<=\S)\1/g, "$2")
+    .replace(/\s*\n+\s*/g, " ")
+    .trim();
+}
+
+/** Вопросы и ответы с главной (FAQPage) — их показывает в поиске Яндекс. Пустые вопросы и ответы пропускаются. */
+export function faqLd(items: { question: string; answer: string }[]) {
+  const mainEntity = items
+    .map((q) => ({ name: q.question.trim(), text: plainText(q.answer) }))
+    .filter((q) => q.name && q.text)
+    .map((q) => ({ "@type": "Question", name: q.name, acceptedAnswer: { "@type": "Answer", text: q.text } }));
+  return mainEntity.length ? { "@context": "https://schema.org", "@type": "FAQPage", mainEntity } : null;
+}
+
 /** JSON для <script type="application/ld+json">: «<» экранируется, чтобы текст из админки не закрыл тег. */
 export function ldJson(data: unknown): string {
   return JSON.stringify(data).replace(/</g, "\\u003c");

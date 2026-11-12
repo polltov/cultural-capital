@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { breadcrumbLd, ldJson, organizationLd, tourLd } from "@/lib/seo";
+import { breadcrumbLd, faqLd, ldJson, organizationLd, plainText, tourLd } from "@/lib/seo";
 import { coverVariants } from "@/lib/domain/tour-text";
 import { parseMoscowLocal } from "@/lib/domain/moscow-time";
 import { contacts } from "@/lib/contacts";
@@ -76,5 +76,28 @@ describe("coverVariants", () => {
       { slug: "d", coverUrl: null }, { slug: "e", coverUrl: null }, { slug: "f", coverUrl: null },
     ]);
     expect([...m.entries()]).toEqual([["b", 0], ["c", 1], ["d", 2], ["e", 3], ["f", 0]]);
+  });
+});
+
+describe("faqLd", () => {
+  it("turns Markdown answers into plain text", () => {
+    expect(plainText("Да, **на поводке** и в _наморднике_.")).toBe("Да, на поводке и в наморднике.");
+    expect(plainText("Первый абзац.\n\nВторой:\n\n- раз\n- [два](https://example.com)\n\n## Итог\n\n1. три")).toBe("Первый абзац. Второй: раз два Итог три");
+    // звёздочка в тексте (2 * 3) и подчёркивание в слове не трогаются
+    expect(plainText("Скидка 2 * 3 = 6, файл my_file")).toBe("Скидка 2 * 3 = 6, файл my_file");
+  });
+
+  it("builds a FAQPage and skips empty questions or answers", () => {
+    const ld = faqLd([
+      { question: "Можно ли с собакой?", answer: "Да, **на поводке**." },
+      { question: " ", answer: "без вопроса" },
+      { question: "Пустой ответ", answer: "  " },
+    ]);
+    expect(ld).toEqual({
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: [{ "@type": "Question", name: "Можно ли с собакой?", acceptedAnswer: { "@type": "Answer", text: "Да, на поводке." } }],
+    });
+    expect(faqLd([])).toBeNull();
   });
 });

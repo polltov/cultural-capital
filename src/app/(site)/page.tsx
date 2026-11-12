@@ -2,7 +2,7 @@ import { getPublishedCatalog } from "@/server/catalog";
 import { listPublishedFaq } from "@/server/faq";
 import { getLatestNews } from "@/server/news";
 import { nextAvailable, scheduleOf } from "@/lib/domain/schedule";
-import { organizationLd } from "@/lib/seo";
+import { faqLd, organizationLd } from "@/lib/seo";
 import { AfishaPreview } from "@/components/site/Afisha";
 import { BookingProvider } from "@/components/site/Booking";
 import { Catalog } from "@/components/site/Catalog";
@@ -21,9 +21,10 @@ const PREVIEW_DATES = 5;
 export default async function HomePage() {
   const [catalog, latestNews, faq] = await Promise.all([getPublishedCatalog(), getLatestNews(3), listPublishedFaq()]);
   const schedule = scheduleOf(catalog);
+  const faqData = faqLd(faq);
   return (
     <SiteShell>
-      <JsonLd data={organizationLd()} />
+      <JsonLd data={faqData ? [organizationLd(), faqData] : organizationLd()} />
       <BookingProvider catalog={catalog}>
         <Hero next={nextAvailable(schedule)} />
         <Catalog items={catalog} />

@@ -45,7 +45,8 @@
 .t-route{font-family:"PT Serif",Georgia,serif;font-size:13.5px;line-height:1.5;color:var(--tk-muted);margin-bottom:14px}
 .t-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tk-muted);margin-bottom:16px}
 .t-meta i{width:4px;height:4px;border-radius:50%;background:var(--tk-gold)}
-.t-foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;border-top:1px solid rgba(194,154,91,.42)}
+/* цена и кнопка в одну строку; не помещаются (две цены в узкой карточке) — кнопка переносится, а не вылезает за край */
+.t-foot{margin-top:auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;border-top:1px solid rgba(194,154,91,.42)}
 .t-price{font-family:"Prata",Georgia,serif;font-size:23px;line-height:1.1;color:var(--tk-ink)}
 .t-price small{display:block;font-family:"PT Sans",system-ui,sans-serif;font-size:11.5px;letter-spacing:.02em;color:var(--tk-muted);margin-top:4px}
 .t-prices{display:flex;gap:22px}
@@ -69,21 +70,29 @@
 .t-desc li{position:relative;padding-left:20px;font-size:14px;line-height:1.5}
 .t-desc li::before{content:"◆";position:absolute;left:0;top:1px;color:var(--tk-terra);font-size:9px}
 
-/* крупная карточка: на широком каталоге — обложка слева, вертикальная перфорация, текст справа */
 .ticket.featured .t-title{font-size:26px}
-@container catalog (min-width:760px){
-  .ticket.featured{flex-direction:row}
-  .ticket.featured .ticket-photo{flex:0 0 48%;aspect-ratio:auto;min-height:360px;border-radius:var(--tk-r) 0 0 var(--tk-r)}
-  .ticket.featured .perf{width:20px;height:auto;
+/* Билет в широкой ячейке каталога (крупная карточка или карточка, оставшаяся одна в ряду) ложится горизонтально:
+   обложка слева, вертикальная перфорация, текст справа. Решает ширина ячейки (.catalog-cell — контейнер `cell`),
+   поэтому в узком превью админки и в колонках каталога билет остаётся вертикальным. */
+@container cell (min-width:620px){
+  .ticket{flex-direction:row}
+  .ticket .ticket-photo{flex:0 0 46%;aspect-ratio:auto;min-height:270px;border-radius:var(--tk-r) 0 0 var(--tk-r)}
+  .ticket.featured .ticket-photo{flex-basis:48%;min-height:360px}
+  .ticket .perf{width:20px;height:auto;
     -webkit-mask:radial-gradient(circle 10px at 50% 0,transparent 98%,#000 100%),radial-gradient(circle 10px at 50% 100%,transparent 98%,#000 100%);
     mask:radial-gradient(circle 10px at 50% 0,transparent 98%,#000 100%),radial-gradient(circle 10px at 50% 100%,transparent 98%,#000 100%);
     -webkit-mask-composite:source-in;mask-composite:intersect}
-  .ticket.featured .perf::before{left:50%;right:auto;top:18px;bottom:18px;border-top:none;border-left:1.5px dashed rgba(34,41,58,.28)}
-  .ticket.featured .perf .t-stub{transform:translate(-50%,-50%) rotate(-90deg)}
-  .ticket.featured .ticket-info{padding:30px 34px 28px;border-radius:0 var(--tk-r) var(--tk-r) 0}
-  .ticket.featured .t-date b{font-size:26px}
+  .ticket .perf::before{left:50%;right:auto;top:18px;bottom:18px;border-top:none;border-left:1.5px dashed rgba(34,41,58,.28)}
+  .ticket .perf .t-stub{transform:translate(-50%,-50%) rotate(-90deg)}
+  .ticket .ticket-info{padding:28px 32px 26px;border-radius:0 var(--tk-r) var(--tk-r) 0;justify-content:center}
+  .ticket .t-title{font-size:26px}
+  .ticket .t-tag{font-size:15px}
+  .ticket .t-route{font-size:15px}
+  .ticket .t-date b{font-size:26px}
+  .ticket .t-foot{margin-top:8px}
+  .ticket.featured .ticket-info{justify-content:flex-start}
+  .ticket.featured .t-foot{margin-top:auto}
 }
 @media (max-width:600px){
   .t-desc ul{grid-template-columns:1fr}
-  .t-foot{flex-wrap:wrap}
 }

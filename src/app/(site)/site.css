@@ -29,11 +29,14 @@ a{color:inherit}
 button{font:inherit;color:inherit}
 ul[class],ol[class]{list-style:none}
 :focus-visible{outline:2px solid var(--terra);outline-offset:3px}
+:is(.route,.foot,.private-card) :focus-visible{outline-color:var(--gold-2)}
 ::selection{background:rgba(163,74,47,.2)}
 [id]{scroll-margin-top:calc(var(--header-h) + 16px)}
 .nowrap{white-space:nowrap}
 .wrap{width:min(1200px,100% - 2 * var(--pad));margin-inline:auto}
-.site{position:relative;overflow-x:clip}
+/* колонка на всю высоту окна: на коротких страницах (заказ, 404) подвал прижат к низу, а не висит посреди экрана */
+.site{position:relative;overflow-x:clip;display:flex;flex-direction:column;min-height:100vh;min-height:100svh}
+.site>main{flex:1 0 auto}
 main:focus{outline:none}
 .skip{position:absolute;left:12px;top:-80px;z-index:100;background:var(--ink);color:var(--card);padding:12px 18px;border-radius:2px;font-family:var(--sans);font-weight:700;text-decoration:none;transition:top .2s}
 .skip:focus{top:12px}
@@ -152,8 +155,14 @@ main:focus{outline:none}
 
 /* ========== 7. Каталог ========== */
 .catalog-sec{padding:20px 0 var(--sec)}
-.catalog{container:catalog / inline-size;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:30px}
-.catalog>.ticket.featured{grid-column:1 / -1}
+.catalog{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:30px}
+/* ячейка — контейнер: в широкой ячейке билет сам ложится горизонтально (ticket.css) */
+.catalog-cell{container:cell / inline-size;display:flex;min-width:0}
+.catalog-cell>.ticket{flex:1}
+/* крупная карточка — всегда на весь ряд; обычная — когда осталась в ряду одна (классы ставит loneCards) */
+.catalog-cell.is-featured{grid-column:1 / -1}
+@media (min-width:1100px){.catalog-cell.is-lone-3{grid-column:1 / -1}}
+@media (min-width:640px) and (max-width:1099px){.catalog-cell.is-lone-2{grid-column:1 / -1}}
 
 /* ========== 8. Афиша (строки-билеты) ========== */
 .afisha-sec{padding:var(--sec) 0;background:var(--paper-2);border-block:1px solid var(--line)}
@@ -306,16 +315,16 @@ main:focus{outline:none}
 .tour-hero{padding:28px 0 56px}
 .tour-hero-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:64px;align-items:center}
 .tour-title{font-family:var(--display);font-weight:400;font-size:clamp(38px,4.4vw,64px);line-height:1.06;letter-spacing:-.01em}
-.tour-tagline{margin-top:14px;font-family:var(--accent);font-style:italic;font-size:22px;color:var(--terra)}
+.tour-title--long{font-size:clamp(30px,3.2vw,46px);line-height:1.12}
 .tour-route-line{max-width:520px;margin-top:20px;font-size:17px;line-height:1.6;color:var(--muted)}
 .tour-cta{display:flex;flex-wrap:wrap;align-items:center;gap:16px 28px;margin-top:34px}
 .tour-price{font-family:var(--display);font-size:30px;line-height:1.1}
 .tour-price small{display:block;margin-top:4px;font-family:var(--sans);font-size:13px;color:var(--muted)}
 .tour-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 28px;margin-top:34px;padding-top:28px;border-top:1px solid var(--line-2)}
-.tour-facts li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:2px 12px;align-items:start}
+.tour-facts li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:2px 12px;align-items:start;align-content:start}
 .tour-facts svg{grid-row:span 2;width:26px;height:26px;color:var(--terra)}
 .tour-facts span{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
-.tour-facts b{font-family:var(--display);font-weight:400;font-size:19px;line-height:1.3}
+.tour-facts b{font-family:var(--display);font-weight:400;font-size:19px;line-height:1.3;overflow-wrap:anywhere}
 .tour-media{position:relative;aspect-ratio:5 / 4;overflow:hidden;background:#26303b;border-radius:50% 50% 10px 10px / 24% 24% 10px 10px;box-shadow:0 34px 60px -32px rgba(34,41,58,.6)}
 .tour-media .cover-img{object-fit:cover}
 .tour-layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:64px;align-items:start;padding-bottom:var(--sec)}
@@ -381,8 +390,9 @@ main:focus{outline:none}
 .date-chip.is-off:hover>span{border-color:var(--line-2)}
 .booking .btn--block{margin-top:18px}
 .booking-note{margin-top:14px;font-family:var(--sans);font-size:13px;line-height:1.55;color:var(--muted)}
-.booking-empty{margin-top:18px;font-family:var(--sans);font-size:15px;line-height:1.6;color:var(--text)}
-.booking-empty .contact-buttons{margin-top:16px}
+.booking-empty{display:grid;gap:14px;margin-top:18px;font-family:var(--sans);font-size:15px;line-height:1.6;color:var(--text)}
+.booking .booking-empty .btn--block{margin-top:0}
+.booking-empty .contact-buttons{margin-top:0}
 .booking-empty .contact-buttons .btn{width:100%}
 /* полоса покупки внизу экрана на телефоне */
 .buybar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:none;align-items:center;justify-content:space-between;gap:16px;padding:12px var(--pad) calc(12px + env(safe-area-inset-bottom));background:rgba(251,246,240,.96);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 -1px 0 var(--line),0 -12px 24px -18px rgba(34,41,58,.4);transform:translateY(110%);visibility:hidden;transition:transform .3s var(--ease),visibility 0s .3s}
@@ -472,11 +482,12 @@ main:focus{outline:none}
 .bk-chip.off:hover span{border-color:var(--line-2)}
 .bk-steppers{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px}
 .bk-stepper-lbl{display:block;margin-bottom:7px;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
-.bk-stepper-ctl{display:flex;align-items:center;width:max-content;border:1px solid var(--line-2);border-radius:4px;background:#fff}
-.bk-stepper-ctl button{width:48px;height:48px;border:none;background:none;font-size:22px;cursor:pointer}
+/* счётчик занимает свою колонку (не шире 150 px): на телефоне 320–360 px два счётчика рядом не вылезают за окно */
+.bk-stepper-ctl{display:flex;align-items:center;width:100%;max-width:150px;border:1px solid var(--line-2);border-radius:4px;background:#fff}
+.bk-stepper-ctl button{flex:none;width:44px;height:48px;border:none;background:none;font-size:22px;cursor:pointer}
 .bk-stepper-ctl button:hover:not(:disabled){color:var(--terra)}
 .bk-stepper-ctl button:disabled{opacity:.3;cursor:default}
-.bk-stepper-ctl output{min-width:38px;text-align:center;font-family:var(--display);font-size:19px}
+.bk-stepper-ctl output{flex:1;min-width:24px;text-align:center;font-family:var(--display);font-size:19px}
 .bk-total{margin:12px 0 20px;font-size:15px}
 .bk-total b{font-family:var(--display);font-size:24px;font-weight:400;color:var(--terra)}
 .bk-consent{display:flex;align-items:flex-start;gap:10px;margin-bottom:6px;font-size:13.5px;line-height:1.45}
@@ -535,6 +546,8 @@ main:focus{outline:none}
   .news-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .foot-top{grid-template-columns:repeat(2,minmax(0,1fr))}
   .foot-brand{grid-column:1 / -1}
+  /* планшеты и телефоны — сенсорные: ссылки подвала не ниже 44 px и на всю ширину колонки */
+  .foot-col a{display:flex;min-height:44px}
   .tour-hero-grid{gap:40px}
   .tour-layout{grid-template-columns:minmax(0,1fr) 340px;gap:40px}
 }
@@ -552,6 +565,7 @@ main:focus{outline:none}
   .tour-layout{grid-template-columns:1fr}
   .tour-aside{position:static;order:-1}
   .buybar{display:flex}
+  .site:has(.buybar) .foot{padding-bottom:110px}
 }
 
 /* ========== 24. Телефон ========== */
@@ -573,7 +587,6 @@ main:focus{outline:none}
   .hero-photo--main{position:relative;width:78%;height:auto;aspect-ratio:4 / 5;margin-left:auto}
   .hero-photo--side{width:50%;height:auto;aspect-ratio:1;bottom:auto;top:18%;border-width:5px}
   .stub{position:relative;right:auto;width:100%;margin-top:-32px}
-  .catalog{grid-template-columns:1fr;gap:22px}
   .bill-row{grid-template-columns:78px minmax(0,1fr)}
   .bill-date{padding:12px 4px}
   .bill-date b{font-size:32px}
@@ -601,7 +614,6 @@ main:focus{outline:none}
   .answer{font-size:15.5px}
   .foot{padding-top:56px}
   .foot-top{grid-template-columns:1fr;gap:30px}
-  .foot-col a{min-height:44px}
   .foot-col[aria-label="Разделы сайта"] ul{grid-template-columns:1fr 1fr;column-gap:20px}
   .page-head{padding:24px 0 32px}
   .tour-hero{padding:16px 0 40px}
@@ -620,7 +632,10 @@ main:focus{outline:none}
   .bk-body{padding:28px 20px 22px}
   .bk-title{font-size:22px}
   .bk-steps{font-size:11px;letter-spacing:.04em}
-  .site:has(.buybar) .foot{padding-bottom:110px}
+}
+
+@media (max-width:639px){
+  .catalog{grid-template-columns:1fr;gap:22px}
 }
 
 /* ========== 25. Без анимаций и печать ========== */

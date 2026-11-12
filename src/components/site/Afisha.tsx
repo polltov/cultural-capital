@@ -31,7 +31,7 @@ export function AfishaPreview({ items, total }: { items: ScheduleRow[]; total: n
           id="afisha-title"
           align="start"
           title={<>Ближайшие <em>даты</em></>}
-          lead={`Выберите день — места держатся за вами ${HOLD_MINUTES} минут, пока вы оплачиваете.`}
+          lead={items.length > 0 ? `Выберите день — места держатся за вами ${HOLD_MINUTES} минут, пока вы оплачиваете.` : undefined}
           action={total > 0 ? <Link className="link-more" href="/afisha">Вся афиша{total > items.length ? ` · ${total}` : ""} <span aria-hidden="true">→</span></Link> : undefined}
         />
         {items.length > 0 ? <ScheduleList items={items} /> : <EmptySchedule />}

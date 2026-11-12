@@ -76,10 +76,20 @@ describe("BookingPanel", () => {
     expect(checked()).toBe("12");
   });
 
-  it("shows the fallback when there is nothing to buy", () => {
+  it("sold out: still lists the dates as unavailable, shows the fallback instead of the buy button", () => {
     panel({ ...catalog[0], sessions: [{ id: 11, startsAt: at("2026-11-22T11:00"), free: 0, capacity: 8 }] });
+    expect(screen.getByRole("group", { name: "Ближайшие даты" })).toBeTruthy();
+    const [sold] = screen.getAllByRole("radio") as HTMLInputElement[];
+    expect(sold.disabled).toBe(true);
+    expect(sold.checked).toBe(false);
     expect(screen.getByText("нет дат")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Купить билет" })).toBeNull();
+  });
+
+  it("no dates at all: only the prices and the fallback", () => {
+    panel({ ...catalog[0], sessions: [] });
+    expect(screen.queryByRole("group")).toBeNull();
+    expect(screen.getByText("нет дат")).toBeTruthy();
   });
 
   it("shows a single «Билет» price when child and adult cost the same", () => {

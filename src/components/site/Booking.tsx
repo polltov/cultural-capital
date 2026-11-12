@@ -1,8 +1,14 @@
 "use client";
 
 import { createContext, use, useCallback, useRef, useState } from "react";
-import type { CatalogTour } from "@/server/catalog";
+import type { CatalogSession, CatalogTour } from "@/server/catalog";
 import { CheckoutDialog } from "./CheckoutDialog";
+
+/** Что окну покупки нужно знать об экскурсии: название, цены и сеансы с остатком мест. */
+export type BookableTour = {
+  tour: Pick<CatalogTour["tour"], "id" | "title" | "priceChild" | "priceAdult">;
+  sessions: Pick<CatalogSession, "id" | "startsAt" | "free">[];
+};
 
 type OpenBooking = (tourId: number, sessionId: number | null) => void;
 
@@ -12,7 +18,7 @@ const BookingContext = createContext<OpenBooking | null>(null);
  * Одно окно покупки на страницу: его открывают обложка-подсказка в первом экране, афиша, карточки каталога
  * и панель на странице экскурсии. После закрытия фокус возвращается на кнопку, с которой начали.
  */
-export function BookingProvider({ catalog, children }: { catalog: CatalogTour[]; children: React.ReactNode }) {
+export function BookingProvider({ catalog, children }: { catalog: BookableTour[]; children: React.ReactNode }) {
   const [booking, setBooking] = useState<{ tourId: number; sessionId: number | null; n: number } | null>(null);
   const opener = useRef<Element | null>(null);
 

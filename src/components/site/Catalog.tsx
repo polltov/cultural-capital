@@ -1,15 +1,50 @@
 "use client";
 
+import { cellClass, loneCards } from "@/lib/domain/catalog-layout";
 import { coverVariants } from "@/lib/domain/tour-text";
 import type { CatalogTour } from "@/server/catalog";
 import { useBooking } from "./Booking";
 import { SectionHead } from "./SectionHead";
 import { TicketCard } from "./TicketCard";
 
+/**
+ * Сетка карточек-билетов. Крупная карточка занимает ряд целиком; обычная, оставшаяся одна в ряду, — тоже
+ * (см. `loneCards`), и в широкой ячейке билет сам ложится горизонтально (ticket.css, контейнер `cell`).
+ * `variants` и `numbers` считаются по всему каталогу, чтобы гравюра и номер билета совпадали на всех страницах.
+ */
+export function TicketGrid({ items, variants, numbers, flat = false }: {
+  items: CatalogTour[];
+  variants: Record<string, number>;
+  numbers: Record<string, number>;
+  /** Все карточки обычного размера — для блока «Другие экскурсии». */
+  flat?: boolean;
+}) {
+  const open = useBooking();
+  const cards = items.map(({ tour, sessions }) => ({ tour: flat ? { ...tour, featured: false } : tour, sessions }));
+  const lone = loneCards(cards.map((c) => c.tour));
+  return (
+    <div className="catalog">
+      {cards.map(({ tour, sessions }, i) => (
+        <div className={cellClass(tour.featured, lone[i])} key={tour.id}>
+          <TicketCard
+            tour={tour}
+            sessions={sessions}
+            number={numbers[tour.slug]}
+            href={`/tours/${tour.slug}`}
+            seed={tour.slug}
+            coverVariant={variants[tour.slug]}
+            onBook={(sessionId) => open(tour.id, sessionId)}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /** Каталог «Наши экскурсии»: карточка ведёт на страницу экскурсии, «Купить билет» — сразу в покупку. */
 export function Catalog({ items }: { items: CatalogTour[] }) {
-  const open = useBooking();
-  const variants = coverVariants(items.map((i) => i.tour));
+  const variants = Object.fromEntries(coverVariants(items.map((i) => i.tour)));
+  const numbers = Object.fromEntries(items.map((c, i) => [c.tour.slug, i + 1]));
   return (
     <section className="catalog-sec" id="catalog" aria-labelledby="catalog-title">
       <div className="wrap">
@@ -22,20 +57,7 @@ export function Catalog({ items }: { items: CatalogTour[] }) {
         {items.length === 0 ? (
           <p className="empty">Скоро здесь появятся новые маршруты.</p>
         ) : (
-          <div className="catalog">
-            {items.map(({ tour, sessions }, i) => (
-              <TicketCard
-                key={tour.id}
-                tour={tour}
-                sessions={sessions}
-                number={i + 1}
-                href={`/tours/${tour.slug}`}
-                seed={tour.slug}
-                coverVariant={variants.get(tour.slug)}
-                onBook={(sessionId) => open(tour.id, sessionId)}
-              />
-            ))}
-          </div>
+          <TicketGrid items={items} variants={variants} numbers={numbers} />
         )}
       </div>
     </section>

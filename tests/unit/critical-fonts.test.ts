@@ -45,3 +45,22 @@ describe("запасные шрифты", () => {
     }
   });
 });
+
+describe("цифры Prata", () => {
+  // у самого Prata единица неотличима от строчной «l», поэтому цифры подменяются отдельным файлом
+  const faces = fontsCss.split("@font-face").filter((b) => /font-family:\s*'Prata'/.test(b));
+
+  it("цифры 0–9 берутся из отдельного файла, и он лежит в public/", () => {
+    const digits = faces.find((b) => /unicode-range:\s*U\+0030-0039;/.test(b));
+    expect(digits).toBeDefined();
+    const file = /url\((\/fonts\/prata-digits-[0-9a-f]+\.woff2)\)/.exec(digits ?? "")?.[1];
+    expect(file).toBeDefined();
+    expect(existsSync(path.join(root, "public", file ?? ""))).toBe(true);
+  });
+
+  it("латинская половинка Prata диапазон цифр не заявляет", () => {
+    const latin = faces.find((b) => b.includes("prata-normal-latin"));
+    expect(latin).toMatch(/U\+0021-002F, U\+003A-009F/);
+    expect(latin).not.toMatch(/U\+0021-009F/);
+  });
+});

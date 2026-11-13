@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { NotFoundContent } from "@/components/site/NotFoundContent";
 import { SiteShell } from "@/components/site/SiteShell";
 import { preloadCriticalFonts } from "@/lib/critical-fonts";
+import { siteIcons } from "@/lib/site-icons";
 import "./fonts.css";
 import "./(site)/site.css";
 
@@ -10,7 +11,7 @@ import "./(site)/site.css";
 export const metadata: Metadata = {
   title: "Страница не найдена — Культурная Столица",
   robots: { index: false },
-  icons: { icon: [{ url: "/assets/favicon.png", type: "image/png" }] },
+  icons: siteIcons,
 };
 
 export default function GlobalNotFound() {

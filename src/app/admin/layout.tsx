@@ -1,11 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { siteIcons } from "@/lib/site-icons";
 import "../fonts.css";
 import "./(panel)/admin.css";
 
 export const metadata: Metadata = {
   title: { default: "Админка — Культурная Столица", template: "%s — админка" },
   robots: { index: false, follow: false },
-  icons: { icon: [{ url: "/assets/favicon.png", type: "image/png" }] },
+  icons: siteIcons,
 };
 
 export const viewport: Viewport = {

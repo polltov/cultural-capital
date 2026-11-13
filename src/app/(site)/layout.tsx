@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { preloadCriticalFonts } from "@/lib/critical-fonts";
+import { siteIcons } from "@/lib/site-icons";
 import { siteUrl } from "@/lib/site-url";
 import "../fonts.css";
 import "./site.css";
@@ -23,10 +24,7 @@ export const metadata: Metadata = {
     description: "Авторские маршруты для детей и взрослых. Маленькие группы до 8 человек.",
     images: [{ url: "/brand/og.jpg", width: 1200, height: 630, alt: "Культурная Столица — экскурсии по Петербургу" }],
   },
-  icons: {
-    icon: [{ url: "/assets/favicon.png", type: "image/png" }],
-    apple: [{ url: "/brand/apple-touch-icon.png", sizes: "180x180" }],
-  },
+  icons: siteIcons,
   formatDetection: { telephone: false },
 };
 

@@ -270,6 +270,20 @@ main:focus{outline:none}
 .news-title a::after{content:"";position:absolute;inset:0}
 .news-card:hover .news-title{color:var(--terra)}
 .news-excerpt{font-size:15.5px;line-height:1.6;color:var(--muted)}
+/* одна новость — широкая карточка, две — пополам (на телефоне — как обычно, в столбик) */
+.news-grid--2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.news-grid.news-grid--1{grid-template-columns:1fr}
+.news-more{display:none;align-items:center;gap:8px;margin-top:6px;font-family:var(--sans);font-size:15px;font-weight:700;letter-spacing:.02em;color:var(--terra)}
+.news-more span{transition:transform .2s var(--ease)}
+.news-card:hover .news-more span{transform:translateX(4px)}
+@media (min-width:760px){
+  .news-grid--1 .news-card{flex-direction:row;min-height:340px}
+  .news-grid--1 .news-cover{flex:0 0 48%;aspect-ratio:auto}
+  .news-grid--1 .news-body{justify-content:center;gap:14px;padding:44px 48px}
+  .news-grid--1 .news-title{font-size:clamp(26px,2.6vw,34px);line-height:1.18}
+  .news-grid--1 .news-excerpt{max-width:52ch;font-size:17px;line-height:1.65}
+  .news-grid--1 .news-more{display:inline-flex}
+}
 
 /* ========== 14. Вопросы ========== */
 .faq{padding:var(--sec) 0;border-top:1px solid var(--line)}
@@ -294,7 +308,8 @@ main:focus{outline:none}
 
 /* ========== 15. Подвал ========== */
 .foot{padding:76px 0 36px;background:var(--ink);color:rgba(251,246,240,.72);font-family:var(--sans);font-size:15px}
-.foot-top{display:grid;grid-template-columns:minmax(0,1.5fr) repeat(3,minmax(0,1fr));gap:40px}
+/* колонок столько, сколько блоков: без контактов — три, с контактами — четыре; пустой колонки справа не остаётся */
+.foot-top{display:grid;grid-template-columns:minmax(0,1.5fr);grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:40px}
 .logo--foot .logo-mark{height:54px}
 .logo--foot .logo-word{height:44px}
 .foot-tag{max-width:320px;margin-top:20px;line-height:1.6}
@@ -325,9 +340,10 @@ main:focus{outline:none}
 .tour-price small{display:block;margin-top:4px;font-family:var(--sans);font-size:13px;color:var(--muted)}
 .tour-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 28px;margin-top:34px;padding-top:28px;border-top:1px solid var(--line-2)}
 .tour-facts li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:2px 12px;align-items:start;align-content:start}
+.tour-facts li.is-wide{grid-column:1 / -1}
 .tour-facts svg{grid-row:span 2;width:26px;height:26px;color:var(--terra)}
 .tour-facts span{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
-.tour-facts b{font-family:var(--display);font-weight:400;font-size:19px;line-height:1.3;overflow-wrap:anywhere}
+.tour-facts b{font-family:var(--display);font-weight:400;font-size:19px;line-height:1.3;overflow-wrap:break-word}
 .tour-media{position:relative;aspect-ratio:5 / 4;overflow:hidden;background:#26303b;border-radius:50% 50% 10px 10px / 24% 24% 10px 10px;box-shadow:0 34px 60px -32px rgba(34,41,58,.6)}
 .tour-media .cover-img{object-fit:cover}
 .tour-layout{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:64px;align-items:start;padding-bottom:var(--sec)}
@@ -547,7 +563,7 @@ main:focus{outline:none}
   .reviews-track{grid-auto-columns:calc((100% - 26px) / 2)}
   .private-card{padding:48px 44px}
   .news-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .foot-top{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .foot-top{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:row}
   .foot-brand{grid-column:1 / -1}
   /* планшеты и телефоны — сенсорные: ссылки подвала не ниже 44 px и на всю ширину колонки */
   .foot-col a{display:flex;min-height:44px}

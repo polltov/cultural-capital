@@ -33,6 +33,8 @@ export async function generateStaticParams(): Promise<{ slug: string }[]> {
 
 /** Длиннее этого место встречи в строку фактов не помещается. */
 const START_FACT_MAX = 40;
+/** Значение длиннее этого занимает всю строку фактов, а не одну из двух колонок: иначе на телефоне слова рвутся посередине. */
+const WIDE_FACT = 22;
 /** Названия длиннее этого набираются кеглем поменьше, чтобы не занимать весь первый экран. */
 const LONG_TITLE = 36;
 
@@ -66,7 +68,7 @@ function Facts({ items }: { items: { icon: React.ReactNode; label: string; value
   return (
     <ul className="tour-facts">
       {items.map((f) => (
-        <li key={f.label}>{f.icon}<span>{f.label}</span><b>{f.value}</b></li>
+        <li key={f.label} className={f.value.length > WIDE_FACT ? "is-wide" : undefined}>{f.icon}<span>{f.label}</span><b>{f.value}</b></li>
       ))}
     </ul>
   );

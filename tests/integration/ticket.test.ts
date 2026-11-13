@@ -174,7 +174,7 @@ describe("sendSorry", () => {
     const mail = send.mock.calls[0][0];
     expect(mail.to).toBe("anna@example.com");
     expect(mail.subject).toBe("Извините, места закончились — заказ КС-0057");
-    expect(mail.html).toContain("https://x.test/#catalog");
+    expect(mail.html).toContain("https://x.test/afisha");
     expect(await sentAt(o.id)).toBeNull();
   });
 

@@ -162,7 +162,8 @@ export function cancelledEmail(t: TicketData, refunded: number): Email {
 
 export function sorryEmail(t: TicketData): Email {
   const subject = `Извините, места закончились — заказ ${t.number}`;
-  const catalog = `${siteUrl()}/#catalog`;
+  // в афише все будущие даты всех экскурсий с покупкой в один клик — ближе к «выбрать другую дату», чем каталог
+  const afisha = `${siteUrl()}/afisha`;
   const lead = `К сожалению, пока ваш платёж обрабатывался, места на экскурсию «${t.tourTitle}» закончились. Возвращаем вам полную стоимость заказа — ${formatRub(t.total)}.`;
   const note = "Деньги вернутся тем же способом, которым вы платили, в течение нескольких дней — срок зависит от банка. Приносим извинения.";
   const rows: Row[] = [["Номер заказа", t.number], ...tourRows(t)];
@@ -174,11 +175,11 @@ export function sorryEmail(t: TicketData): Email {
       paragraph(esc(lead)) +
       paragraph(esc(note)) +
       detailsTable(rows) +
-      button(catalog, "Выбрать другую дату"),
+      button(afisha, "Выбрать другую дату"),
     footer,
   );
   const text = [
-    `Здравствуйте, ${t.name}!`, "", lead, "", note, "", ...rows.map(([k, v]) => `${k}: ${v}`), "", `Другие даты: ${catalog}`, "", ...footer,
+    `Здравствуйте, ${t.name}!`, "", lead, "", note, "", ...rows.map(([k, v]) => `${k}: ${v}`), "", `Другие даты: ${afisha}`, "", ...footer,
   ].join("\n");
 
   return { subject, html, text };

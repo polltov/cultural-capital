@@ -142,13 +142,13 @@ describe("cancelledEmail", () => {
 describe("sorryEmail", () => {
   afterEach(() => vi.unstubAllEnvs());
 
-  it("тема, полный возврат и ссылка на каталог сайта (от SITE_URL, а не от ссылки на заказ)", () => {
+  it("тема, полный возврат и ссылка на афишу сайта (от SITE_URL, а не от ссылки на заказ)", () => {
     vi.stubEnv("SITE_URL", "https://kc.example/");
     const m = sorryEmail(t);
     expect(m.subject).toBe("Извините, места закончились — заказ КС-0057");
     expect(m.html).toContain(formatRub(3270));
-    expect(m.html).toContain("https://kc.example/#catalog");
-    expect(m.text).toContain("https://kc.example/#catalog");
+    expect(m.html).toContain("https://kc.example/afisha");
+    expect(m.text).toContain("https://kc.example/afisha");
     expect(m.html).toContain("Египетский зал Эрмитажа");
   });
 

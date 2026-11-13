@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { db } from "@/db/client";
 import { tours, tourSessions, orders } from "@/db/schema";
-import { getPublishedCatalog } from "@/server/catalog";
+import { findTour, getPublishedCatalog } from "@/server/catalog";
 
 const H = 3600_000;
 const base = { durationLabel: "2 часа", ageLabel: "6+", priceChild: 1000, priceAdult: 500 };
@@ -38,5 +38,17 @@ describe("getPublishedCatalog", () => {
     ]);
     const res = await getPublishedCatalog(db);
     expect(res[0].sessions[0].free).toBe(5);
+  });
+
+  it("carries the tour-page fields and session capacity", async () => {
+    const [t] = await db.insert(tours).values({
+      ...base, slug: "a", title: "A", published: true, meetingPoint: "У Невских ворот", whatToBring: "Удобную обувь",
+    }).returning();
+    await db.insert(tourSessions).values({ tourId: t.id, startsAt: new Date(Date.now() + 24 * H), capacity: 10 });
+    const [c] = await getPublishedCatalog(db);
+    expect(c.tour).toMatchObject({ slug: "a", meetingPoint: "У Невских ворот", whatToBring: "Удобную обувь" });
+    expect(c.sessions[0]).toMatchObject({ capacity: 10, free: 10 });
+    expect(findTour([c], "a")).toBe(c);
+    expect(findTour([c], "nope")).toBeNull();
   });
 });

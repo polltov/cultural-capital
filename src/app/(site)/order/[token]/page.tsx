@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
-import { SiteHeader } from "@/components/site/SiteHeader";
-import { Footer } from "@/components/site/StaticSections";
+import { SiteShell } from "@/components/site/SiteShell";
 import { TicketView } from "@/components/site/TicketView";
 import { loadOrderPage } from "@/server/order-page";
 import { runSyncEffects } from "@/server/payment-sync";
@@ -10,7 +9,7 @@ import { runSyncEffects } from "@/server/payment-sync";
 // Страница меняется по мере подтверждения оплаты и открывается по секретной ссылке: не кэшируем и не индексируем.
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
-  title: "Ваш заказ — Культурная Столица",
+  title: "Ваш заказ",
   robots: { index: false, follow: false },
 };
 
@@ -26,12 +25,12 @@ export default async function OrderPage({ params }: Props) {
   if (outcome) after(() => runSyncEffects(outcome));
 
   return (
-    <div className="mock">
-      <SiteHeader />
-      <main className="order">
-        <TicketView {...data} />
-      </main>
-      <Footer />
-    </div>
+    <SiteShell>
+      <div className="wrap">
+        <div className="order">
+          <TicketView {...data} />
+        </div>
+      </div>
+    </SiteShell>
   );
 }

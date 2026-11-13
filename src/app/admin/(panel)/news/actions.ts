@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidatePublicSite } from "@/server/revalidate";
 import { requireAdmin } from "@/lib/auth/session";
 import { idSchema } from "@/lib/validation/tour";
 import { saveNews, setNewsPublished, type PublishResult, type SaveNewsResult } from "@/server/news";
 
 function revalidateNews(...slugs: (string | null)[]) {
-  revalidatePath("/");
+  revalidatePublicSite();
   revalidatePath("/news");
   for (const s of new Set(slugs)) if (s) revalidatePath(`/news/${s}`);
   revalidatePath("/admin/news");

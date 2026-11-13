@@ -1,4 +1,9 @@
 /* Шрифты хостятся на сайте: браузер посетителя не обращается к серверам Google. */
+/*
+ * Каждый шрифт разрезан на кириллицу и латиницу (цифры, знаки препинания). Пробел и неразрывный пробел есть в обоих
+ * файлах — берём их из кириллического: он предзагружается (src/lib/critical-fonts.ts), и пока латинская половинка
+ * в пути, ширина пробелов уже настоящая и строки не переносятся иначе.
+ */
 /* PT Sans 400 normal, cyrillic */
 @font-face {
   font-family: 'PT Sans';
@@ -6,7 +11,7 @@
   font-weight: 400;
   font-display: swap;
   src: url(/fonts/pt-sans-normal-cyrillic-4608c3.woff2) format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  unicode-range: U+0020, U+00A0, U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
 }
 /* PT Sans 400 normal, latin */
 @font-face {
@@ -15,7 +20,7 @@
   font-weight: 400;
   font-display: swap;
   src: url(/fonts/pt-sans-normal-latin-19c184.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range: U+0000-001F, U+0021-009F, U+00A1-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 /* PT Sans 700 normal, cyrillic */
 @font-face {
@@ -24,7 +29,7 @@
   font-weight: 700;
   font-display: swap;
   src: url(/fonts/pt-sans-normal-cyrillic-00c236.woff2) format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  unicode-range: U+0020, U+00A0, U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
 }
 /* PT Sans 700 normal, latin */
 @font-face {
@@ -33,7 +38,7 @@
   font-weight: 700;
   font-display: swap;
   src: url(/fonts/pt-sans-normal-latin-cae7dc.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range: U+0000-001F, U+0021-009F, U+00A1-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 /* PT Serif 400 italic, cyrillic */
 @font-face {
@@ -42,7 +47,7 @@
   font-weight: 400;
   font-display: swap;
   src: url(/fonts/pt-serif-italic-cyrillic-dfdb93.woff2) format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  unicode-range: U+0020, U+00A0, U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
 }
 /* PT Serif 400 italic, latin */
 @font-face {
@@ -51,7 +56,7 @@
   font-weight: 400;
   font-display: swap;
   src: url(/fonts/pt-serif-italic-latin-f5c530.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range: U+0000-001F, U+0021-009F, U+00A1-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 /* PT Serif 400 normal, cyrillic */
 @font-face {
@@ -60,7 +65,7 @@
   font-weight: 400;
   font-display: swap;
   src: url(/fonts/pt-serif-normal-cyrillic-93f404.woff2) format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  unicode-range: U+0020, U+00A0, U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
 }
 /* PT Serif 400 normal, latin */
 @font-face {
@@ -69,7 +74,7 @@
   font-weight: 400;
   font-display: swap;
   src: url(/fonts/pt-serif-normal-latin-1e4ff9.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range: U+0000-001F, U+0021-009F, U+00A1-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 /* Playfair Display 400 italic, cyrillic */
 @font-face {
@@ -78,7 +83,7 @@
   font-weight: 400;
   font-display: swap;
   src: url(/fonts/playfair-display-italic-cyrillic-711017.woff2) format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  unicode-range: U+0020, U+00A0, U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
 }
 /* Playfair Display 400 italic, latin */
 @font-face {
@@ -87,7 +92,7 @@
   font-weight: 400;
   font-display: swap;
   src: url(/fonts/playfair-display-italic-latin-ef5ca8.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range: U+0000-001F, U+0021-009F, U+00A1-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 /* Playfair Display 500 italic, cyrillic */
 @font-face {
@@ -96,7 +101,7 @@
   font-weight: 500;
   font-display: swap;
   src: url(/fonts/playfair-display-italic-cyrillic-711017.woff2) format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  unicode-range: U+0020, U+00A0, U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
 }
 /* Playfair Display 500 italic, latin */
 @font-face {
@@ -105,7 +110,7 @@
   font-weight: 500;
   font-display: swap;
   src: url(/fonts/playfair-display-italic-latin-ef5ca8.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range: U+0000-001F, U+0021-009F, U+00A1-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 /* Playfair Display 400 normal, cyrillic */
 @font-face {
@@ -114,7 +119,7 @@
   font-weight: 400;
   font-display: swap;
   src: url(/fonts/playfair-display-normal-cyrillic-73961b.woff2) format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  unicode-range: U+0020, U+00A0, U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
 }
 /* Playfair Display 400 normal, latin */
 @font-face {
@@ -123,7 +128,7 @@
   font-weight: 400;
   font-display: swap;
   src: url(/fonts/playfair-display-normal-latin-9deeae.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range: U+0000-001F, U+0021-009F, U+00A1-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 /* Playfair Display 500 normal, cyrillic */
 @font-face {
@@ -132,7 +137,7 @@
   font-weight: 500;
   font-display: swap;
   src: url(/fonts/playfair-display-normal-cyrillic-73961b.woff2) format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  unicode-range: U+0020, U+00A0, U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
 }
 /* Playfair Display 500 normal, latin */
 @font-face {
@@ -141,7 +146,7 @@
   font-weight: 500;
   font-display: swap;
   src: url(/fonts/playfair-display-normal-latin-9deeae.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range: U+0000-001F, U+0021-009F, U+00A1-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 /* Prata 400 normal, cyrillic */
 @font-face {
@@ -150,7 +155,7 @@
   font-weight: 400;
   font-display: swap;
   src: url(/fonts/prata-normal-cyrillic-d06632.woff2) format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+  unicode-range: U+0020, U+00A0, U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
 }
 /* Prata 400 normal, latin */
 @font-face {
@@ -159,5 +164,115 @@
   font-weight: 400;
   font-display: swap;
   src: url(/fonts/prata-normal-latin-c9c5f3.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range: U+0000-001F, U+0021-002F, U+003A-009F, U+00A1-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/*
+ * Prata, цифры. У самого Prata единица неотличима от строчной «l»: «11:00» читалось как «ll:00», «1 390 ₽» — как
+ * «l 390 ₽». Цифры 0–9 поэтому берутся из отдельного файла: это маюскульные цифры Playfair Display, увеличенные
+ * до роста цифр Prata и с её вертикальными метриками (собирается скриптом scripts/fonts/prata-digits.py).
+ * Из латинской половинки выше диапазон цифр U+0030–0039 исключён.
+ */
+@font-face {
+  font-family: 'Prata';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/prata-digits-23b8dc.woff2) format('woff2');
+  unicode-range: U+0030-0039;
+}
+
+/*
+ * Запасные начертания на время загрузки. Пока файл шрифта в пути, текст набран системным шрифтом; здесь он
+ * подогнан под «свой» по ширине и положению строки (size-adjust, ascent/descent-override), чтобы после подгрузки
+ * строки не переносились иначе и страница не «прыгала». Системные шрифты: Times New Roman и Arial (Windows, macOS,
+ * iOS; на Linux — их метрические двойники Liberation), на Android — Noto Serif и Roboto; нет ни одного — берётся
+ * следующий шрифт из списка в стилях. size-adjust — во сколько раз реальный текст сайта, набранный веб-шрифтом,
+ * шире того же текста запасным; при замене шрифтов коэффициенты нужно пересчитать.
+ */
+@font-face {
+  font-family: 'Prata Fallback';
+  src: local('Times New Roman'), local('TimesNewRomanPSMT'), local('Liberation Serif');
+  size-adjust: 119.4%;
+  ascent-override: 83.2%;
+  descent-override: 30.3%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Prata Fallback Android';
+  src: local('Noto Serif'), local('NotoSerif');
+  size-adjust: 100.6%;
+  ascent-override: 98.8%;
+  descent-override: 36%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'PT Serif Fallback';
+  src: local('Times New Roman'), local('TimesNewRomanPSMT'), local('Liberation Serif');
+  size-adjust: 110.3%;
+  ascent-override: 94.2%;
+  descent-override: 25.9%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'PT Serif Fallback Android';
+  src: local('Noto Serif'), local('NotoSerif');
+  size-adjust: 92.2%;
+  ascent-override: 112.7%;
+  descent-override: 31%;
+  line-gap-override: 0%;
+}
+/* Playfair Display на сайте — только курсив (акценты в заголовках, цитаты). */
+@font-face {
+  font-family: 'Playfair Fallback';
+  font-style: italic;
+  src: local('Times New Roman Italic'), local('TimesNewRomanPS-ItalicMT'), local('Liberation Serif Italic');
+  size-adjust: 108%;
+  ascent-override: 100.2%;
+  descent-override: 23.2%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'Playfair Fallback Android';
+  font-style: italic;
+  src: local('Noto Serif Italic'), local('NotoSerif-Italic');
+  size-adjust: 92.6%;
+  ascent-override: 116.8%;
+  descent-override: 27.1%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'PT Sans Fallback';
+  font-weight: 400;
+  src: local('Arial'), local('ArialMT'), local('Liberation Sans');
+  size-adjust: 93.5%;
+  ascent-override: 108.9%;
+  descent-override: 29.5%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'PT Sans Fallback';
+  font-weight: 700;
+  src: local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold');
+  size-adjust: 87.8%;
+  ascent-override: 115.9%;
+  descent-override: 31.4%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'PT Sans Fallback Android';
+  font-weight: 400;
+  src: local('Roboto'), local('Roboto-Regular');
+  size-adjust: 92.5%;
+  ascent-override: 110.1%;
+  descent-override: 29.8%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: 'PT Sans Fallback Android';
+  font-weight: 700;
+  src: local('Roboto Bold'), local('Roboto-Bold');
+  size-adjust: 91.9%;
+  ascent-override: 110.8%;
+  descent-override: 30%;
+  line-gap-override: 0%;
 }

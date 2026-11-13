@@ -67,3 +67,42 @@ export function formatDateLong(d: Date): string {
   const p = parts(d);
   return `${p.day} ${MONTHS_GEN[p.month - 1]} ${p.year}`;
 }
+
+const MONTHS_NOM = ["январь", "февраль", "март", "апрель", "май", "июнь", "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"];
+const WEEKDAY_FULL: Record<string, string> = {
+  Mon: "понедельник", Tue: "вторник", Wed: "среда", Thu: "четверг", Fri: "пятница", Sat: "суббота", Sun: "воскресенье",
+};
+
+/** Число месяца по Москве: «22». */
+export function formatDay(d: Date): string {
+  return String(parts(d).day);
+}
+
+/** Месяц в родительном падеже по Москве: «ноября». */
+export function formatMonthGen(d: Date): string {
+  return MONTHS_GEN[parts(d).month - 1];
+}
+
+/** День недели полностью по Москве: «суббота». */
+export function formatWeekdayFull(d: Date): string {
+  return WEEKDAY_FULL[parts(d).weekday];
+}
+
+/** Ключ месяца по Москве для группировки: «2026-11». */
+export function moscowMonthKey(d: Date): string {
+  const p = parts(d);
+  return `${p.year}-${String(p.month).padStart(2, "0")}`;
+}
+
+/** Заголовок месяца: «Ноябрь», а для другого года, чем `now`, — «Январь 2027». */
+export function formatMonthTitle(d: Date, now: Date = new Date()): string {
+  const p = parts(d);
+  const name = MONTHS_NOM[p.month - 1];
+  const title = name[0].toUpperCase() + name.slice(1);
+  return p.year === parts(now).year ? title : `${title} ${p.year}`;
+}
+
+/** ISO 8601 с московским смещением для микроразметки: «2026-11-22T11:00:00+03:00». */
+export function toMoscowIso(d: Date): string {
+  return `${toMoscowLocalInput(d)}:00+03:00`;
+}

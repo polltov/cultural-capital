@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import { Markdown } from "@/components/Markdown";
 import "./ticket.css";
-import { formatRub } from "@/lib/domain/pricing";
 import { formatDayMonth, formatTime, formatWeekday } from "@/lib/domain/moscow-time";
-import { seatsBadge } from "@/lib/domain/seats";
+import { pluralRu, seatsBadge } from "@/lib/domain/seats";
+import { headlinePrice, priceLines } from "@/lib/domain/tour-text";
+import { formatRub } from "@/lib/domain/pricing";
+import { TourCover } from "./TourCover";
 
 export type TicketTour = {
   title: string;
@@ -28,110 +30,81 @@ export type TicketCardProps = {
   sessions: TicketSession[];
   /** Порядковый номер на перфорации (№ 00N). */
   number?: number;
-  /** Начальное состояние «раскрыт» (для живого превью в админке). По умолчанию закрыт. */
-  defaultOpen?: boolean;
-  onBook?: (sessionId: number | null) => void;
+  /** Страница экскурсии. Без неё (превью в админке) название — просто текст. */
+  href?: string;
+  /** Ключ для выбора гравюры, когда нет фото; по умолчанию — название. */
+  seed?: string;
+  /** Номер гравюры (0–3) от каталога; без него — по `seed`. */
+  coverVariant?: number;
+  onBook?: (sessionId: number) => void;
 };
 
-function Description({ text }: { text: string }) {
+/**
+ * Даты на обложке: ближайший сеанс, на который ещё можно купить билет (если таких нет — просто ближайший),
+ * его день недели и время, и сколько дат есть после него.
+ */
+function CoverDates({ shown, later }: { shown: TicketSession | null; later: number }) {
+  if (!shown) return <span className="t-date"><b>Даты уточняются</b></span>;
   return (
-    <Markdown className="t-desc">{text}</Markdown>
+    <span className="t-date">
+      <b>{formatDayMonth(shown.startsAt)}</b>
+      {formatWeekday(shown.startsAt)} · {formatTime(shown.startsAt)}
+      {later > 0 && <em>и ещё {later} {pluralRu(later, ["дата", "даты", "дат"])}</em>}
+    </span>
   );
 }
 
-export function TicketCard({ tour, sessions, number, defaultOpen = false, onBook }: TicketCardProps) {
-  const [open, setOpen] = useState(defaultOpen);
-  const [picked, setPicked] = useState<number | null>(null);
-  // Выбранный чип выводится из props: если его больше нет в sessions — первый сеанс.
-  const selected = sessions.some((s) => s.id === picked) ? picked : (sessions[0]?.id ?? null);
-
-  const first = sessions[0];
-  const badge = first ? seatsBadge(first.free) : null;
-  const twoPrices = tour.priceChild !== tour.priceAdult;
-
-  const toggle = () => setOpen((o) => !o);
+export function TicketCard({ tour, sessions, number, href, seed, coverVariant, onBook }: TicketCardProps) {
+  // Купить можно, пока есть хоть один сеанс с местами; покупка открывается на ближайшем таком сеансе,
+  // и обложка говорит именно о нём — дата и остаток мест не расходятся с тем, что откроется в покупке.
+  const bookable = sessions.find((s) => s.free > 0) ?? null;
+  const shown = bookable ?? sessions[0] ?? null;
+  const later = shown ? sessions.filter((s) => s.startsAt.getTime() > shown.startsAt.getTime()).length : 0;
+  const badge = shown ? seatsBadge(shown.free) : null;
+  const price = headlinePrice(tour);
+  const lines = priceLines(tour);
 
   return (
-    // eslint-disable-next-line jsx-a11y/role-supports-aria-props -- kept from the original markup
-    <article
-      className={`ticket${tour.featured ? " featured" : ""}${open ? " open" : ""}`}
-      tabIndex={0}
-      aria-expanded={open}
-      onClick={(e) => {
-        const target = e.target as Element;
-        if (target.closest(".t-date-chip")) return;
-        if (open && target.closest(".t-btn")) return;
-        toggle();
-      }}
-      onKeyDown={(e) => {
-        if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
-        e.preventDefault();
-        toggle();
-      }}
-    >
-      <div className="ticket-photo" style={tour.coverUrl ? { backgroundImage: `url("${tour.coverUrl}")` } : undefined}>
+    <article className={`ticket${tour.featured ? " featured" : ""}${href ? " linked" : ""}`}>
+      <div className="ticket-photo">
+        <TourCover
+          src={tour.coverUrl}
+          alt={tour.title}
+          seed={seed ?? tour.title}
+          variant={coverVariant}
+          sizes={tour.featured ? "(max-width: 760px) 100vw, 560px" : "(max-width: 760px) 100vw, (max-width: 1100px) 50vw, 400px"}
+        />
         {badge && <span className="t-seats">{badge}</span>}
-        {first ? (
-          <span className="t-date">
-            <b>{sessions.map((s) => formatDayMonth(s.startsAt)).join(" / ")}</b>
-            {formatWeekday(first.startsAt)} · {formatTime(first.startsAt)}
-          </span>
-        ) : (
-          <span className="t-date"><b>Даты уточняются</b></span>
-        )}
+        <CoverDates shown={shown} later={later} />
       </div>
       <div className="perf"><span className="t-stub">№ {String(number ?? 0).padStart(3, "0")}</span></div>
       <div className="ticket-info">
-        <div className="t-title">{tour.title}</div>
-        <div className="t-tag">{tour.subtitle}</div>
-        <div className="t-route">{tour.route}</div>
-        {sessions.length > 1 && (
-          <div className="t-dates">
-            <span className="t-date-lbl">Дата:</span>
-            {sessions.map((s) => (
-              <button
-                key={s.id}
-                className={`t-date-chip${s.id === selected ? " active" : ""}`}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPicked(s.id);
-                }}
-              >
-                <b>{formatDayMonth(s.startsAt)}</b>
-                {formatWeekday(s.startsAt)}
-              </button>
-            ))}
-          </div>
-        )}
-        <Description text={tour.description} />
-        {tour.note.trim() && <div className="t-note">{tour.note}</div>}
-        <div className="t-meta">{tour.durationLabel} <i></i> {tour.ageLabel}</div>
+        {tour.subtitle.trim() && <p className="t-tag">{tour.subtitle}</p>}
+        <h3 className="t-title">{href ? <Link className="t-link" href={href}>{tour.title}</Link> : tour.title}</h3>
+        {tour.route.trim() && <p className="t-route">{tour.route}</p>}
+        {tour.featured && tour.description.trim() && <Markdown className="t-desc">{tour.description}</Markdown>}
+        <p className="t-meta">
+          {tour.durationLabel && <span>{tour.durationLabel}</span>}
+          {tour.durationLabel && tour.ageLabel && <i aria-hidden="true"></i>}
+          {tour.ageLabel && <span>{tour.ageLabel}</span>}
+        </p>
         <div className="t-foot">
-          {twoPrices ? (
-            <>
-              <span className="t-price t-price-compact">{formatRub(tour.priceChild)}<small>/чел</small></span>
-              <div className="t-prices">
-                <span className="t-price-item"><span>Детский</span><b>{formatRub(tour.priceChild)}</b></span>
-                <span className="t-price-item"><span>Взрослый</span><b>{formatRub(tour.priceAdult)}</b></span>
-              </div>
-            </>
+          {tour.featured && lines.length > 1 ? (
+            <dl className="t-prices">
+              {lines.map((l) => (
+                <div key={l.label}><dt>{l.label}</dt><dd>{formatRub(l.price)}</dd></div>
+              ))}
+            </dl>
           ) : (
-            <span className="t-price">{formatRub(tour.priceChild)}<small>/чел</small></span>
+            <p className="t-price">{price.price}{price.note && <small>{price.note}</small>}</p>
           )}
-          <button
-            className="t-btn"
-            type="button"
-            aria-disabled={sessions.length === 0}
-            onClick={(e) => {
-              // Есть даты — покупка сразу, даже из закрытой карточки; нет дат — нажатие раскрывает описание.
-              if (!sessions.length) return;
-              e.stopPropagation();
-              onBook?.(selected);
-            }}
-          >
-            Купить билет
-          </button>
+          {bookable ? (
+            <button className="t-btn" type="button" onClick={() => onBook?.(bookable.id)}>Купить билет</button>
+          ) : href ? (
+            <Link className="t-btn t-btn--ghost" href={href}>Подробнее</Link>
+          ) : (
+            <span className="t-btn" aria-disabled="true">Купить билет</span>
+          )}
         </div>
       </div>
     </article>

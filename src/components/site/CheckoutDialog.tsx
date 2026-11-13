@@ -7,12 +7,12 @@ import { formatRub, orderTotal } from "@/lib/domain/pricing";
 import { formatDayMonth, formatTime, formatWeekday } from "@/lib/domain/moscow-time";
 import { maskPhone } from "@/lib/domain/phone-mask";
 import { formatComposition } from "@/lib/domain/seats";
-import type { CatalogTour } from "@/server/catalog";
+import type { CatalogSession, CatalogTour } from "@/server/catalog";
 import { PaymentWidget } from "./PaymentWidget";
 
 export type CheckoutDialogProps = {
-  tour: CatalogTour["tour"];
-  sessions: CatalogTour["sessions"];
+  tour: Pick<CatalogTour["tour"], "title" | "priceChild" | "priceAdult">;
+  sessions: Pick<CatalogSession, "id" | "startsAt" | "free">[];
   initialSessionId: number | null;
   onClose: () => void;
 };
@@ -278,7 +278,7 @@ export function CheckoutDialog({ tour, sessions, initialSessionId, onClose }: Ch
             </fieldset>
             {formError}
             <div className="bk-nav">
-              <button type="button" className="t-btn bk-next" disabled={!session} onClick={() => go("tickets")}>Далее</button>
+              <button type="button" className="btn btn--dark bk-next" disabled={!session} onClick={() => go("tickets")}>Далее</button>
             </div>
           </>
         )}
@@ -294,7 +294,7 @@ export function CheckoutDialog({ tour, sessions, initialSessionId, onClose }: Ch
             {formError}
             <div className="bk-nav">
               <button type="button" className="bk-back" onClick={() => go("date")}>Назад</button>
-              <button type="button" className="t-btn bk-next" disabled={!session || ch + ad === 0} onClick={() => go("pay")}>Далее</button>
+              <button type="button" className="btn btn--dark bk-next" disabled={!session || ch + ad === 0} onClick={() => go("pay")}>Далее</button>
             </div>
           </>
         )}
@@ -359,13 +359,13 @@ export function CheckoutDialog({ tour, sessions, initialSessionId, onClose }: Ch
                 {hold.phase === "expired" && (
                   <div className="bk-hold-msg">
                     <p role="alert">Время на оплату истекло</p>
-                    <button type="button" className="t-btn" disabled={working !== null} onClick={change}>Начать заново</button>
+                    <button type="button" className="btn btn--dark" disabled={working !== null} onClick={change}>Начать заново</button>
                   </div>
                 )}
                 {hold.phase === "failed" && (
                   <div className="bk-hold-msg">
                     <p role="alert">Не удалось загрузить форму оплаты</p>
-                    <button type="button" className="t-btn" disabled={working !== null} onClick={retry}>Попробовать снова</button>
+                    <button type="button" className="btn btn--dark" disabled={working !== null} onClick={retry}>Попробовать снова</button>
                     <button type="button" className="bk-link" disabled={working !== null} onClick={change}>← Изменить</button>
                   </div>
                 )}
@@ -373,7 +373,7 @@ export function CheckoutDialog({ tour, sessions, initialSessionId, onClose }: Ch
             ) : (
               <>
                 {formError}
-                <button type="submit" className="t-btn bk-submit" disabled={working !== null || !session}>
+                <button type="submit" className="btn btn--dark bk-submit" disabled={working !== null || !session}>
                   {working === "start" ? "Переходим к оплате…" : `Перейти к оплате · ${formatRub(total)}`}
                 </button>
                 <p className="bk-offer">

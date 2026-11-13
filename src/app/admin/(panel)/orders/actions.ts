@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidatePublicSite } from "@/server/revalidate";
 import { after } from "next/server";
 import { requireAdmin } from "@/lib/auth/session";
 import { ORDER_STATUSES, type OrderStatus } from "@/lib/domain/order-status";
@@ -13,7 +14,7 @@ const BAD_REQUEST = "Некорректный запрос";
 
 function revalidateAll(id: number) {
   revalidatePath("/admin/sessions/[id]", "page");
-  revalidatePath("/");
+  revalidatePublicSite();
   revalidatePath("/admin");
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${id}`);

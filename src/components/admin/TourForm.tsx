@@ -122,7 +122,6 @@ export function TourForm({
           }}
           sessions={previewSessions(rows, now)}
           number={number}
-          defaultOpen
         />
       </div>
     </aside>

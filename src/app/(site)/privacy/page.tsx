@@ -3,7 +3,7 @@ import Link from "next/link";
 import { LegalPage, OperatorDetails } from "@/components/site/LegalPage";
 import { operator, or } from "@/lib/legal";
 
-export const metadata: Metadata = { title: "Политика обработки персональных данных — Культурная Столица" };
+export const metadata: Metadata = { title: "Политика обработки персональных данных" };
 
 // Текст описывает фактическую обработку в коде: форма покупки (src/components/site/CheckoutDialog.tsx),
 // платёжная форма ЮKassa (src/components/site/PaymentWidget.tsx), таблицы orders и rate_limit_hits, письма через Resend,

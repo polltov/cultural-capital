@@ -5,9 +5,11 @@ import { freeSeats } from "@/lib/domain/seats";
 import { seatsTakenSql } from "@/server/seats-sql";
 import type { TicketTour } from "@/components/site/TicketCard";
 
+export type CatalogSession = { id: number; startsAt: Date; free: number; capacity: number };
+
 export type CatalogTour = {
-  tour: TicketTour & { id: number; slug: string };
-  sessions: { id: number; startsAt: Date; free: number }[];
+  tour: TicketTour & { id: number; slug: string; meetingPoint: string; whatToBring: string };
+  sessions: CatalogSession[];
 };
 
 export async function getPublishedCatalog(db: Db = sharedDb): Promise<CatalogTour[]> {
@@ -47,6 +49,8 @@ export async function getPublishedCatalog(db: Db = sharedDb): Promise<CatalogTou
       route: t.route,
       description: t.description,
       note: t.note,
+      meetingPoint: t.meetingPoint,
+      whatToBring: t.whatToBring,
       durationLabel: t.durationLabel,
       ageLabel: t.ageLabel,
       coverUrl: t.coverUrl,
@@ -56,6 +60,11 @@ export async function getPublishedCatalog(db: Db = sharedDb): Promise<CatalogTou
     },
     sessions: sessionRows
       .filter((s) => s.tourId === t.id)
-      .map((s) => ({ id: s.id, startsAt: s.startsAt, free: freeSeats(s.capacity, s.occupied) })),
+      .map((s) => ({ id: s.id, startsAt: s.startsAt, free: freeSeats(s.capacity, s.occupied), capacity: s.capacity })),
   }));
+}
+
+/** Опубликованная экскурсия по адресу страницы — из того же каталога (с местами), чтобы цифры совпадали с главной. */
+export function findTour(catalog: CatalogTour[], slug: string): CatalogTour | null {
+  return catalog.find((c) => c.tour.slug === slug) ?? null;
 }

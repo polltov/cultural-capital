@@ -23,6 +23,8 @@
 /* ========== 2. База ========== */
 *,*::before,*::after{box-sizing:border-box}
 *{margin:0;padding:0}
+/* плавная прокрутка — для якорей внутри страницы; при переходе на другую страницу Next.js её отключает
+   (data-scroll-behavior="smooth" у <html> в layout), иначе новая страница «доезжала» бы до верха */
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 /* открыт модальный dialog (меню или покупка) — страница под ним не прокручивается */
 html:has(dialog[open]){overflow:hidden}
@@ -657,10 +659,47 @@ main:focus{outline:none}
   .catalog{grid-template-columns:1fr;gap:22px}
 }
 
-/* ========== 25. Без анимаций и печать ========== */
+/* ========== 25. Переходы между страницами ========== */
+/*
+ * Классы для <ViewTransition> из src/components/site/transitions.tsx (там же — какие ссылки что запускают).
+ * Уходящая страница исчезает быстро, новая проявляется чуть позже и дольше, сдвиг — 60 px: направление
+ * читается, но глазу не приходится догонять уезжающий текст.
+ */
+:root{--vt-exit:150ms;--vt-enter:210ms;--vt-move:400ms}
+@keyframes vt-fade{from{opacity:0}to{opacity:1}}
+@keyframes vt-slide{from{translate:var(--vt-offset)}to{translate:0}}
+/* вглубь: старая страница уходит влево, новая приходит справа */
+::view-transition-old(.nav-forward){--vt-offset:-60px;animation:var(--vt-exit) ease-in both vt-fade reverse,var(--vt-move) ease-in-out both vt-slide reverse}
+::view-transition-new(.nav-forward){--vt-offset:60px;animation:var(--vt-enter) ease-out var(--vt-exit) both vt-fade,var(--vt-move) ease-in-out both vt-slide}
+/* назад: зеркально */
+::view-transition-old(.nav-back){--vt-offset:60px;animation:var(--vt-exit) ease-in both vt-fade reverse,var(--vt-move) ease-in-out both vt-slide reverse}
+::view-transition-new(.nav-back){--vt-offset:-60px;animation:var(--vt-enter) ease-out var(--vt-exit) both vt-fade,var(--vt-move) ease-in-out both vt-slide}
+/*
+ * Обложка карточки → обложка страницы экскурсии. Форма меняется (карточка — прямоугольник, на странице — арка),
+ * поэтому оба снимка заполняют летящую рамку целиком (object-fit: cover), а лёгкое размытие в середине пути
+ * прячет растяжение картинки.
+ */
+::view-transition-group(.morph){animation-duration:var(--vt-move);animation-timing-function:var(--ease)}
+::view-transition-old(.morph),::view-transition-new(.morph){height:100%;object-fit:cover}
+::view-transition-image-pair(.morph){animation-name:vt-via-blur}
+@keyframes vt-via-blur{30%{filter:blur(3px)}}
+/*
+ * Шапка не едет вместе со страницей: у неё своё имя (SiteHeader) и группа без анимации. Старый снимок гаснет
+ * вместе с уходящей страницей: у прокрученной шапки плотный фон, а у новой (страница вверху) его нет, и без этого
+ * уходящий текст на мгновение просвечивал бы сквозь шапку.
+ */
+::view-transition-group(site-header){animation:none;z-index:100}
+::view-transition-old(site-header){animation:var(--vt-exit) ease-in both vt-fade reverse}
+::view-transition-new(site-header){animation:none}
+/* слой анимации не перехватывает клики: нажатие во время перехода попадает в новую страницу */
+::view-transition{pointer-events:none}
+
+/* ========== 26. Без анимаций и печать ========== */
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   *,*::before,*::after{transition:none!important;animation:none!important}
+  /* переходы между страницами — мгновенная смена, как без View Transitions */
+  ::view-transition-old(*),::view-transition-new(*),::view-transition-group(*){animation-duration:0s!important;animation-delay:0s!important}
 }
 @media print{
   .top,.foot,.no-print,.skip,.buybar{display:none!important}

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { SiteShell } from "@/components/site/SiteShell";
 import { NewsCards } from "@/components/site/NewsBlock";
 import { listPublishedNews } from "@/server/news";
+import { NAV_BACK } from "@/components/site/transitions";
 
 export const revalidate = 300;
 export const metadata: Metadata = {
@@ -19,7 +20,7 @@ export default async function NewsArchivePage({ searchParams }: { searchParams: 
     <SiteShell mainClassName="news-page">
       <div className="wrap">
         <nav className="crumbs" aria-label="Навигационная цепочка">
-          <ol><li><Link href="/">Главная</Link></li><li aria-current="page">Новости</li></ol>
+          <ol><li><Link href="/" transitionTypes={NAV_BACK}>Главная</Link></li><li aria-current="page">Новости</li></ol>
         </nav>
         <header className="page-head">
           <p className="kicker">Новости</p>

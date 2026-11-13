@@ -7,6 +7,7 @@ import type { ScheduleItem } from "@/lib/domain/schedule";
 import { headlinePrice } from "@/lib/domain/tour-text";
 import type { CatalogTour } from "@/server/catalog";
 import { useBooking } from "./Booking";
+import { NAV_FORWARD } from "./transitions";
 
 export type ScheduleRow = ScheduleItem<CatalogTour["tour"]>;
 
@@ -34,7 +35,7 @@ export function ScheduleList({ items }: { items: ScheduleRow[] }) {
                   <b>{formatTime(session.startsAt)}</b>
                   {[tour.durationLabel, tour.ageLabel].filter(Boolean).map((x) => <span key={x}>{x}</span>)}
                 </p>
-                <h3 className="bill-title"><Link href={`/tours/${tour.slug}`}>{tour.title}</Link></h3>
+                <h3 className="bill-title"><Link href={`/tours/${tour.slug}`} transitionTypes={NAV_FORWARD}>{tour.title}</Link></h3>
                 {tour.subtitle.trim() && <p className="bill-tag">{tour.subtitle}</p>}
               </div>
               <div className="bill-side">

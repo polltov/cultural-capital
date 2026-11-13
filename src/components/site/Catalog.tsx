@@ -6,6 +6,7 @@ import type { CatalogTour } from "@/server/catalog";
 import { useBooking } from "./Booking";
 import { SectionHead } from "./SectionHead";
 import { TicketCard } from "./TicketCard";
+import { OPEN_TOUR } from "./transitions";
 
 /**
  * Сетка карточек-билетов. Крупная карточка занимает ряд целиком; обычная, оставшаяся одна в ряду, — тоже
@@ -16,7 +17,10 @@ export function TicketGrid({ items, variants, numbers, flat = false }: {
   items: CatalogTour[];
   variants: Record<string, number>;
   numbers: Record<string, number>;
-  /** Все карточки обычного размера — для блока «Другие экскурсии». */
+  /**
+   * Все карточки обычного размера и без анимации перехода — для блока «Другие экскурсии»: переход к соседней
+   * экскурсии не движение «вглубь», а обложку этой страницы карточки отнимать не должны (имя перехода одно).
+   */
   flat?: boolean;
 }) {
   const open = useBooking();
@@ -34,6 +38,8 @@ export function TicketGrid({ items, variants, numbers, flat = false }: {
             seed={tour.slug}
             coverVariant={variants[tour.slug]}
             onBook={(sessionId) => open(tour.id, sessionId)}
+            linkTransition={flat ? undefined : OPEN_TOUR}
+            morphSlug={flat ? undefined : tour.slug}
           />
         </div>
       ))}

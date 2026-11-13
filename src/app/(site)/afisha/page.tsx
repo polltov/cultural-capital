@@ -7,6 +7,7 @@ import { SiteShell } from "@/components/site/SiteShell";
 import { groupByMonth, scheduleOf } from "@/lib/domain/schedule";
 import { HOLD_MINUTES, pluralRu } from "@/lib/domain/seats";
 import { getPublishedCatalog } from "@/server/catalog";
+import { NAV_BACK } from "@/components/site/transitions";
 
 // Как главная: даты и места обновляются раз в 5 минут и сразу после покупок и правок в админке.
 export const revalidate = 300;
@@ -25,7 +26,7 @@ export default async function AfishaPage() {
       <BookingProvider catalog={catalog}>
         <div className="wrap">
           <nav className="crumbs" aria-label="Навигационная цепочка">
-            <ol><li><Link href="/">Главная</Link></li><li aria-current="page">Афиша</li></ol>
+            <ol><li><Link href="/" transitionTypes={NAV_BACK}>Главная</Link></li><li aria-current="page">Афиша</li></ol>
           </nav>
           <header className="page-head">
             <p className="kicker">Афиша</p>

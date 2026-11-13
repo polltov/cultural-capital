@@ -11,6 +11,7 @@ import { SectionHead } from "@/components/site/SectionHead";
 import { SiteShell } from "@/components/site/SiteShell";
 import { ContactButtons } from "@/components/site/StaticSections";
 import { TourCover } from "@/components/site/TourCover";
+import { BACK_TO_CATALOG, NAV_BACK, TourCoverTransition } from "@/components/site/transitions";
 import { IconAge, IconArrow, IconBag, IconClock, IconGroup, IconInfo, IconPin, IconReturn, IconTicket } from "@/components/site/icons";
 import { contactLinks } from "@/lib/contacts";
 import { CANCEL_TERMS } from "@/lib/domain/refund-policy";
@@ -132,8 +133,8 @@ export default async function TourPage({ params }: Props) {
         <div className="wrap">
           <nav className="crumbs" aria-label="Навигационная цепочка">
             <ol>
-              <li><Link href="/">Главная</Link></li>
-              <li><Link href="/#catalog">Экскурсии</Link></li>
+              <li><Link href="/" transitionTypes={NAV_BACK}>Главная</Link></li>
+              <li><Link href="/#catalog" transitionTypes={BACK_TO_CATALOG}>Экскурсии</Link></li>
               <li aria-current="page">{tour.title}</li>
             </ol>
           </nav>
@@ -155,9 +156,12 @@ export default async function TourPage({ params }: Props) {
               </div>
               {facts.length > 0 && <Facts items={facts} />}
             </div>
-            <div className="tour-media">
-              <TourCover src={tour.coverUrl} alt={tour.title} seed={tour.slug} variant={variants[tour.slug]} sizes="(max-width: 900px) 100vw, 600px" preload />
-            </div>
+            {/* та же обложка, что у карточки в каталоге: при переходе из каталога она перетекает сюда (transitions.tsx) */}
+            <TourCoverTransition slug={tour.slug}>
+              <div className="tour-media">
+                <TourCover src={tour.coverUrl} alt={tour.title} seed={tour.slug} variant={variants[tour.slug]} sizes="(max-width: 900px) 100vw, 600px" preload />
+              </div>
+            </TourCoverTransition>
           </div>
         </section>
 
@@ -207,7 +211,7 @@ export default async function TourPage({ params }: Props) {
                 id="more-title"
                 align="start"
                 title={<>Другие <em>экскурсии</em></>}
-                action={<Link className="link-more" href="/#catalog">Весь каталог <span aria-hidden="true">→</span></Link>}
+                action={<Link className="link-more" href="/#catalog" transitionTypes={BACK_TO_CATALOG}>Весь каталог <span aria-hidden="true">→</span></Link>}
               />
               <TicketGrid items={related} variants={variants} numbers={numbers} flat />
             </div>

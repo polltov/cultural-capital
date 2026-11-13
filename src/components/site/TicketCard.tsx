@@ -8,6 +8,7 @@ import { pluralRu, seatsBadge } from "@/lib/domain/seats";
 import { headlinePrice, priceLines } from "@/lib/domain/tour-text";
 import { formatRub } from "@/lib/domain/pricing";
 import { TourCover } from "./TourCover";
+import { TourCoverTransition } from "./transitions";
 
 export type TicketTour = {
   title: string;
@@ -37,6 +38,10 @@ export type TicketCardProps = {
   /** Номер гравюры (0–3) от каталога; без него — по `seed`. */
   coverVariant?: number;
   onBook?: (sessionId: number) => void;
+  /** Типы перехода для ссылок карточки (`transitionTypes` у next/link), см. transitions.tsx. */
+  linkTransition?: string[];
+  /** Адрес экскурсии для перетекания обложки на её страницу; только в каталоге, где карточка экскурсии одна. */
+  morphSlug?: string;
 };
 
 /**
@@ -54,7 +59,7 @@ function CoverDates({ shown, later }: { shown: TicketSession | null; later: numb
   );
 }
 
-export function TicketCard({ tour, sessions, number, href, seed, coverVariant, onBook }: TicketCardProps) {
+export function TicketCard({ tour, sessions, number, href, seed, coverVariant, onBook, linkTransition, morphSlug }: TicketCardProps) {
   // Купить можно, пока есть хоть один сеанс с местами; покупка открывается на ближайшем таком сеансе,
   // и обложка говорит именно о нём — дата и остаток мест не расходятся с тем, что откроется в покупке.
   const bookable = sessions.find((s) => s.free > 0) ?? null;
@@ -64,23 +69,27 @@ export function TicketCard({ tour, sessions, number, href, seed, coverVariant, o
   const price = headlinePrice(tour);
   const lines = priceLines(tour);
 
+  const photo = (
+    <div className="ticket-photo">
+      <TourCover
+        src={tour.coverUrl}
+        alt={tour.title}
+        seed={seed ?? tour.title}
+        variant={coverVariant}
+        sizes={tour.featured ? "(max-width: 760px) 100vw, 560px" : "(max-width: 760px) 100vw, (max-width: 1100px) 50vw, 400px"}
+      />
+      {badge && <span className="t-seats">{badge}</span>}
+      <CoverDates shown={shown} later={later} />
+    </div>
+  );
+
   return (
     <article className={`ticket${tour.featured ? " featured" : ""}${href ? " linked" : ""}`}>
-      <div className="ticket-photo">
-        <TourCover
-          src={tour.coverUrl}
-          alt={tour.title}
-          seed={seed ?? tour.title}
-          variant={coverVariant}
-          sizes={tour.featured ? "(max-width: 760px) 100vw, 560px" : "(max-width: 760px) 100vw, (max-width: 1100px) 50vw, 400px"}
-        />
-        {badge && <span className="t-seats">{badge}</span>}
-        <CoverDates shown={shown} later={later} />
-      </div>
+      {morphSlug ? <TourCoverTransition slug={morphSlug}>{photo}</TourCoverTransition> : photo}
       <div className="perf"><span className="t-stub">№ {String(number ?? 0).padStart(3, "0")}</span></div>
       <div className="ticket-info">
         {tour.subtitle.trim() && <p className="t-tag">{tour.subtitle}</p>}
-        <h3 className="t-title">{href ? <Link className="t-link" href={href}>{tour.title}</Link> : tour.title}</h3>
+        <h3 className="t-title">{href ? <Link className="t-link" href={href} transitionTypes={linkTransition}>{tour.title}</Link> : tour.title}</h3>
         {tour.route.trim() && <p className="t-route">{tour.route}</p>}
         {tour.featured && tour.description.trim() && <Markdown className="t-desc">{tour.description}</Markdown>}
         <p className="t-meta">
@@ -101,7 +110,7 @@ export function TicketCard({ tour, sessions, number, href, seed, coverVariant, o
           {bookable ? (
             <button className="t-btn" type="button" onClick={() => onBook?.(bookable.id)}>Купить билет</button>
           ) : href ? (
-            <Link className="t-btn t-btn--ghost" href={href}>Подробнее</Link>
+            <Link className="t-btn t-btn--ghost" href={href} transitionTypes={linkTransition}>Подробнее</Link>
           ) : (
             <span className="t-btn" aria-disabled="true">Купить билет</span>
           )}

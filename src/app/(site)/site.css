@@ -694,7 +694,63 @@ main:focus{outline:none}
 /* слой анимации не перехватывает клики: нажатие во время перехода попадает в новую страницу */
 ::view-transition{pointer-events:none}
 
-/* ========== 26. Без анимаций и печать ========== */
+/* ========== 26. Движение на странице ========== */
+/*
+ * Всё — только на экране (не при печати), только для тех, кто не просил убрать анимацию, и только свойствами,
+ * которые не двигают вёрстку (opacity, translate, scale): CLS остаётся нулевым. Заголовок и большое фото первого
+ * экрана не прячутся даже на мгновение — это LCP, их показ не задерживается.
+ */
+@media screen and (prefers-reduced-motion:no-preference){
+  /* Первый экран: фото «дышит» (медленно садится на место), боковое фото и корешок «Ближайшая экскурсия»
+     выходят следом, как билет, который протягивают в окошко кассы */
+  .hero-photo--main img{animation:mv-settle 1.6s var(--ease) both}
+  .hero-photo--side{animation:mv-rise .8s var(--ease) .2s both;--mv-from:-14px 14px}
+  .stub{animation:mv-rise .7s var(--ease) .45s both;--mv-from:0 22px}
+}
+@keyframes mv-settle{from{scale:1.06}}
+@keyframes mv-rise{from{opacity:0;translate:var(--mv-from,0 24px)}}
+/*
+ * Появление при прокрутке: заголовки секций, карточки, строки афиши, пункты «О нас» и шаги «Как проходит»
+ * поднимаются и проявляются, пока входят в экран снизу. Анимация привязана к прокрутке (animation-timeline: view()),
+ * без JS. Заканчивается, когда верх элемента поднялся на 180 px над краем экрана, — и у строки афиши, и у высокой
+ * карточки, так что читать полупрозрачный текст не приходится. То, что видно сразу при загрузке, показано целиком.
+ * Соседи в одном ряду (новости, шаги маршрута) догоняют друг друга с небольшим отставанием (--mv-lag, px).
+ * Браузер без поддержки (пока Firefox) показывает всё как есть.
+ */
+@supports (animation-timeline:view()){
+  @media screen and (prefers-reduced-motion:no-preference){
+    :is(.shead,.catalog-cell,.bill-row,.why-row,.route-step,.news-card,.info-card,.private-card){
+      animation:mv-reveal linear both;
+      animation-timeline:view();
+      animation-range:entry calc(var(--mv-lag,0) * 1px) entry calc(180px + var(--mv-lag,0) * 1px);
+    }
+    .news-card:nth-child(3n+2){--mv-lag:40}
+    .news-card:nth-child(3n+3){--mv-lag:80}
+  }
+  /* шаги «Как проходит» в ряд: слева направо, по порядку маршрута */
+  @media screen and (prefers-reduced-motion:no-preference) and (min-width:1100px){
+    .route-step:nth-child(2){--mv-lag:30}
+    .route-step:nth-child(3){--mv-lag:60}
+    .route-step:nth-child(4){--mv-lag:90}
+    .route-step:nth-child(5){--mv-lag:120}
+    .route-step:nth-child(6){--mv-lag:150}
+  }
+  @media screen and (prefers-reduced-motion:no-preference) and (min-width:760px) and (max-width:1099px){
+    .route-step:nth-child(3n+2){--mv-lag:40}
+    .route-step:nth-child(3n+3){--mv-lag:80}
+  }
+}
+@keyframes mv-reveal{from{opacity:0;translate:0 28px}}
+/* Вопросы раскрываются плавно, а не скачком (где браузер умеет анимировать высоту до auto) */
+@supports (interpolate-size:allow-keywords){
+  @media screen and (prefers-reduced-motion:no-preference){
+    .faq-item{interpolate-size:allow-keywords}
+    .faq-item::details-content{block-size:0;overflow-y:clip;transition:block-size .35s var(--ease),content-visibility .35s allow-discrete}
+    .faq-item[open]::details-content{block-size:auto}
+  }
+}
+
+/* ========== 27. Без анимаций и печать ========== */
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   *,*::before,*::after{transition:none!important;animation:none!important}

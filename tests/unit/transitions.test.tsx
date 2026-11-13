@@ -43,6 +43,13 @@ describe("переходы между страницами: код и стили
     expect(css).toContain("::view-transition{pointer-events:none}");
   });
 
+  it("движение на странице — только на экране и без «уменьшить движение»", () => {
+    const motion = css.slice(css.indexOf("26. Движение на странице"), css.indexOf("27. Без анимаций и печать"));
+    const queries = [...motion.matchAll(/@media ([^{]+)\{/g)].map((m) => m[1].trim());
+    expect(queries.length).toBeGreaterThan(0);
+    for (const q of queries) expect(q).toMatch(/^screen and \(prefers-reduced-motion:no-preference\)/);
+  });
+
   it("Next.js отключает плавную прокрутку на время перехода (иначе новая страница «доезжает» до верха)", () => {
     expect(read("src/app/(site)/layout.tsx")).toContain('data-scroll-behavior="smooth"');
   });

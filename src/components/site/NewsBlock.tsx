@@ -3,6 +3,7 @@ import { formatDateLong } from "@/lib/domain/moscow-time";
 import type { NewsCard } from "@/server/news";
 import { SectionHead } from "./SectionHead";
 import { TourCover } from "./TourCover";
+import { NAV_FORWARD } from "./transitions";
 
 /** Раскладка по числу новостей: одна — широкая карточка (обложка слева, текст справа), две — пополам, дальше — по три в ряд. */
 const LAYOUTS = {
@@ -27,7 +28,7 @@ export function NewsCards({ items, level = 3 }: { items: NewsCard[]; level?: 2 |
           </div>
           <div className="news-body">
             <time className="news-date" dateTime={n.publishedAt.toISOString()}>{formatDateLong(n.publishedAt)}</time>
-            <H className="news-title"><Link href={`/news/${n.slug}`}>{n.title}</Link></H>
+            <H className="news-title"><Link href={`/news/${n.slug}`} transitionTypes={NAV_FORWARD}>{n.title}</Link></H>
             {n.excerpt && <p className="news-excerpt">{n.excerpt}</p>}
             {/* в широкой карточке есть место для явного «Читать»; ссылкой остаётся заголовок, она растянута на всю карточку */}
             {items.length === 1 && <span className="news-more" aria-hidden="true">Читать <span>→</span></span>}

@@ -22,7 +22,8 @@ export function SiteHeader({ cta = { href: "/afisha", label: "Купить би�
   const close = () => menu.current?.close();
 
   return (
-    <header className={scrolled ? "top is-scrolled" : "top"}>
+    // своё имя в переходах: при сдвиге страницы шапка стоит на месте (site.css, «Переходы между страницами»)
+    <header className={scrolled ? "top is-scrolled" : "top"} style={{ viewTransitionName: "site-header" }}>
       <div className="wrap top-row">
         <Logo />
         <nav className="nav" aria-label="Основное меню">

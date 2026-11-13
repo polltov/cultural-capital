@@ -23,6 +23,8 @@
 /* ========== 2. База ========== */
 *,*::before,*::after{box-sizing:border-box}
 *{margin:0;padding:0}
+/* плавная прокрутка — для якорей внутри страницы; при переходе на другую страницу Next.js её отключает
+   (data-scroll-behavior="smooth" у <html> в layout), иначе новая страница «доезжала» бы до верха */
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 /* открыт модальный dialog (меню или покупка) — страница под ним не прокручивается */
 html:has(dialog[open]){overflow:hidden}
@@ -657,10 +659,103 @@ main:focus{outline:none}
   .catalog{grid-template-columns:1fr;gap:22px}
 }
 
-/* ========== 25. Без анимаций и печать ========== */
+/* ========== 25. Переходы между страницами ========== */
+/*
+ * Классы для <ViewTransition> из src/components/site/transitions.tsx (там же — какие ссылки что запускают).
+ * Уходящая страница исчезает быстро, новая проявляется чуть позже и дольше, сдвиг — 60 px: направление
+ * читается, но глазу не приходится догонять уезжающий текст.
+ */
+:root{--vt-exit:150ms;--vt-enter:210ms;--vt-move:400ms}
+@keyframes vt-fade{from{opacity:0}to{opacity:1}}
+@keyframes vt-slide{from{translate:var(--vt-offset)}to{translate:0}}
+/* вглубь: старая страница уходит влево, новая приходит справа */
+::view-transition-old(.nav-forward){--vt-offset:-60px;animation:var(--vt-exit) ease-in both vt-fade reverse,var(--vt-move) ease-in-out both vt-slide reverse}
+::view-transition-new(.nav-forward){--vt-offset:60px;animation:var(--vt-enter) ease-out var(--vt-exit) both vt-fade,var(--vt-move) ease-in-out both vt-slide}
+/* назад: зеркально */
+::view-transition-old(.nav-back){--vt-offset:60px;animation:var(--vt-exit) ease-in both vt-fade reverse,var(--vt-move) ease-in-out both vt-slide reverse}
+::view-transition-new(.nav-back){--vt-offset:-60px;animation:var(--vt-enter) ease-out var(--vt-exit) both vt-fade,var(--vt-move) ease-in-out both vt-slide}
+/*
+ * Обложка карточки → обложка страницы экскурсии. Форма меняется (карточка — прямоугольник, на странице — арка),
+ * поэтому оба снимка заполняют летящую рамку целиком (object-fit: cover), а лёгкое размытие в середине пути
+ * прячет растяжение картинки.
+ */
+::view-transition-group(.morph){animation-duration:var(--vt-move);animation-timing-function:var(--ease)}
+::view-transition-old(.morph),::view-transition-new(.morph){height:100%;object-fit:cover}
+::view-transition-image-pair(.morph){animation-name:vt-via-blur}
+@keyframes vt-via-blur{30%{filter:blur(3px)}}
+/*
+ * Шапка не едет вместе со страницей: у неё своё имя (SiteHeader) и группа без анимации. Старый снимок гаснет
+ * вместе с уходящей страницей: у прокрученной шапки плотный фон, а у новой (страница вверху) его нет, и без этого
+ * уходящий текст на мгновение просвечивал бы сквозь шапку.
+ */
+::view-transition-group(site-header){animation:none;z-index:100}
+::view-transition-old(site-header){animation:var(--vt-exit) ease-in both vt-fade reverse}
+::view-transition-new(site-header){animation:none}
+/* слой анимации не перехватывает клики: нажатие во время перехода попадает в новую страницу */
+::view-transition{pointer-events:none}
+
+/* ========== 26. Движение на странице ========== */
+/*
+ * Всё — только на экране (не при печати), только для тех, кто не просил убрать анимацию, и только свойствами,
+ * которые не двигают вёрстку (opacity, translate, scale): CLS остаётся нулевым. Заголовок и большое фото первого
+ * экрана не прячутся даже на мгновение — это LCP, их показ не задерживается.
+ */
+@media screen and (prefers-reduced-motion:no-preference){
+  /* Первый экран: фото «дышит» (медленно садится на место), боковое фото и корешок «Ближайшая экскурсия»
+     выходят следом, как билет, который протягивают в окошко кассы */
+  .hero-photo--main img{animation:mv-settle 1.6s var(--ease) both}
+  .hero-photo--side{animation:mv-rise .8s var(--ease) .2s both;--mv-from:-14px 14px}
+  .stub{animation:mv-rise .7s var(--ease) .45s both;--mv-from:0 22px}
+}
+@keyframes mv-settle{from{scale:1.06}}
+@keyframes mv-rise{from{opacity:0;translate:var(--mv-from,0 24px)}}
+/*
+ * Появление при прокрутке: заголовки секций, карточки, строки афиши, пункты «О нас» и шаги «Как проходит»
+ * поднимаются и проявляются, пока входят в экран снизу. Анимация привязана к прокрутке (animation-timeline: view()),
+ * без JS. Заканчивается, когда верх элемента поднялся на 180 px над краем экрана, — и у строки афиши, и у высокой
+ * карточки, так что читать полупрозрачный текст не приходится. То, что видно сразу при загрузке, показано целиком.
+ * Соседи в одном ряду (новости, шаги маршрута) догоняют друг друга с небольшим отставанием (--mv-lag, px).
+ * Браузер без поддержки (пока Firefox) показывает всё как есть.
+ */
+@supports (animation-timeline:view()){
+  @media screen and (prefers-reduced-motion:no-preference){
+    :is(.shead,.catalog-cell,.bill-row,.why-row,.route-step,.news-card,.info-card,.private-card){
+      animation:mv-reveal linear both;
+      animation-timeline:view();
+      animation-range:entry calc(var(--mv-lag,0) * 1px) entry calc(180px + var(--mv-lag,0) * 1px);
+    }
+    .news-card:nth-child(3n+2){--mv-lag:40}
+    .news-card:nth-child(3n+3){--mv-lag:80}
+  }
+  /* шаги «Как проходит» в ряд: слева направо, по порядку маршрута */
+  @media screen and (prefers-reduced-motion:no-preference) and (min-width:1100px){
+    .route-step:nth-child(2){--mv-lag:30}
+    .route-step:nth-child(3){--mv-lag:60}
+    .route-step:nth-child(4){--mv-lag:90}
+    .route-step:nth-child(5){--mv-lag:120}
+    .route-step:nth-child(6){--mv-lag:150}
+  }
+  @media screen and (prefers-reduced-motion:no-preference) and (min-width:760px) and (max-width:1099px){
+    .route-step:nth-child(3n+2){--mv-lag:40}
+    .route-step:nth-child(3n+3){--mv-lag:80}
+  }
+}
+@keyframes mv-reveal{from{opacity:0;translate:0 28px}}
+/* Вопросы раскрываются плавно, а не скачком (где браузер умеет анимировать высоту до auto) */
+@supports (interpolate-size:allow-keywords){
+  @media screen and (prefers-reduced-motion:no-preference){
+    .faq-item{interpolate-size:allow-keywords}
+    .faq-item::details-content{block-size:0;overflow-y:clip;transition:block-size .35s var(--ease),content-visibility .35s allow-discrete}
+    .faq-item[open]::details-content{block-size:auto}
+  }
+}
+
+/* ========== 27. Без анимаций и печать ========== */
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   *,*::before,*::after{transition:none!important;animation:none!important}
+  /* переходы между страницами — мгновенная смена, как без View Transitions */
+  ::view-transition-old(*),::view-transition-new(*),::view-transition-group(*){animation-duration:0s!important;animation-delay:0s!important}
 }
 @media print{
   .top,.foot,.no-print,.skip,.buybar{display:none!important}

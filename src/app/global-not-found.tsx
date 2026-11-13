@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function GlobalNotFound() {
   preloadCriticalFonts();
   return (
-    <html lang="ru">
+    <html lang="ru" data-scroll-behavior="smooth">
       <body>
         <SiteShell>
           <NotFoundContent />

@@ -6,6 +6,7 @@ import { Markdown } from "@/components/Markdown";
 import { TourCover } from "@/components/site/TourCover";
 import { formatDateLong } from "@/lib/domain/moscow-time";
 import { getNewsBySlug } from "@/server/news";
+import { NAV_BACK } from "@/components/site/transitions";
 
 export const revalidate = 300;
 // Страницы строятся по первому запросу и дальше кэшируются (ISR); мутации в админке сбрасывают кэш.
@@ -33,7 +34,7 @@ export default async function NewsArticlePage({ params }: Props) {
       <div className="wrap">
         <article className="article">
           <nav className="crumbs" aria-label="Навигационная цепочка">
-            <ol><li><Link href="/">Главная</Link></li><li><Link href="/news">Новости</Link></li></ol>
+            <ol><li><Link href="/" transitionTypes={NAV_BACK}>Главная</Link></li><li><Link href="/news" transitionTypes={NAV_BACK}>Новости</Link></li></ol>
           </nav>
           <header className="article-head">
             <time className="news-date" dateTime={n.publishedAt.toISOString()}>{formatDateLong(n.publishedAt)}</time>
@@ -45,7 +46,7 @@ export default async function NewsArticlePage({ params }: Props) {
             </div>
           )}
           <Markdown className="md">{n.body}</Markdown>
-          <p className="article-back"><Link href="/news">← Все новости</Link></p>
+          <p className="article-back"><Link href="/news" transitionTypes={NAV_BACK}>← Все новости</Link></p>
         </article>
       </div>
     </SiteShell>

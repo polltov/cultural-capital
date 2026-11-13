@@ -10,6 +10,7 @@ import type { CatalogTour } from "@/server/catalog";
 import { BuyButton } from "./Booking";
 import { Logo, NAV } from "./Logo";
 import { IconArrow, IconCompass, IconGroup, IconTicket } from "./icons";
+import { NAV_FORWARD } from "./transitions";
 
 /** Ссылка «к содержимому» для клавиатуры и скринридеров — первая на странице. */
 export function SkipLink() {
@@ -60,7 +61,7 @@ function NextStub({ item: { tour, session } }: { item: NonNullable<Next> }) {
       <div className="stub-main">
         <p className="stub-kicker">Ближайшая экскурсия</p>
         <p className="stub-date">{formatDayMonth(session.startsAt)}, {formatWeekday(session.startsAt)} · {formatTime(session.startsAt)}</p>
-        <p className="stub-title"><Link href={`/tours/${tour.slug}`}>{tour.title}</Link></p>
+        <p className="stub-title"><Link href={`/tours/${tour.slug}`} transitionTypes={NAV_FORWARD}>{tour.title}</Link></p>
       </div>
       <div className="stub-foot">
         <span className="stub-seats">{seatsBadge(session.free) ?? `свободно ${session.free} ${pluralRu(session.free, ["место", "места", "мест"])}`}</span>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireStaff } from "@/lib/auth/viewer";
 import { getDashboard } from "@/server/admin-orders";
 import { formatDayMonth, formatTime, formatWeekday } from "@/lib/domain/moscow-time";
 import { formatRub } from "@/lib/domain/pricing";
@@ -9,19 +9,23 @@ import { pluralRu } from "@/lib/domain/seats";
 export const metadata: Metadata = { title: "Сводка" };
 
 export default async function DashboardPage() {
-  await requireAdmin();
+  const viewer = await requireStaff();
   const { paid7d, upcoming } = await getDashboard();
+  // Гиду — только ближайшие сеансы: выручка и заказы ему не нужны.
+  const guide = viewer.role === "guide";
   return (
     <>
       <h1 className="page-title">Сводка</h1>
 
-      <Link href="/admin/orders?status=paid" className="stat-card stat-card--paid">
-        <span className="stat-label">Оплачено за 7 дней</span>
-        <span className="stat-value">
-          {paid7d.count} {pluralRu(paid7d.count, ["заказ", "заказа", "заказов"])} · {formatRub(paid7d.sum)}
-        </span>
-        <span className="stat-link">Открыть список →</span>
-      </Link>
+      {!guide && (
+        <Link href="/admin/orders?status=paid" className="stat-card stat-card--paid">
+          <span className="stat-label">Оплачено за 7 дней</span>
+          <span className="stat-value">
+            {paid7d.count} {pluralRu(paid7d.count, ["заказ", "заказа", "заказов"])} · {formatRub(paid7d.sum)}
+          </span>
+          <span className="stat-link">Открыть список →</span>
+        </Link>
+      )}
 
       <section className="panel-section">
         <h2 className="section-title">Ближайшие сеансы</h2>

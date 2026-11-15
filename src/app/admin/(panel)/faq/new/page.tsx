@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireAdmin } from "@/lib/auth/viewer";
 import { EMPTY_FAQ, FaqForm } from "@/components/admin/FaqForm";
 
 export const metadata: Metadata = { title: "Новый вопрос" };

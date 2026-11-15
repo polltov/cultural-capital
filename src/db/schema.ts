@@ -128,6 +128,27 @@ export const faqItems = pgTable("faq_items", {
   updatedAt: ts("updated_at").notNull().defaultNow(),
 });
 
+export const adminRole = pgEnum("admin_role", ["admin", "guide"]);
+
+/**
+ * Сотрудники с личным входом в админку. Владелец (логин и хеш пароля из переменных окружения) в таблице не хранится.
+ * `admin` — всё, кроме учётки владельца; `guide` — только сводка сеансов, списки участников и отметка прихода.
+ * `token_version` растёт при смене пароля, роли или отключении — выданные раньше сессии перестают действовать.
+ */
+export const adminUsers = pgTable("admin_users", {
+  id: serial("id").primaryKey(),
+  /** Хранится в нижнем регистре: вход не зависит от регистра. */
+  login: text("login").notNull().unique(),
+  name: text("name").notNull().default(""),
+  passwordHash: text("password_hash").notNull(),
+  role: adminRole("role").notNull().default("guide"),
+  active: boolean("active").notNull().default(true),
+  tokenVersion: integer("token_version").notNull().default(0),
+  lastLoginAt: ts("last_login_at"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+});
+
 export const rateLimitHits = pgTable(
   "rate_limit_hits",
   {

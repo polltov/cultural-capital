@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { revalidatePublicSite } from "@/server/revalidate";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireAdmin } from "@/lib/auth/viewer";
 import { idSchema } from "@/lib/validation/tour";
 import {
   deleteSession, reorderTours, saveSession, saveTour, setTourPublished,

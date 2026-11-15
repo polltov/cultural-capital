@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireAdmin } from "@/lib/auth/viewer";
 import { db } from "@/db/client";
 import { tours, tourSessions } from "@/db/schema";
 import { asc, desc } from "drizzle-orm";

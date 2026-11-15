@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { revalidatePublicSite } from "@/server/revalidate";
 import { after } from "next/server";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireAdmin } from "@/lib/auth/viewer";
 import { ORDER_STATUSES, type OrderStatus } from "@/lib/domain/order-status";
 import { idSchema } from "@/lib/validation/tour";
 import { setAdminNote, transitionOrder, type TransitionResult } from "@/server/orders";

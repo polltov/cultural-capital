@@ -1,8 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 
 export const SESSION_COOKIE = "cc_admin";
 export const SESSION_MAX_AGE_SEC = 30 * 24 * 60 * 60;
@@ -26,31 +24,61 @@ export async function verifyCredentials(login: string, password: string): Promis
   const hash = process.env.ADMIN_PASSWORD_HASH;
   const configured = Boolean(expectedLogin && hash);
   // Хеши одинаковой длины → timingSafeEqual не зависит от длины введённого логина.
-  const loginOk = configured && timingSafeEqual(sha256(login), sha256(expectedLogin!));
+  const loginOk = configured && isOwnerLogin(login);
   const passwordOk = await bcrypt.compare(password, configured ? hash! : DUMMY_HASH);
   return configured && loginOk && passwordOk;
 }
 
-export async function signSession(): Promise<string> {
-  return new SignJWT({ sub: "admin" })
+/** Совпадает ли логин с логином владельца (из окружения); сравнение по времени не зависит от введённого. */
+export function isOwnerLogin(login: string): boolean {
+  const expected = process.env.ADMIN_LOGIN;
+  return Boolean(expected) && timingSafeEqual(sha256(login), sha256(expected!));
+}
+
+/** Сверка пароля с хешем сотрудника; без хеша (нет такого логина) — сверка с подставным хешем, ответ `false`. */
+export async function checkPassword(password: string, hash: string | null): Promise<boolean> {
+  const ok = await bcrypt.compare(password, hash ?? DUMMY_HASH);
+  return hash !== null && ok;
+}
+
+/**
+ * Кто вошёл. Владелец — учётка из окружения; его токен несёт отпечаток логина и хеша пароля, поэтому после смены пароля
+ * в Vercel старые сессии владельца перестают действовать. Сотрудник — id и версия токена из `admin_users`.
+ */
+export type SessionSubject = { kind: "owner"; v: string } | { kind: "user"; id: number; v: number };
+
+/** Отпечаток учётки владельца для его токена; без настроенной учётки — `null`. */
+export function ownerFingerprint(): string | null {
+  const login = process.env.ADMIN_LOGIN;
+  const hash = process.env.ADMIN_PASSWORD_HASH;
+  if (!login || !hash) return null;
+  return createHash("sha256").update(`${login}\n${hash}`, "utf8").digest("base64url").slice(0, 22);
+}
+
+export async function signSession(subject: SessionSubject): Promise<string> {
+  const claims = subject.kind === "owner" ? { sub: "admin", v: subject.v } : { sub: `u:${subject.id}`, v: subject.v };
+  return new SignJWT(claims)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${SESSION_MAX_AGE_SEC}s`)
     .sign(secretKey());
 }
 
-export async function verifySessionToken(token: string): Promise<boolean> {
-  if (!token) return false;
+/** Подпись и срок токена; кто в нём — без обращения к БД. Авторитетная проверка — `getViewer()` в `viewer.ts`. */
+export async function readSessionToken(token: string): Promise<SessionSubject | null> {
+  if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secretKey(), { algorithms: ["HS256"] });
-    return payload.sub === "admin";
+    if (payload.sub === "admin" && typeof payload.v === "string") return { kind: "owner", v: payload.v };
+    const m = typeof payload.sub === "string" ? /^u:(\d{1,9})$/.exec(payload.sub) : null;
+    if (m && Number.isInteger(payload.v)) return { kind: "user", id: Number(m[1]), v: payload.v as number };
+    return null;
   } catch {
-    return false;
+    return null;
   }
 }
 
-/** Авторитетная проверка: вызывать в (panel)/layout.tsx и в начале каждого admin Server Action. */
-export async function requireAdmin(): Promise<void> {
-  const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  if (!token || !(await verifySessionToken(token))) redirect("/admin/login");
+/** Оптимистичная проверка для proxy: только подпись и срок. */
+export async function verifySessionToken(token: string): Promise<boolean> {
+  return (await readSessionToken(token)) !== null;
 }

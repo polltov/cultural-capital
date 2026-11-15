@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireAdmin } from "@/lib/auth/viewer";
 import { getAdminTour, listAdminTours } from "@/server/tours";
 import { toMoscowLocalInput } from "@/lib/domain/moscow-time";
 import { TourForm } from "@/components/admin/TourForm";

@@ -1,11 +1,7 @@
 import Image from "next/image";
 import { coverVariant } from "@/lib/domain/tour-text";
+import { optimizableImage } from "@/lib/images";
 import "./cover.css";
-
-/** Картинку можно отдать оптимизатору Next: свои файлы и Vercel Blob (см. images.remotePatterns в next.config.ts). */
-function optimizable(src: string): boolean {
-  return src.startsWith("/") || /^https:\/\/[a-z0-9-]+\.public\.blob\.vercel-storage\.com\//i.test(src);
-}
 
 /**
  * Обложка экскурсии. Есть фото — уменьшенная копия под экран (а не исходник из админки, который бывает и по 8 МБ).
@@ -22,7 +18,7 @@ export function TourCover({ src, alt, seed, variant, sizes, preload = false }: {
 }) {
   if (src) {
     return (
-      <Image className="cover-img" src={src} alt={alt} fill sizes={sizes} preload={preload} unoptimized={!optimizable(src)} />
+      <Image className="cover-img" src={src} alt={alt} fill sizes={sizes} preload={preload} unoptimized={!optimizableImage(src)} />
     );
   }
   return <span className={`cover-art cover-art--${variant ?? coverVariant(seed)}`} aria-hidden="true" />;

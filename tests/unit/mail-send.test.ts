@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { sendMail } from "@/server/mail/send";
+import { sendMail, smtpConfig, type MailTransport } from "@/server/mail/send";
 
 const mail = { to: "anna@example.com", subject: "Тема", html: "<p>Привет</p>", text: "Привет" };
 
@@ -7,7 +7,10 @@ let warn: ReturnType<typeof vi.spyOn>;
 let error: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
-  vi.stubEnv("RESEND_API_KEY", "re_secret_key");
+  vi.stubEnv("SMTP_HOST", "smtp.yandex.ru");
+  vi.stubEnv("SMTP_PORT", "");
+  vi.stubEnv("SMTP_USER", "tickets@x.test");
+  vi.stubEnv("SMTP_PASSWORD", "smtp-secret-pass");
   vi.stubEnv("MAIL_FROM", "Культурная Столица <tickets@x.test>");
   warn = vi.spyOn(console, "warn").mockImplementation(() => {});
   error = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -18,70 +21,73 @@ afterEach(() => {
 });
 
 const logged = () => JSON.stringify([...warn.mock.calls, ...error.mock.calls]);
+const transport = (impl: MailTransport["sendMail"] = async () => ({ messageId: "m1" })) => ({ sendMail: vi.fn(impl) });
+
+describe("smtpConfig", () => {
+  it("порт по умолчанию 465", () => {
+    expect(smtpConfig()).toEqual({ host: "smtp.yandex.ru", port: 465, user: "tickets@x.test", pass: "smtp-secret-pass" });
+  });
+  it("свой порт", () => {
+    vi.stubEnv("SMTP_PORT", "587");
+    expect(smtpConfig()?.port).toBe(587);
+  });
+  it("null без хоста, логина, пароля или с кривым портом", () => {
+    for (const [k, v] of [["SMTP_HOST", ""], ["SMTP_USER", " "], ["SMTP_PASSWORD", ""], ["SMTP_PORT", "abc"]]) {
+      vi.stubEnv(k, v);
+      expect(smtpConfig()).toBeNull();
+      vi.unstubAllEnvs();
+      vi.stubEnv("SMTP_HOST", "smtp.yandex.ru");
+      vi.stubEnv("SMTP_USER", "tickets@x.test");
+      vi.stubEnv("SMTP_PASSWORD", "smtp-secret-pass");
+    }
+  });
+});
 
 describe("sendMail", () => {
-  it("200: true, POST в Resend с Bearer-ключом и нужным телом, таймаут 10 с", async () => {
-    const fetchImpl = vi.fn<typeof fetch>(async () => Response.json({ id: "e1" }, { status: 200 }));
-    await expect(sendMail(mail, fetchImpl)).resolves.toBe(true);
-
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchImpl.mock.calls[0];
-    expect(String(url)).toBe("https://api.resend.com/emails");
-    expect(init!.method).toBe("POST");
-    const headers = new Headers(init!.headers);
-    expect(headers.get("Authorization")).toBe("Bearer re_secret_key");
-    expect(headers.get("Content-Type")).toBe("application/json");
-    expect(JSON.parse(String(init!.body))).toEqual({
-      from: "Культурная Столица <tickets@x.test>", to: ["anna@example.com"], subject: "Тема", html: "<p>Привет</p>", text: "Привет",
+  it("успех: true, письмо от MAIL_FROM с html и текстом", async () => {
+    const t = transport();
+    await expect(sendMail(mail, t)).resolves.toBe(true);
+    expect(t.sendMail).toHaveBeenCalledTimes(1);
+    expect(t.sendMail.mock.calls[0][0]).toEqual({
+      from: "Культурная Столица <tickets@x.test>", to: "anna@example.com", subject: "Тема", html: "<p>Привет</p>", text: "Привет",
     });
-    expect(init!.signal).toBeInstanceOf(AbortSignal);
     expect(error).not.toHaveBeenCalled();
   });
 
-  it("без RESEND_API_KEY: false, fetch не вызывается, предупреждение", async () => {
-    vi.stubEnv("RESEND_API_KEY", "");
-    const fetchImpl = vi.fn<typeof fetch>();
-    await expect(sendMail(mail, fetchImpl)).resolves.toBe(false);
-    expect(fetchImpl).not.toHaveBeenCalled();
+  it("без SMTP_HOST: false, ничего не отправляется, предупреждение", async () => {
+    vi.stubEnv("SMTP_HOST", "");
+    await expect(sendMail(mail)).resolves.toBe(false);
     expect(warn).toHaveBeenCalledTimes(1);
     expect(error).not.toHaveBeenCalled();
   });
 
-  it("без MAIL_FROM: false, fetch не вызывается, предупреждение", async () => {
+  it("без MAIL_FROM: false, транспорт не вызывается, предупреждение", async () => {
     vi.stubEnv("MAIL_FROM", "");
-    const fetchImpl = vi.fn<typeof fetch>();
-    await expect(sendMail(mail, fetchImpl)).resolves.toBe(false);
-    expect(fetchImpl).not.toHaveBeenCalled();
+    const t = transport();
+    await expect(sendMail(mail, t)).resolves.toBe(false);
+    expect(t.sendMail).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalledTimes(1);
   });
 
-  it("ответ 500: false и error в логе, без ключа и тела письма", async () => {
-    const fetchImpl = vi.fn<typeof fetch>(async () => new Response("upstream boom", { status: 500 }));
-    await expect(sendMail(mail, fetchImpl)).resolves.toBe(false);
+  it("отказ сервера: false и error в логе с кодом, без пароля и тела письма", async () => {
+    const t = transport(async () => {
+      throw Object.assign(new Error("Invalid login: 535 5.7.8 authentication failed"), { code: "EAUTH", responseCode: 535 });
+    });
+    await expect(sendMail(mail, t)).resolves.toBe(false);
     expect(error).toHaveBeenCalledTimes(1);
     const log = logged();
-    expect(log).toContain("500");
-    expect(log).not.toContain("re_secret_key");
+    expect(log).toContain("EAUTH");
+    expect(log).toContain("535");
+    expect(log).not.toContain("smtp-secret-pass");
     expect(log).not.toContain("Привет");
   });
 
-  it("сетевая ошибка/таймаут: false, не бросает, в логе нет ключа", async () => {
-    const fetchImpl = vi.fn<typeof fetch>(async () => {
-      throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+  it("сеть/таймаут: false, не бросает", async () => {
+    const t = transport(async () => {
+      throw Object.assign(new Error("Connection timeout"), { code: "ETIMEDOUT" });
     });
-    await expect(sendMail(mail, fetchImpl)).resolves.toBe(false);
-    expect(error).toHaveBeenCalledTimes(1);
-    expect(logged()).not.toContain("re_secret_key");
-  });
-
-  it("по умолчанию использует глобальный fetch", async () => {
-    const spy = vi.fn<typeof fetch>(async () => Response.json({ id: "e1" }));
-    vi.stubGlobal("fetch", spy);
-    try {
-      await expect(sendMail(mail)).resolves.toBe(true);
-      expect(spy).toHaveBeenCalledTimes(1);
-    } finally {
-      vi.unstubAllGlobals();
-    }
+    await expect(sendMail(mail, t)).resolves.toBe(false);
+    expect(logged()).toContain("ETIMEDOUT");
+    expect(logged()).not.toContain("smtp-secret-pass");
   });
 });

@@ -51,7 +51,7 @@ export function ImageDrop({
         }}
       >
         {value ? (
-          // eslint-disable-next-line @next/next/no-img-element -- превью обложки из Blob, без оптимизатора
+          // eslint-disable-next-line @next/next/no-img-element -- превью обложки из хранилища, без оптимизатора
           <img src={value} alt="Обложка" className="drop-img" />
         ) : (
           <span className="muted">Перетащите фото сюда</span>

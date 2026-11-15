@@ -5,7 +5,7 @@ import { startOfMoscowDay } from "@/lib/domain/moscow-time";
 import { occupiedSeats } from "@/server/orders";
 import { sendAbandoned, sendReminder } from "@/server/ticket";
 
-/** Сколько писем ушло за запуск; `failed` — не ушли (почта не настроена, сбой Resend или БД), повтор — при следующем запуске. */
+/** Сколько писем ушло за запуск; `failed` — не ушли (почта не настроена, сбой почтового сервиса или БД), повтор — при следующем запуске. */
 export type DailyReport = { reminders: number; abandoned: number; failed: number };
 
 const H = 3600_000;
@@ -49,7 +49,7 @@ async function claimAndSend(db: Db, orderId: number, mark: Mark, send: (id: numb
 }
 
 /**
- * Дневная задача (Vercel Cron, вечер по Москве):
+ * Дневная задача (расписание deploy/cron.mjs, вечер по Москве):
  * 1. Напоминание об экскурсии всем оплаченным заказам на сеансы до конца завтрашнего дня по Москве, которым его ещё не слали.
  *    Окно «до конца завтра» (а не «ровно завтра») подбирает и сегодняшние вечерние сеансы, если напоминание вчера не ушло.
  * 2. При ABANDONED_MAIL=on — «вы не завершили оплату» по неоплаченным заказам последних дней, если на ту же дату ещё хватает мест,

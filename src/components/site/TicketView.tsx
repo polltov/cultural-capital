@@ -27,7 +27,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-function PaidTicket({ ticket: t, qr }: { ticket: TicketData; qr?: string }) {
+function PaidTicket({ ticket: t, qr, refunded }: { ticket: TicketData; qr?: string; refunded: number }) {
   const meetingPoint = t.meetingPoint.trim();
   const bring = t.whatToBring.trim();
   return (
@@ -67,6 +67,7 @@ function PaidTicket({ ticket: t, qr }: { ticket: TicketData; qr?: string }) {
             <PrintButton />
           </div>
           <p className="order-receipt">Кассовый чек отправлен на email отдельным письмом от ЮKassa</p>
+          {refunded > 0 && <p className="order-receipt">За отменённые билеты возвращено {formatRub(refunded)}</p>}
         </div>
       </article>
       <p className="order-terms">{CANCEL_TERMS}</p>
@@ -109,7 +110,7 @@ function UnpaidState({ title, text }: { title: string; text: string }) {
 export function TicketView({ view, ticket, refunded, qr }: OrderPageData) {
   return (
     <section className="order-view">
-      {view === "paid" && <PaidTicket ticket={ticket} qr={qr} />}
+      {view === "paid" && <PaidTicket ticket={ticket} qr={qr} refunded={refunded} />}
       {view === "awaiting" && (
         <>
           <AwaitPayment />

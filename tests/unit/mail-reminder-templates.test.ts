@@ -87,3 +87,22 @@ describe("QR-код в письмах", () => {
     expect(reminderEmail(t).html).not.toContain("<img");
   });
 });
+
+describe("ticketsCancelledEmail", () => {
+  it("какие билеты отменены, сколько возвращаем, что осталось, ссылка на билет", async () => {
+    const { ticketsCancelledEmail } = await import("@/server/mail/templates");
+    const m = ticketsCancelledEmail({ ...t, children: 1, adults: 1 }, { children: 1, adults: 0 }, 1000);
+    expect(m.subject).toBe("Часть билетов по заказу КС-0057 отменена");
+    for (const s of ["отменены билеты: 1 детский.", "Возвращаем вам 1", "Осталось", "1 детский + 1 взрослый", t.url]) {
+      expect(m.text).toContain(s);
+    }
+    expect(m.text).not.toMatch(/<[a-z/]/i);
+  });
+
+  it("без возврата — без строк про деньги", async () => {
+    const { ticketsCancelledEmail } = await import("@/server/mail/templates");
+    const m = ticketsCancelledEmail({ ...t, children: 2, adults: 0 }, { children: 0, adults: 1 }, 0);
+    expect(m.text).not.toContain("Возвращаем");
+    expect(m.text).not.toContain("Деньги вернутся");
+  });
+});

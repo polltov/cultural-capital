@@ -7,8 +7,8 @@ import { requireAdmin } from "@/lib/auth/viewer";
 import { ORDER_STATUSES, type OrderStatus } from "@/lib/domain/order-status";
 import { idSchema } from "@/lib/validation/tour";
 import { setAdminNote, transitionOrder, type TransitionResult } from "@/server/orders";
-import { moveOrder, refundOrder, type ActionResult } from "@/server/refunds";
-import { sendCancelled, sendTicket } from "@/server/ticket";
+import { cancelTickets, moveOrder, refundOrder, type ActionResult } from "@/server/refunds";
+import { sendCancelled, sendTicket, sendTicketsCancelled } from "@/server/ticket";
 
 const BAD_REQUEST = "Некорректный запрос";
 
@@ -46,6 +46,18 @@ export async function refundAction(id: number, amount: number): Promise<ActionRe
   if (r.ok) {
     revalidateAll(id);
     after(() => sendCancelled(id));
+  }
+  return r;
+}
+
+/** «Отменить часть билетов»: остальные билеты действуют; клиенту — письмо с суммой возврата и ссылкой на обновлённый билет. */
+export async function cancelTicketsAction(id: number, children: number, adults: number, amount: number): Promise<ActionResult> {
+  await requireAdmin();
+  if (!idSchema.safeParse(id).success || ![children, adults, amount].every(Number.isInteger)) return { ok: false, error: BAD_REQUEST };
+  const r = await cancelTickets(id, { children, adults }, amount);
+  if (r.ok) {
+    revalidateAll(id);
+    after(() => sendTicketsCancelled(id, { children, adults }, amount));
   }
   return r;
 }

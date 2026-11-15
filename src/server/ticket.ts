@@ -1,11 +1,11 @@
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull } from "drizzle-orm";
 import { db as sharedDb, type Db } from "@/db/client";
-import { orders, tours, tourSessions } from "@/db/schema";
+import { orderRefunds, orders, tours, tourSessions } from "@/db/schema";
 import { formatOrderNumber } from "@/lib/domain/order-number";
 import { ticketQrImageUrl } from "@/lib/checkin";
 import { siteUrl } from "@/lib/site-url";
 import { sendMail } from "./mail/send";
-import { abandonedEmail, cancelledEmail, reminderEmail, sorryEmail, ticketEmail, type TicketData } from "./mail/templates";
+import { abandonedEmail, cancelledEmail, reminderEmail, sorryEmail, ticketEmail, ticketsCancelledEmail, type TicketData } from "./mail/templates";
 
 type Loaded = { ticket: TicketData; refunded: number; slug: string };
 
@@ -44,13 +44,13 @@ async function deliver(
   what: string,
   orderId: number,
   db: Db,
-  compose: (l: Loaded) => { subject: string; html: string; text: string },
+  compose: (l: Loaded) => { subject: string; html: string; text: string } | Promise<{ subject: string; html: string; text: string }>,
   onSent?: () => Promise<unknown>,
 ): Promise<boolean> {
   try {
     const l = await load(orderId, db);
     if (!l) return false;
-    const ok = await sendMail({ to: l.ticket.email, ...compose(l) });
+    const ok = await sendMail({ to: l.ticket.email, ...(await compose(l)) });
     if (ok) await onSent?.();
     return ok;
   } catch (e) {
@@ -68,9 +68,20 @@ export function sendTicket(orderId: number, kind: "paid" | "moved", db: Db = sha
   );
 }
 
-/** Письмо об отмене; сумма возврата берётся из заказа (`refunded_amount`). */
+/**
+ * Письмо об отмене. Сумма — последнего возврата по заказу (той отмены, что закрыла заказ): о прежних частичных возвратах
+ * клиенту уже писали. Заказы без истории возвратов (до её появления) — вся `refunded_amount`.
+ */
 export function sendCancelled(orderId: number, db: Db = sharedDb): Promise<boolean> {
-  return deliver("отмена", orderId, db, (l) => cancelledEmail(l.ticket, l.refunded));
+  return deliver("отмена", orderId, db, async (l) => {
+    const [last] = await db
+      .select({ amount: orderRefunds.amount })
+      .from(orderRefunds)
+      .where(eq(orderRefunds.orderId, orderId))
+      .orderBy(desc(orderRefunds.createdAt), desc(orderRefunds.id))
+      .limit(1);
+    return cancelledEmail(l.ticket, last ? last.amount : l.refunded);
+  });
 }
 
 /** Письмо-извинение: поздняя оплата, а мест уже нет. */
@@ -86,4 +97,9 @@ export function sendReminder(orderId: number, db: Db = sharedDb): Promise<boolea
 /** «Вы не завершили оплату» со ссылкой на покупку на странице экскурсии. */
 export function sendAbandoned(orderId: number, db: Db = sharedDb): Promise<boolean> {
   return deliver("незавершённая оплата", orderId, db, (l) => abandonedEmail(l.ticket, `${siteUrl()}/tours/${l.slug}#booking`));
+}
+
+/** Письмо о частичной отмене: отменённые билеты и сумма возврата этой операции; состав в письме — оставшиеся билеты. */
+export function sendTicketsCancelled(orderId: number, cancelled: { children: number; adults: number }, refunded: number, db: Db = sharedDb): Promise<boolean> {
+  return deliver("часть билетов отменена", orderId, db, (l) => ticketsCancelledEmail(l.ticket, cancelled, refunded));
 }

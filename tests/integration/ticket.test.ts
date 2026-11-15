@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
 import { db, type Db } from "@/db/client";
-import { orders, tours, tourSessions } from "@/db/schema";
+import { orderRefunds, orders, tours, tourSessions } from "@/db/schema";
 import { loadTicket, sendCancelled, sendSorry, sendTicket } from "@/server/ticket";
 import { sendMail } from "@/server/mail/send";
 import { formatRub } from "@/lib/domain/pricing";
@@ -152,6 +152,17 @@ describe("sendCancelled", () => {
     expect(mail.subject).toBe("Заказ КС-0057 отменён");
     expect(mail.html).toContain(formatRub(1635));
     expect(await sentAt(o.id)).toBeNull();
+  });
+
+  it("после частичных отмен — сумма последнего возврата (о прежних клиенту уже писали)", async () => {
+    const o = await setup({ refundedAmount: 2270 });
+    await db.insert(orderRefunds).values([
+      { orderId: o.id, amount: 1000, children: 1, adults: 0, source: "admin", createdAt: new Date(Date.now() - 60_000) },
+      { orderId: o.id, amount: 1270, children: 1, adults: 1, source: "admin" },
+    ]);
+    expect(await sendCancelled(o.id, db)).toBe(true);
+    expect(send.mock.calls[0][0].html).toContain(formatRub(1270));
+    expect(send.mock.calls[0][0].html).not.toContain(formatRub(2270));
   });
 
   it("возврата нет — письмо «без возврата»", async () => {

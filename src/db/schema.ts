@@ -87,6 +87,29 @@ export const orders = pgTable(
   ],
 );
 
+/**
+ * История возвратов по заказу: каждая отмена (части билетов или всего заказа) с её суммой. `orders.refunded_amount` —
+ * их сумма. `source`: `admin` — из админки, `late` — автовозврат поздней оплаты, `external` — оформлен в кабинете ЮKassa,
+ * `legacy` — возврат, сделанный до появления этой таблицы. `children`/`adults` — сколько билетов отменено этой операцией.
+ */
+export const orderRefunds = pgTable(
+  "order_refunds",
+  {
+    id: serial("id").primaryKey(),
+    orderId: integer("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+    refundId: text("refund_id"),
+    amount: integer("amount").notNull(),
+    children: integer("children").notNull().default(0),
+    adults: integer("adults").notNull().default(0),
+    source: text("source").notNull(),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("order_refunds_order_idx").on(t.orderId),
+    check("order_refunds_amount_check", sql`${t.amount} >= 0 and ${t.children} >= 0 and ${t.adults} >= 0`),
+  ],
+);
+
 export const paymentEvents = pgTable(
   "payment_events",
   {

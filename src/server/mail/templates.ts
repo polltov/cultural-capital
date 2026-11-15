@@ -262,3 +262,32 @@ export function abandonedEmail(t: TicketData, buyUrl: string): Email {
 
   return { subject, html, text };
 }
+
+/** Частичная отмена: какие билеты отменены, сколько возвращаем, какие остались (`t` — уже после отмены). */
+export function ticketsCancelledEmail(t: TicketData, cancelled: { children: number; adults: number }, refunded: number): Email {
+  const subject = `Часть билетов по заказу ${t.number} отменена`;
+  const lead =
+    `В заказе ${t.number} отменены билеты: ${formatComposition(cancelled.children, cancelled.adults)}.` +
+    (refunded > 0 ? ` Возвращаем вам ${formatRub(refunded)}.` : "");
+  const note = refunded > 0 ? "Деньги вернутся тем же способом, которым вы платили, в течение нескольких дней — срок зависит от банка." : "";
+  const rest = "Остальные билеты действуют — обновлённый билет по ссылке ниже.";
+  const rows: Row[] = [["Номер билета", t.number], ...tourRows(t), ["Осталось", formatComposition(t.children, t.adults)]];
+  const footer = footerLines(false);
+
+  const html = layout(
+    "Часть билетов отменена",
+    paragraph(`Здравствуйте, ${esc(t.name)}!`) +
+      paragraph(esc(lead)) +
+      (note ? paragraph(esc(note)) : "") +
+      paragraph(esc(rest)) +
+      detailsTable(rows) +
+      button(t.url, "Открыть билет"),
+    footer,
+  );
+  const text = [
+    `Здравствуйте, ${t.name}!`, "", lead, ...(note ? ["", note] : []), "", rest, "", ...rows.map(([k, v]) => `${k}: ${v}`), "",
+    `Билет на сайте: ${t.url}`, "", ...footer,
+  ].join("\n");
+
+  return { subject, html, text };
+}

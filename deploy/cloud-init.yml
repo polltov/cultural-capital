@@ -49,7 +49,11 @@ runcmd:
   - install -d -o deploy -g deploy -m 750 /home/deploy/app
   - systemctl enable docker
   - systemctl restart docker
-  - ufw allow OpenSSH
+  # SSH — номером порта, а не профилем OpenSSH: на сервере 2026-11-15 правило по профилю не открыло порт 22, и в
+  # сервер нельзя было зайти (ping и порт 80 отвечали, 22 молчал для всех)
+  - ufw allow 22/tcp
   - ufw allow 80/tcp
   - ufw allow 443
   - ufw --force enable
+  # итог настройки — в системный журнал сервера (панель Селектела → сервер → Syslog): видно без входа на сервер
+  - sh -c '{ echo "== ufw"; ufw status verbose; echo "== порты"; ss -ltn; echo "== docker"; docker --version; docker compose version; echo "== deploy"; id deploy; } > /dev/console 2>&1'

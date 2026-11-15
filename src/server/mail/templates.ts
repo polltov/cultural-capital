@@ -184,3 +184,66 @@ export function sorryEmail(t: TicketData): Email {
 
   return { subject, html, text };
 }
+
+/** Напоминание накануне: когда и куда приходить, что взять, ссылка на билет. */
+export function reminderEmail(t: TicketData): Email {
+  const subject = `Напоминание: «${t.tourTitle}» — ${formatSessionLong(t.startsAt)}`;
+  const lead = `Напоминаем об экскурсии «${t.tourTitle}». Ждём вас!`;
+  const rows: Row[] = [...tourRows(t)];
+  if (t.meetingPoint.trim()) rows.push(["Место встречи", t.meetingPoint.trim()]);
+  rows.push(["Состав", formatComposition(t.children, t.adults)], ["Номер билета", t.number]);
+  const bring = t.whatToBring.trim();
+  const contacts = contactItems();
+  const late = contacts.length ? "Если опаздываете или планы изменились, напишите или позвоните нам." : "";
+  const footer = footerLines(false);
+
+  const html = layout(
+    "До встречи на экскурсии",
+    paragraph(`Здравствуйте, ${esc(t.name)}!`) +
+      paragraph(esc(lead)) +
+      detailsTable(rows) +
+      (bring ? section("Что взять с собой", bring) : "") +
+      button(t.url, "Открыть билет") +
+      (late ? paragraph(esc(late)) : ""),
+    footer,
+  );
+  const text = [
+    `Здравствуйте, ${t.name}!`,
+    "",
+    lead,
+    "",
+    ...rows.map(([k, v]) => `${k}: ${v}`),
+    ...(bring ? ["", "Что взять с собой:", bring] : []),
+    "",
+    `Билет на сайте: ${t.url}`,
+    ...(late ? ["", late] : []),
+    "",
+    ...footer,
+  ].join("\n");
+
+  return { subject, html, text };
+}
+
+/** «Вы не завершили оплату»: заказ не оплачен, а места на ту же дату ещё есть. `buyUrl` — страница экскурсии. */
+export function abandonedEmail(t: TicketData, buyUrl: string): Email {
+  const subject = `Вы не завершили покупку — «${t.tourTitle}»`;
+  const lead = `Вы выбирали билеты на экскурсию «${t.tourTitle}», но оплата не завершилась. Места на эту дату пока есть — можно вернуться и купить билеты.`;
+  const ignore = "Если вы уже купили билеты или передумали, просто не обращайте внимания на это письмо.";
+  const rows: Row[] = [...tourRows(t), ["Состав", formatComposition(t.children, t.adults)]];
+  const footer = footerLines(false);
+
+  const html = layout(
+    "Вы не завершили покупку",
+    paragraph(`Здравствуйте, ${esc(t.name)}!`) +
+      paragraph(esc(lead)) +
+      detailsTable(rows) +
+      button(buyUrl, "Купить билеты") +
+      paragraph(esc(ignore)),
+    footer,
+  );
+  const text = [
+    `Здравствуйте, ${t.name}!`, "", lead, "", ...rows.map(([k, v]) => `${k}: ${v}`), "", `Купить билеты: ${buyUrl}`, "", ignore, "", ...footer,
+  ].join("\n");
+
+  return { subject, html, text };
+}

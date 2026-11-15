@@ -130,7 +130,8 @@ export async function moveOrder(orderId: number, targetSessionId: number, db: Db
     const free = target.capacity - (await occupiedSeats(tx, targetSessionId));
     if (participants > free) return { ok: false, error: `В выбранном сеансе свободно ${Math.max(free, 0)}, в заказе ${participants}` };
 
-    await tx.update(orders).set({ sessionId: targetSessionId, updatedAt: new Date() }).where(eq(orders.id, o.id));
+    // Напоминание накануне относилось к старой дате — для новой оно должно уйти заново.
+    await tx.update(orders).set({ sessionId: targetSessionId, reminderSentAt: null, updatedAt: new Date() }).where(eq(orders.id, o.id));
     return { ok: true };
   });
 }

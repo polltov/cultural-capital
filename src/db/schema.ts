@@ -70,6 +70,10 @@ export const orders = pgTable(
     refundedAmount: integer("refunded_amount").notNull().default(0),
     ticketSentAt: ts("ticket_sent_at"),
     closingReceiptAt: ts("closing_receipt_at"),
+    /** Письмо-напоминание накануне экскурсии отправлено; при переносе на другой сеанс сбрасывается. */
+    reminderSentAt: ts("reminder_sent_at"),
+    /** Письмо «вы не завершили оплату» отправлено (только для неоплаченных заказов). */
+    abandonedMailSentAt: ts("abandoned_mail_sent_at"),
     createdAt: ts("created_at").notNull().defaultNow(),
     updatedAt: ts("updated_at").notNull().defaultNow(),
   },

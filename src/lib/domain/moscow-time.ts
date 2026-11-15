@@ -106,3 +106,9 @@ export function formatMonthTitle(d: Date, now: Date = new Date()): string {
 export function toMoscowIso(d: Date): string {
   return `${toMoscowLocalInput(d)}:00+03:00`;
 }
+
+/** Полночь по Москве того дня, в который попадает `d`, как момент времени (UTC+3, без перехода на летнее время). */
+export function startOfMoscowDay(d: Date): Date {
+  const p = parts(d);
+  return new Date(Date.UTC(Number(p.year), p.month - 1, p.day) - OFFSET_MS);
+}

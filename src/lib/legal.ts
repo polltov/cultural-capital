@@ -30,7 +30,7 @@ export const processors = {
 };
 
 /** Дата, с которой действуют текущие редакции политики, согласия и оферты. */
-export const LEGAL_EDITION = "15 ноября 2026 г.";
+export const LEGAL_EDITION = "16 ноября 2026 г.";
 
 export const MISSING = "[не заполнено]";
 

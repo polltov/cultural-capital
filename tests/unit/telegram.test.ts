@@ -4,7 +4,7 @@ import { formatRub } from "@/lib/domain/pricing";
 
 const paid = {
   number: "КС-0057", tourTitle: "Египетский зал Эрмитажа", startsAt: new Date("2026-10-04T08:00:00Z"),
-  children: 2, adults: 1, total: 3270, name: "Анна", phone: "+79991234567", adminUrl: "https://x.test/admin/orders/57",
+  children: 2, adults: 1, total: 3270, adminUrl: "https://x.test/admin/orders/57",
 };
 
 describe("buildPaidOrderMessage", () => {
@@ -13,16 +13,20 @@ describe("buildPaidOrderMessage", () => {
   });
   it("contains key facts and the admin link", () => {
     const m = buildPaidOrderMessage(paid);
-    for (const s of ["Египетский зал Эрмитажа", "вс, 4 октября 2026, 11:00", "2 детских + 1 взрослый", "Анна, +79991234567", "https://x.test/admin/orders/57"]) {
+    for (const s of ["Египетский зал Эрмитажа", "вс, 4 октября 2026, 11:00", "2 детских + 1 взрослый", "https://x.test/admin/orders/57"]) {
       expect(m).toContain(s);
     }
   });
-  it("escapes html in name, tour title and phone", () => {
-    const m = buildPaidOrderMessage({ ...paid, name: "<script>x</script>", tourTitle: "a & b", phone: "<b>" });
+  it("carries no personal data: Telegram is abroad, the buyer's name and phone stay on the server in Russia", () => {
+    const m = buildPaidOrderMessage({ ...paid, name: "Анна", phone: "+79991234567" } as typeof paid);
+    expect(m).not.toContain("Анна");
+    expect(m).not.toContain("+79991234567");
+    expect(m).not.toContain("9991234567");
+  });
+  it("escapes html in the tour title", () => {
+    const m = buildPaidOrderMessage({ ...paid, tourTitle: "<script>a & b</script>" });
     expect(m).not.toContain("<script>");
-    expect(m).toContain("&lt;script&gt;");
-    expect(m).toContain("a &amp; b");
-    expect(m).toContain("&lt;b&gt;");
+    expect(m).toContain("&lt;script&gt;a &amp; b&lt;/script&gt;");
   });
 });
 

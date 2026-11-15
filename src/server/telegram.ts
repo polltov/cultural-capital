@@ -47,9 +47,12 @@ async function sendTelegram(cfg: { token: string; chatId: string }, text: string
   }
 }
 
+/**
+ * Что уходит в Telegram об оплаченном заказе. Telegram за границей, а данные покупателей по закону (152-ФЗ) хранятся и
+ * обрабатываются в России, поэтому имени, телефона и почты здесь нет — их администратор видит по ссылке в админке.
+ */
 type OrderRow = {
-  number: string; tourTitle: string; startsAt: Date; children: number; adults: number; total: number;
-  name: string; phone: string; adminUrl: string;
+  number: string; tourTitle: string; startsAt: Date; children: number; adults: number; total: number; adminUrl: string;
 };
 
 /** Загружает заказ и отправляет сообщение, собранное `compose`. Ссылка в админку без токена страницы заказа. */
@@ -67,8 +70,7 @@ async function notifyOrder(orderId: number, db: Db, compose: (o: OrderRow) => st
     if (!row) return;
     text = compose({
       number: formatOrderNumber(row.o.number), tourTitle: row.title, startsAt: row.startsAt,
-      children: row.o.children, adults: row.o.adults, total: row.o.total, name: row.o.customerName,
-      phone: row.o.phone, adminUrl: `${siteUrl()}/admin/orders/${row.o.id}`,
+      children: row.o.children, adults: row.o.adults, total: row.o.total, adminUrl: `${siteUrl()}/admin/orders/${row.o.id}`,
     });
   } catch (e) {
     console.error("Telegram notify error", e);
@@ -77,16 +79,12 @@ async function notifyOrder(orderId: number, db: Db, compose: (o: OrderRow) => st
   await sendTelegram(cfg, text);
 }
 
-export function buildPaidOrderMessage(o: {
-  number: string; tourTitle: string; startsAt: Date; children: number; adults: number; total: number;
-  name: string; phone: string; adminUrl: string;
-}): string {
+export function buildPaidOrderMessage(o: OrderRow): string {
   return [
     `<b>Оплачен заказ ${esc(o.number)} · ${formatRub(o.total)}</b>`,
     esc(o.tourTitle),
     formatSessionLong(o.startsAt),
     formatComposition(o.children, o.adults),
-    `${esc(o.name)}, ${esc(o.phone)}`,
     esc(o.adminUrl),
   ].join("\n");
 }

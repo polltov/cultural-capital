@@ -44,7 +44,9 @@ describe("notifyPaidOrder", () => {
     expect(body.text).toContain("Египетский зал");
     expect(body.text).toContain("вс, 4 октября 2026, 11:00");
     expect(body.text).toContain("2 детских + 1 взрослый");
-    expect(body.text).toContain("Анна &lt;b&gt;, +79991234567");
+    // имя и телефон покупателя в Telegram (за границей) не уходят
+    expect(body.text).not.toContain("Анна");
+    expect(body.text).not.toContain("+79991234567");
     expect(lines.at(-1)).toBe(`https://x.test/admin/orders/${o.id}`);
     expect(body.text).not.toContain("tok_secret_access");
   });

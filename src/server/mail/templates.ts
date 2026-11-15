@@ -19,6 +19,8 @@ export type TicketData = {
   email: string;
   /** Ссылка на страницу заказа (билет). */
   url: string;
+  /** Картинка QR-кода для отметки прихода (`/order/<token>/qr`); без неё письмо обходится без QR. */
+  qrImageUrl?: string;
 };
 
 type Email = { subject: string; html: string; text: string };
@@ -55,6 +57,17 @@ function button(url: string, label: string): string {
   return (
     `<p style="margin:0 0 12px;"><a href="${esc(url)}" style="display:inline-block;padding:12px 24px;background:${ACCENT};color:#ffffff;${FONT};font-size:16px;font-weight:bold;text-decoration:none;border-radius:8px;">${esc(label)}</a></p>` +
     `<p style="margin:0 0 20px;${FONT};font-size:13px;line-height:1.4;color:${MUTED};">Если кнопка не открывается, скопируйте ссылку: <a href="${esc(url)}" style="color:${ACCENT};word-break:break-all;">${esc(url)}</a></p>`
+  );
+}
+
+/** QR-код билета картинкой по ссылке: встроенный SVG и data:-картинки почтовые клиенты не показывают. */
+function qrBlock(t: TicketData): string {
+  if (!t.qrImageUrl) return "";
+  return (
+    `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px;"><tr>` +
+    `<td style="padding:0 16px 0 0;vertical-align:middle;"><img src="${esc(t.qrImageUrl)}" width="140" height="140" alt="QR-код билета" style="display:block;border:1px solid ${LINE};"></td>` +
+    `<td style="vertical-align:middle;${FONT};font-size:14px;line-height:1.5;color:${INK};">Покажите QR-код гиду на встрече — с экрана телефона или распечатанным.</td>` +
+    `</tr></table>`
   );
 }
 
@@ -119,6 +132,7 @@ export function ticketEmail(t: TicketData, kind: "paid" | "moved"): Email {
     paragraph(`Здравствуйте, ${esc(t.name)}!`) +
       paragraph(esc(intro)) +
       detailsTable(rows) +
+      qrBlock(t) +
       (bring ? section("Что взять с собой", bring) : "") +
       button(t.url, "Открыть билет") +
       (moved ? "" : paragraph(esc(receipt))),
@@ -202,6 +216,7 @@ export function reminderEmail(t: TicketData): Email {
     paragraph(`Здравствуйте, ${esc(t.name)}!`) +
       paragraph(esc(lead)) +
       detailsTable(rows) +
+      qrBlock(t) +
       (bring ? section("Что взять с собой", bring) : "") +
       button(t.url, "Открыть билет") +
       (late ? paragraph(esc(late)) : ""),

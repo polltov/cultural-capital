@@ -71,3 +71,19 @@ describe("abandonedEmail", () => {
     expect(m.text).not.toMatch(/<[a-z/]/i);
   });
 });
+
+describe("QR-код в письмах", () => {
+  const qr = { ...t, qrImageUrl: "https://x.test/order/abc_DEF-123/qr" };
+
+  it("билет, перенос и напоминание показывают картинку QR-кода, если она есть", async () => {
+    const { ticketEmail } = await import("@/server/mail/templates");
+    for (const m of [ticketEmail(qr, "paid"), ticketEmail(qr, "moved"), reminderEmail(qr)]) {
+      expect(m.html).toContain('<img src="https://x.test/order/abc_DEF-123/qr"');
+      expect(m.html).toContain("Покажите QR-код гиду");
+    }
+  });
+
+  it("без ссылки на картинку блока QR нет", () => {
+    expect(reminderEmail(t).html).not.toContain("<img");
+  });
+});

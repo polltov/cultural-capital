@@ -74,6 +74,8 @@ export const orders = pgTable(
     reminderSentAt: ts("reminder_sent_at"),
     /** Письмо «вы не завершили оплату» отправлено (только для неоплаченных заказов). */
     abandonedMailSentAt: ts("abandoned_mail_sent_at"),
+    /** Гид отметил приход по QR-коду или в списке участников; снятая отметка — `null`. */
+    checkedInAt: ts("checked_in_at"),
     createdAt: ts("created_at").notNull().defaultNow(),
     updatedAt: ts("updated_at").notNull().defaultNow(),
   },

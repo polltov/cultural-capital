@@ -1,0 +1,1 @@
+ALTER TABLE "orders" ADD COLUMN "checked_in_at" timestamp with time zone;

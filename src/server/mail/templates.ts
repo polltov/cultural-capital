@@ -119,6 +119,7 @@ export function ticketEmail(t: TicketData, kind: "paid" | "moved"): Email {
     ? "Мы перенесли ваш билет на другое время — новые дата и время указаны ниже."
     : "Спасибо за покупку! Билет ниже — он же доступен на странице заказа, там его можно распечатать.";
   const receipt = "Кассовый чек придёт отдельным письмом от ЮKassa.";
+  const account = `Все ваши билеты — в личном кабинете: ${siteUrl()}/account`;
 
   const rows: Row[] = [["Номер билета", t.number], ...tourRows(t)];
   if (t.meetingPoint.trim()) rows.push(["Место встречи", t.meetingPoint.trim()]);
@@ -135,7 +136,8 @@ export function ticketEmail(t: TicketData, kind: "paid" | "moved"): Email {
       qrBlock(t) +
       (bring ? section("Что взять с собой", bring) : "") +
       button(t.url, "Открыть билет") +
-      (moved ? "" : paragraph(esc(receipt))),
+      (moved ? "" : paragraph(esc(receipt))) +
+      paragraph(`Все ваши билеты — в <a href="${esc(`${siteUrl()}/account`)}" style="color:${ACCENT};">личном кабинете</a>.`),
     footer,
   );
 
@@ -149,6 +151,8 @@ export function ticketEmail(t: TicketData, kind: "paid" | "moved"): Email {
     "",
     `Билет на сайте: ${t.url}`,
     ...(moved ? [] : ["", receipt]),
+    "",
+    account,
     "",
     ...footer,
   ].join("\n");
@@ -260,5 +264,45 @@ export function abandonedEmail(t: TicketData, buyUrl: string): Email {
     `Здравствуйте, ${t.name}!`, "", lead, "", ...rows.map(([k, v]) => `${k}: ${v}`), "", `Купить билеты: ${buyUrl}`, "", ignore, "", ...footer,
   ].join("\n");
 
+  return { subject, html, text };
+}
+
+/** Частичная отмена: какие билеты отменены, сколько возвращаем, какие остались (`t` — уже после отмены). */
+export function ticketsCancelledEmail(t: TicketData, cancelled: { children: number; adults: number }, refunded: number): Email {
+  const subject = `Часть билетов по заказу ${t.number} отменена`;
+  const lead =
+    `В заказе ${t.number} отменены билеты: ${formatComposition(cancelled.children, cancelled.adults)}.` +
+    (refunded > 0 ? ` Возвращаем вам ${formatRub(refunded)}.` : "");
+  const note = refunded > 0 ? "Деньги вернутся тем же способом, которым вы платили, в течение нескольких дней — срок зависит от банка." : "";
+  const rest = "Остальные билеты действуют — обновлённый билет по ссылке ниже.";
+  const rows: Row[] = [["Номер билета", t.number], ...tourRows(t), ["Осталось", formatComposition(t.children, t.adults)]];
+  const footer = footerLines(false);
+
+  const html = layout(
+    "Часть билетов отменена",
+    paragraph(`Здравствуйте, ${esc(t.name)}!`) +
+      paragraph(esc(lead)) +
+      (note ? paragraph(esc(note)) : "") +
+      paragraph(esc(rest)) +
+      detailsTable(rows) +
+      button(t.url, "Открыть билет"),
+    footer,
+  );
+  const text = [
+    `Здравствуйте, ${t.name}!`, "", lead, ...(note ? ["", note] : []), "", rest, "", ...rows.map(([k, v]) => `${k}: ${v}`), "",
+    `Билет на сайте: ${t.url}`, "", ...footer,
+  ].join("\n");
+
+  return { subject, html, text };
+}
+
+/** Ссылка входа в личный кабинет. */
+export function accountLinkEmail(url: string): Email {
+  const subject = "Вход в личный кабинет — Культурная Столица";
+  const lead = "Чтобы посмотреть свои билеты, откройте ссылку. Она действует 30 минут и подходит для одного входа.";
+  const ignore = "Если вы не запрашивали вход, просто не обращайте внимания на это письмо.";
+  const footer = footerLines(false);
+  const html = layout("Вход в личный кабинет", paragraph("Здравствуйте!") + paragraph(esc(lead)) + button(url, "Войти") + paragraph(esc(ignore)), footer);
+  const text = ["Здравствуйте!", "", lead, "", url, "", ignore, "", ...footer].join("\n");
   return { subject, html, text };
 }

@@ -378,3 +378,4 @@
 .user-roles .check { align-items: flex-start; }
 .user-roles .check input { width: 18px; height: 18px; min-height: 0; margin: 3px 0 0; padding: 0; flex: none; box-shadow: none; }
 .users-table tr.is-off td { color: var(--muted); }
+.partial-grid { display: flex; flex-wrap: wrap; gap: 16px; } .partial-grid .field { flex: 1 1 180px; }

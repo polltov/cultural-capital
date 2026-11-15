@@ -84,6 +84,31 @@ export const orders = pgTable(
     index("orders_status_created_idx").on(t.status, t.createdAt),
     index("orders_session_idx").on(t.sessionId),
     uniqueIndex("orders_payment_id_idx").on(t.paymentId),
+    // Личный кабинет и дневная задача ищут заказы по email без учёта регистра.
+    index("orders_email_lower_idx").on(sql`lower(${t.email})`),
+  ],
+);
+
+/**
+ * История возвратов по заказу: каждая отмена (части билетов или всего заказа) с её суммой. `orders.refunded_amount` —
+ * их сумма. `source`: `admin` — из админки, `late` — автовозврат поздней оплаты, `external` — оформлен в кабинете ЮKassa,
+ * `legacy` — возврат, сделанный до появления этой таблицы. `children`/`adults` — сколько билетов отменено этой операцией.
+ */
+export const orderRefunds = pgTable(
+  "order_refunds",
+  {
+    id: serial("id").primaryKey(),
+    orderId: integer("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+    refundId: text("refund_id"),
+    amount: integer("amount").notNull(),
+    children: integer("children").notNull().default(0),
+    adults: integer("adults").notNull().default(0),
+    source: text("source").notNull(),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("order_refunds_order_idx").on(t.orderId),
+    check("order_refunds_amount_check", sql`${t.amount} >= 0 and ${t.children} >= 0 and ${t.adults} >= 0`),
   ],
 );
 
@@ -148,6 +173,23 @@ export const adminUsers = pgTable("admin_users", {
   createdAt: ts("created_at").notNull().defaultNow(),
   updatedAt: ts("updated_at").notNull().defaultNow(),
 });
+
+/**
+ * Одноразовые ссылки входа в личный кабинет покупателя: в БД только SHA-256 токена. Ссылка живёт 30 минут и гасится при входе.
+ */
+export const customerLoginTokens = pgTable(
+  "customer_login_tokens",
+  {
+    id: serial("id").primaryKey(),
+    /** В нижнем регистре: заказы ищутся по email без учёта регистра. */
+    email: text("email").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: ts("expires_at").notNull(),
+    usedAt: ts("used_at"),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("customer_login_tokens_expires_idx").on(t.expiresAt)],
+);
 
 export const rateLimitHits = pgTable(
   "rate_limit_hits",

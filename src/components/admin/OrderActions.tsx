@@ -6,7 +6,8 @@ import { nextStatuses, type OrderStatus } from "@/lib/domain/order-status";
 import { formatDayMonth, formatTime, formatWeekday } from "@/lib/domain/moscow-time";
 import { formatRub } from "@/lib/domain/pricing";
 import { defaultRefundAmount } from "@/lib/domain/refund-policy";
-import { changeStatus, moveAction, refundAction, resendTicketAction } from "@/app/admin/(panel)/orders/actions";
+import { cancelTicketsAction, changeStatus, moveAction, refundAction, resendTicketAction } from "@/app/admin/(panel)/orders/actions";
+import { formatComposition } from "@/lib/domain/seats";
 
 const BUTTONS: Record<OrderStatus, { label: string; cls: string }> = {
   confirmed: { label: "Подтвердить", cls: "btn btn-accent" },
@@ -30,19 +31,26 @@ type Props = {
   id: number;
   status: OrderStatus;
   total: number;
+  /** Уже возвращено по заказу (частичные отмены). */
+  refunded: number;
+  /** Билеты в заказе сейчас (детские, взрослые) и цены по слепку заказа. */
+  childTickets: number;
+  adultTickets: number;
+  priceChild: number;
+  priceAdult: number;
   startsAt: Date;
   /** Сеансы, куда можно перенести оплаченный заказ (`listMoveTargets`); для остальных статусов пусто. */
   moveTargets: MoveTarget[];
   /** У заказа есть токен страницы и email, то есть билет можно отправить. */
   hasTicket: boolean;
 };
-type Mode = "cancel" | "refund" | "move" | null;
+type Mode = "cancel" | "refund" | "partial" | "move" | null;
 
 const AMOUNT_RE = /^\d{1,9}$/;
 const targetLabel = (t: MoveTarget) =>
   `${formatDayMonth(t.startsAt)}, ${formatWeekday(t.startsAt)}, ${formatTime(t.startsAt)} · свободно ${t.free}`;
 
-export function OrderActions({ id, status, total, startsAt, moveTargets, hasTicket }: Props) {
+export function OrderActions({ id, status, total, refunded, childTickets: children, adultTickets: adults, priceChild, priceAdult, startsAt, moveTargets, hasTicket }: Props) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [failure, setFailure] = useState<string | null>(null);
@@ -50,6 +58,7 @@ export function OrderActions({ id, status, total, startsAt, moveTargets, hasTick
   const [mode, setModeState] = useState<Mode>(null);
   const [amount, setAmount] = useState("");
   const [target, setTarget] = useState("");
+  const [cut, setCut] = useState({ children: 0, adults: 0 });
   // Время открытия страницы — как в TourForm: в рендере часы не читаем.
   const [now] = useState(() => Date.now());
 
@@ -85,10 +94,27 @@ export function OrderActions({ id, status, total, startsAt, moveTargets, hasTick
     run(() => changeStatus(id, to), saved);
   }
 
+  // Возвращать можно только то, что ещё не вернули; по правилу — от стоимости отменяемых билетов.
+  const left = total - refunded;
+  const value = (c: number, a: number) => c * priceChild + a * priceAdult;
+  const byRule = (v: number) => Math.min(defaultRefundAmount(v, startsAt, new Date()), left);
+
   function openRefund() {
     setMode("refund");
     // Сумма по правилу считается в момент открытия диалога, а не при загрузке страницы: страница могла простоять открытой.
-    setAmount(String(defaultRefundAmount(total, startsAt, new Date())));
+    setAmount(String(byRule(value(children, adults))));
+  }
+
+  function openPartial() {
+    setMode("partial");
+    setCut({ children: 0, adults: 0 });
+    setAmount("0");
+  }
+
+  function changeCut(k: "children" | "adults", n: number) {
+    const next = { ...cut, [k]: Math.max(0, Math.min(n, k === "children" ? children : adults)) };
+    setCut(next);
+    setAmount(String(byRule(value(next.children, next.adults))));
   }
 
   function openMove() {
@@ -96,8 +122,12 @@ export function OrderActions({ id, status, total, startsAt, moveTargets, hasTick
     setTarget("");
   }
 
-  const refundValid = AMOUNT_RE.test(amount.trim()) && Number(amount) <= total;
+  const refundValid = AMOUNT_RE.test(amount.trim()) && Number(amount) <= left;
   const refundSum = refundValid ? Number(amount) : 0;
+  const cutCount = cut.children + cut.adults;
+  const cutMax = Math.min(value(cut.children, cut.adults), left);
+  const cutOk = cutCount >= 1 && cutCount < children + adults;
+  const partialValid = cutOk && AMOUNT_RE.test(amount.trim()) && Number(amount) <= cutMax;
 
   return (
     <div className="order-actions">
@@ -141,7 +171,8 @@ export function OrderActions({ id, status, total, startsAt, moveTargets, hasTick
           <p id="refund-rule" className="muted">
             По правилу: за 24 ч и раньше — 100%, позже — 50%
           </p>
-          {!refundValid && <p className="form-error">Сумма — целое число от 0 до {formatRub(total)}</p>}
+          {!refundValid && <p className="form-error">Сумма — целое число от 0 до {formatRub(left)}</p>}
+          {refunded > 0 && <p className="muted">Раньше по заказу уже вернули {formatRub(refunded)}.</p>}
           <p className="muted">Заказ будет отменён, места освободятся, клиент получит письмо об отмене.</p>
           <div className="btn-row">
             <button
@@ -151,6 +182,51 @@ export function OrderActions({ id, status, total, startsAt, moveTargets, hasTick
               onClick={() => run(() => refundAction(id, refundSum), saved)}
             >
               {refundValid ? `Вернуть ${formatRub(refundSum)}` : "Вернуть"}
+            </button>
+            <button type="button" className="btn btn-ghost" disabled={pending} onClick={() => setMode(null)}>
+              Назад
+            </button>
+          </div>
+        </div>
+      )}
+
+      {mode === "partial" && (
+        <div className="order-panel" role="dialog" aria-label="Отмена части билетов">
+          <div className="partial-grid">
+            {children > 0 && (
+              <label className="field">
+                <span className="field-label">Отменить детских (из {children})</span>
+                <input type="number" min={0} max={children} value={cut.children} onChange={(e) => changeCut("children", Number(e.target.value) || 0)} />
+              </label>
+            )}
+            {adults > 0 && (
+              <label className="field">
+                <span className="field-label">Отменить взрослых (из {adults})</span>
+                <input type="number" min={0} max={adults} value={cut.adults} onChange={(e) => changeCut("adults", Number(e.target.value) || 0)} />
+              </label>
+            )}
+          </div>
+          <label className="field">
+            <span className="field-label">Сумма возврата, ₽</span>
+            <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="numeric" autoComplete="off" aria-invalid={cutOk && !partialValid} />
+          </label>
+          <p className="muted">
+            {cutOk
+              ? `Отменяемые билеты стоят ${formatRub(value(cut.children, cut.adults))}; по правилу: за 24 ч и раньше — 100%, позже — 50%. Останется ${formatComposition(children - cut.children, adults - cut.adults)}.`
+              : cutCount >= children + adults
+                ? "Это все билеты заказа — используйте «Отменить и вернуть»."
+                : "Укажите, сколько билетов отменить."}
+          </p>
+          {cutOk && !partialValid && <p className="form-error">Сумма — целое число от 0 до {formatRub(cutMax)}</p>}
+          <p className="muted">Места освободятся сразу, клиент получит письмо; остальные билеты действуют.</p>
+          <div className="btn-row">
+            <button
+              type="button"
+              className="btn btn-danger"
+              disabled={pending || !partialValid}
+              onClick={() => run(() => cancelTicketsAction(id, cut.children, cut.adults, Number(amount)), saved)}
+            >
+              {partialValid ? `Отменить ${formatComposition(cut.children, cut.adults)} и вернуть ${formatRub(Number(amount))}` : "Отменить билеты"}
             </button>
             <button type="button" className="btn btn-ghost" disabled={pending} onClick={() => setMode(null)}>
               Назад
@@ -204,6 +280,11 @@ export function OrderActions({ id, status, total, startsAt, moveTargets, hasTick
               <button type="button" className="btn btn-ghost" disabled={pending} onClick={openRefund}>
                 Отменить и вернуть
               </button>
+              {children + adults >= 2 && (
+                <button type="button" className="btn btn-ghost" disabled={pending} onClick={openPartial}>
+                  Отменить часть билетов
+                </button>
+              )}
               <button type="button" className="btn btn-ghost" disabled={pending} onClick={openMove}>
                 Перенести
               </button>

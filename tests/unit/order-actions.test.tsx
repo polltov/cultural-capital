@@ -2,14 +2,15 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 
-const { changeStatus, refundAction, moveAction, resendTicketAction, replace } = vi.hoisted(() => ({
+const { changeStatus, refundAction, moveAction, resendTicketAction, cancelTicketsAction, replace } = vi.hoisted(() => ({
   changeStatus: vi.fn(),
+  cancelTicketsAction: vi.fn(),
   refundAction: vi.fn(),
   moveAction: vi.fn(),
   resendTicketAction: vi.fn(),
   replace: vi.fn(),
 }));
-vi.mock("@/app/admin/(panel)/orders/actions", () => ({ changeStatus, refundAction, moveAction, resendTicketAction }));
+vi.mock("@/app/admin/(panel)/orders/actions", () => ({ changeStatus, refundAction, moveAction, resendTicketAction, cancelTicketsAction }));
 // Как в Next: `useRouter()` отдаёт один и тот же объект между рендерами.
 const router = { replace };
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
@@ -19,7 +20,8 @@ import type { OrderStatus } from "@/lib/domain/order-status";
 import { formatRub } from "@/lib/domain/pricing";
 
 beforeEach(() => {
-  for (const f of [changeStatus, refundAction, moveAction, resendTicketAction, replace]) f.mockReset();
+  for (const f of [changeStatus, refundAction, moveAction, resendTicketAction, cancelTicketsAction, replace]) f.mockReset();
+  cancelTicketsAction.mockResolvedValue({ ok: true });
   changeStatus.mockResolvedValue({ ok: true });
   refundAction.mockResolvedValue({ ok: true });
   moveAction.mockResolvedValue({ ok: true });
@@ -34,12 +36,19 @@ const targets = [
 ];
 
 /** По умолчанию — оплаченный заказ на 3270 ₽, до начала 48 ч (не ближе и не дальше от границы в 24 ч). */
-function setup(over: { status?: OrderStatus; startsInHours?: number; hasTicket?: boolean; moveTargets?: typeof targets } = {}) {
+function setup(
+  over: { status?: OrderStatus; startsInHours?: number; hasTicket?: boolean; moveTargets?: typeof targets; refunded?: number; children?: number; adults?: number } = {},
+) {
   return render(
     <OrderActions
       id={57}
       status={over.status ?? "paid"}
       total={3270}
+      refunded={over.refunded ?? 0}
+      childTickets={over.children ?? 2}
+      adultTickets={over.adults ?? 1}
+      priceChild={1000}
+      priceAdult={1270}
       startsAt={new Date(Date.now() + (over.startsInHours ?? 48) * HOUR)}
       moveTargets={over.moveTargets ?? targets}
       hasTicket={over.hasTicket ?? true}
@@ -52,7 +61,7 @@ const click = (name: string | RegExp) => fireEvent.click(screen.getByRole("butto
 const buttonNames = () => screen.queryAllByRole("button").map((b) => b.textContent);
 const amount = () => screen.getByLabelText(/Сумма возврата/) as HTMLInputElement;
 
-const PAID_BEFORE_START = ["Отменить и вернуть", "Перенести", "Отправить билет повторно"];
+const PAID_BEFORE_START = ["Отменить и вернуть", "Отменить часть билетов", "Перенести", "Отправить билет повторно"];
 
 describe("OrderActions: оплаченный заказ", () => {
   it("до начала экскурсии — три кнопки, «Отметить проведённым» нет", () => {
@@ -60,9 +69,14 @@ describe("OrderActions: оплаченный заказ", () => {
     expect(buttonNames()).toEqual(PAID_BEFORE_START);
   });
 
-  it("после начала — четыре кнопки по порядку", () => {
+  it("после начала — кнопки по порядку", () => {
     setup({ startsInHours: -1 });
-    expect(buttonNames()).toEqual(["Отменить и вернуть", "Перенести", "Отметить проведённым", "Отправить билет повторно"]);
+    expect(buttonNames()).toEqual(["Отменить и вернуть", "Отменить часть билетов", "Перенести", "Отметить проведённым", "Отправить билет повторно"]);
+  });
+
+  it("в заказе один билет — «Отменить часть билетов» нет", () => {
+    setup({ children: 0, adults: 1 });
+    expect(buttonNames()).not.toContain("Отменить часть билетов");
   });
 
   it("«Отметить проведённым» меняет статус на done и обновляет страницу", async () => {
@@ -266,5 +280,55 @@ describe("OrderActions: старые заявки", () => {
   it("подтверждённая: «Отметить проведённым» и «Отменить»", () => {
     setup({ status: "confirmed", hasTicket: false, moveTargets: [] });
     expect(buttonNames()).toEqual(["Отметить проведённым", "Отменить"]);
+  });
+});
+
+describe("OrderActions: отмена части билетов", () => {
+  const count = (label: RegExp) => screen.getByLabelText(label) as HTMLInputElement;
+
+  it("сумма по правилу от стоимости отменяемых билетов (за 48 ч — 100%); отправка с выбранными билетами", async () => {
+    setup({ startsInHours: 48 });
+    click("Отменить часть билетов");
+    expect(screen.getByRole("button", { name: "Отменить билеты" })).toHaveProperty("disabled", true);
+    fireEvent.change(count(/Отменить детских/), { target: { value: "1" } });
+    expect(amount().value).toBe("1000");
+    expect(screen.getByText(/Останется 1 детский \+ 1 взрослый/)).toBeTruthy();
+    click(/^Отменить 1 детский и вернуть 1\s000\s₽$/);
+    await waitFor(() => expect(cancelTicketsAction).toHaveBeenCalledWith(57, 1, 0, 1000));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/admin/orders/57?saved=1"));
+  });
+
+  it("меньше чем за сутки — 50% с округлением вверх", () => {
+    setup({ startsInHours: 3 });
+    click("Отменить часть билетов");
+    fireEvent.change(count(/Отменить взрослых/), { target: { value: "1" } });
+    expect(amount().value).toBe("635");
+  });
+
+  it("все билеты сразу — нельзя: подсказка про «Отменить и вернуть»", () => {
+    setup();
+    click("Отменить часть билетов");
+    fireEvent.change(count(/Отменить детских/), { target: { value: "2" } });
+    fireEvent.change(count(/Отменить взрослых/), { target: { value: "1" } });
+    expect(screen.getByText(/Это все билеты заказа/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Отменить билеты" })).toHaveProperty("disabled", true);
+  });
+
+  it("сумма больше стоимости отменяемых билетов — ошибка, кнопка неактивна", () => {
+    setup();
+    click("Отменить часть билетов");
+    fireEvent.change(count(/Отменить детских/), { target: { value: "1" } });
+    fireEvent.change(amount(), { target: { value: "1500" } });
+    expect(screen.getByText(plain(`Сумма — целое число от 0 до ${formatRub(1000)}`))).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Отменить билеты" })).toHaveProperty("disabled", true);
+  });
+
+  it("после частичного возврата «Отменить и вернуть» предлагает не больше остатка", () => {
+    setup({ startsInHours: 48, refunded: 1000, children: 1, adults: 1 });
+    click("Отменить и вернуть");
+    expect(amount().value).toBe("2270");
+    fireEvent.change(amount(), { target: { value: "2500" } });
+    expect(screen.getByText(plain(`Сумма — целое число от 0 до ${formatRub(2270)}`))).toBeTruthy();
+    expect(screen.getByText(plain(`Раньше по заказу уже вернули ${formatRub(1000)}.`))).toBeTruthy();
   });
 });

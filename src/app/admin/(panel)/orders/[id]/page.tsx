@@ -3,16 +3,22 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/viewer";
 import { getOrder } from "@/server/admin-orders";
-import { listMoveTargets } from "@/server/refunds";
+import { listMoveTargets, listRefunds } from "@/server/refunds";
 import { paymentStatusLabel } from "@/lib/domain/order-status";
 import { formatOrderNumber } from "@/lib/domain/order-number";
 import { formatRub } from "@/lib/domain/pricing";
+import { formatComposition } from "@/lib/domain/seats";
 import { formatSessionLong, formatDayMonth, formatTime } from "@/lib/domain/moscow-time";
 import { StatusBadge } from "@/components/admin/StatusBadge";
 import { OrderActions } from "@/components/admin/OrderActions";
 import { saveNote } from "../actions";
 
 export const metadata: Metadata = { title: "Заказ" };
+
+const REFUND_SOURCES: Record<string, string> = {
+  late: "автовозврат поздней оплаты",
+  external: "в кабинете ЮKassa",
+};
 
 export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin();
@@ -23,6 +29,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   // Переносить можно только оплаченный заказ; список сеансов нужен лишь ему.
   const moveTargets = o.status === "paid" ? await listMoveTargets(o.id) : [];
   const online = o.paymentId !== null;
+  const refunds = online ? await listRefunds(o.id) : [];
 
   return (
     <>
@@ -37,6 +44,11 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         id={o.id}
         status={o.status}
         total={o.total}
+        refunded={o.refundedAmount}
+        childTickets={o.children}
+        adultTickets={o.adults}
+        priceChild={o.priceChildSnapshot}
+        priceAdult={o.priceAdultSnapshot}
         startsAt={o.startsAt}
         moveTargets={moveTargets}
         hasTicket={o.accessToken !== null && o.email !== null}
@@ -113,10 +125,19 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                 <span className="muted">{paymentStatusLabel(o.paymentStatus)}</span>
               )}
             </dd>
-            {o.refundedAmount > 0 && (
+            {(o.refundedAmount > 0 || refunds.length > 0) && (
               <>
-                <dt>Возврат</dt>
-                <dd>Возвращено {formatRub(o.refundedAmount)}</dd>
+                <dt>Отмены и возвраты</dt>
+                <dd>
+                  Возвращено {formatRub(o.refundedAmount)}
+                  {refunds.map((r) => (
+                    <span key={r.id} className="block muted">
+                      {formatDayMonth(r.createdAt)}, {formatTime(r.createdAt)} · {r.children + r.adults > 0 ? `${formatComposition(r.children, r.adults)} · ` : ""}
+                      {formatRub(r.amount)}
+                      {REFUND_SOURCES[r.source] ? ` · ${REFUND_SOURCES[r.source]}` : ""}
+                    </span>
+                  ))}
+                </dd>
               </>
             )}
             {o.paidAt && (

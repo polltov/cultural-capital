@@ -1,8 +1,9 @@
 import { and, asc, eq, gt, ne, sql } from "drizzle-orm";
 import { db as sharedDb, type Db, type Tx } from "@/db/client";
-import { orders, tours, tourSessions } from "@/db/schema";
+import { orderRefunds, orders, tours, tourSessions } from "@/db/schema";
 import type { OrderStatus } from "@/lib/domain/order-status";
 import { formatRub } from "@/lib/domain/pricing";
+import { formatComposition } from "@/lib/domain/seats";
 import { occupiedSeats } from "@/server/orders";
 import { paymentGateway } from "@/server/payments/gateway";
 import { createReceiptRefund } from "@/server/payments/refund";
@@ -13,28 +14,47 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
 
 const NOT_FOUND = "Заказ не найден";
 
-/**
- * Возврат, который прошёл мимо сайта (оформлен в кабинете ЮKassa или наш вызов отвалился по таймауту, а ЮKassa его провела):
- * если по платежу (`payment` — свежий объект из API) уже что-то возвращено, оплаченный заказ отменяется с фактически
- * возвращённой суммой — места освобождаются, билет больше не действует. Возвращает `true`, если заказ отменён.
- * Вызывающий держит блокировку строки заказа и сам решает, что сказать клиенту и владельцу.
- */
-export async function reconcileExternalRefund(
+type RefundableOrder = { id: number; status: OrderStatus; refundedAmount: number; children: number; adults: number };
+
+/** Запись в историю возвратов заказа (в транзакции вызывающего). */
+export async function logRefund(
   tx: Tx,
-  order: { id: number; status: OrderStatus },
-  payment: GatewayPayment,
-): Promise<boolean> {
-  const refunded = Number(payment.refundedAmount);
-  if (order.status !== "paid" || !(refunded > 0)) return false;
-  await tx
-    .update(orders)
-    .set({ status: "cancelled", refundedAmount: Math.round(refunded), updatedAt: new Date() })
-    .where(eq(orders.id, order.id));
-  return true;
+  r: { orderId: number; amount: number; children: number; adults: number; source: "admin" | "late" | "external"; refundId?: string | null },
+): Promise<void> {
+  await tx.insert(orderRefunds).values({ ...r, refundId: r.refundId ?? null });
+}
+
+/** Сколько возвратов по заказу уже записано — для ключа идемпотентности следующего. */
+async function refundCount(tx: Tx, orderId: number): Promise<number> {
+  const [r] = await tx.select({ n: sql<number>`count(*)::int` }).from(orderRefunds).where(eq(orderRefunds.orderId, orderId));
+  return r.n;
 }
 
 /**
- * «Отменить и вернуть»: оплаченный заказ → `cancelled`, деньги возвращаются через ЮKassa (`amount` — целые рубли, 0…total).
+ * Возврат, который прошёл мимо сайта (оформлен в кабинете ЮKassa или наш вызов отвалился по таймауту, а ЮKassa его провела):
+ * ЮKassa (`payment` — свежий объект из API) знает о возвращённых деньгах больше, чем записано в заказе. Тогда оплаченный заказ
+ * отменяется целиком с фактически возвращённой суммой — места освобождаются, билет больше не действует: какие билеты
+ * вернули в кабинете, сайту не узнать. Возвраты самого сайта (в том числе частичные) уже учтены в `refunded_amount` и
+ * отменой не считаются. Возвращает `true`, если заказ отменён. Вызывающий держит блокировку строки заказа и сам решает,
+ * что сказать клиенту и владельцу.
+ */
+export async function reconcileExternalRefund(tx: Tx, order: RefundableOrder, payment: GatewayPayment): Promise<boolean> {
+  const refunded = Math.round(Number(payment.refundedAmount));
+  if (order.status !== "paid" || !(refunded > order.refundedAmount)) return false;
+  await tx
+    .update(orders)
+    .set({ status: "cancelled", refundedAmount: refunded, updatedAt: new Date() })
+    .where(eq(orders.id, order.id));
+  await logRefund(tx, { orderId: order.id, amount: refunded - order.refundedAmount, children: order.children, adults: order.adults, source: "external" });
+  return true;
+}
+
+/** Ключ идемпотентности возврата: первый — `refund-<id>` (как до частичных возвратов), следующие — с номером. */
+const refundKey = (orderId: number, prior: number) => (prior === 0 ? `refund-${orderId}` : `refund-${orderId}-${prior + 1}`);
+
+/**
+ * «Отменить и вернуть»: оплаченный заказ → `cancelled`, деньги возвращаются через ЮKassa (`amount` — целые рубли, от 0 до того,
+ * что ещё не возвращено: `total − refunded_amount`; после частичных отмен это меньше суммы заказа).
  * Если по платежу уже есть возврат (`reconcileExternalRefund`), нового не будет: заказ закрывается с суммой, которую назвала ЮKassa.
  * `0` — отмена без возврата, шлюз не вызывается. Заказ блокируется на всё время вызова шлюза: второй клик админа дождётся
  * и увидит `cancelled`; вторая страховка от двойного возврата — ключ идемпотентности `refund-<id>`.
@@ -62,9 +82,11 @@ export async function refundOrder(
     if (o.status !== "paid" || o.paymentId === null) {
       return { ok: false, error: "Вернуть деньги можно только по оплаченному заказу" };
     }
-    if (!Number.isInteger(amount) || amount < 0 || amount > o.total) {
-      return { ok: false, error: `Сумма возврата — от 0 до ${formatRub(o.total)}` };
+    const left = o.total - o.refundedAmount;
+    if (!Number.isInteger(amount) || amount < 0 || amount > left) {
+      return { ok: false, error: `Сумма возврата — от 0 до ${formatRub(left)}` };
     }
+    const prior = await refundCount(tx, o.id);
 
     let refund: GatewayRefund | null = null;
     if (amount > 0) {
@@ -75,7 +97,7 @@ export async function refundOrder(
         // второй возврат не создаём, заказ закрывается с фактически возвращённой суммой — её же назовёт письмо клиенту.
         if (await reconcileExternalRefund(tx, o, await gateway.getPayment(o.paymentId))) return { ok: true };
         refund = await createReceiptRefund(gateway, {
-          idempotenceKey: `refund-${o.id}`,
+          idempotenceKey: refundKey(o.id, prior),
           paymentId: o.paymentId,
           amount,
           email: o.email,
@@ -90,10 +112,107 @@ export async function refundOrder(
 
     await tx
       .update(orders)
-      .set({ status: "cancelled", refundedAmount: amount, ...(refund ? { refundId: refund.id } : {}), updatedAt: new Date() })
+      .set({ status: "cancelled", refundedAmount: o.refundedAmount + amount, ...(refund ? { refundId: refund.id } : {}), updatedAt: new Date() })
       .where(eq(orders.id, o.id));
+    await logRefund(tx, { orderId: o.id, amount, children: o.children, adults: o.adults, source: "admin", refundId: refund?.id });
     return { ok: true };
   });
+}
+
+/** Стоимость билетов по слепку цен заказа. */
+export const ticketsValue = (o: { priceChildSnapshot: number; priceAdultSnapshot: number }, children: number, adults: number) =>
+  children * o.priceChildSnapshot + adults * o.priceAdultSnapshot;
+
+/**
+ * «Отменить часть билетов»: из оплаченного заказа убираются `children` детских и `adults` взрослых билетов (хотя бы один
+ * билет должен остаться — иначе это «Отменить и вернуть»), за них возвращается `amount` (0…стоимость отменённых билетов,
+ * но не больше ещё не возвращённого). Места освобождаются сразу: заказ занимает столько мест, сколько в нём билетов.
+ * Сумма заказа (`total`) не меняется — это сумма платежа; возвращённое копится в `refunded_amount`, каждая отмена пишется в
+ * историю (`order_refunds`). Блокировки, сверка с ЮKassa и ошибки — как у `refundOrder`.
+ */
+export async function cancelTickets(
+  orderId: number,
+  tickets: { children: number; adults: number },
+  amount: number,
+  deps: { db?: Db; gateway?: PaymentGateway } = {},
+): Promise<ActionResult> {
+  const db = deps.db ?? sharedDb;
+  return db.transaction(async (tx): Promise<ActionResult> => {
+    const [row] = await tx
+      .select({ o: orders, startsAt: tourSessions.startsAt, tourTitle: tours.title })
+      .from(orders)
+      .innerJoin(tourSessions, eq(orders.sessionId, tourSessions.id))
+      .innerJoin(tours, eq(tourSessions.tourId, tours.id))
+      .where(eq(orders.id, orderId))
+      .for("update", { of: orders });
+    if (!row) return { ok: false, error: NOT_FOUND };
+    const { o } = row;
+    if (o.status !== "paid" || o.paymentId === null) {
+      return { ok: false, error: "Отменить билеты можно только в оплаченном заказе" };
+    }
+
+    const { children, adults } = tickets;
+    const count = (n: number, max: number) => Number.isInteger(n) && n >= 0 && n <= max;
+    if (!count(children, o.children) || !count(adults, o.adults) || children + adults < 1) {
+      return { ok: false, error: `Можно отменить от 1 билета; в заказе ${formatComposition(o.children, o.adults)}` };
+    }
+    if (children + adults >= o.children + o.adults) {
+      return { ok: false, error: "Это все билеты заказа — используйте «Отменить и вернуть»" };
+    }
+    const max = Math.min(ticketsValue(o, children, adults), o.total - o.refundedAmount);
+    if (!Number.isInteger(amount) || amount < 0 || amount > max) {
+      return { ok: false, error: `Сумма возврата — от 0 до ${formatRub(max)}` };
+    }
+
+    let refund: GatewayRefund | null = null;
+    if (amount > 0) {
+      try {
+        const gateway = deps.gateway ?? paymentGateway();
+        // Возврат мимо сайта: какие билеты вернули в кабинете, неизвестно — заказ закрывается целиком (как и в `refundOrder`).
+        if (await reconcileExternalRefund(tx, o, await gateway.getPayment(o.paymentId))) {
+          return { ok: false, error: "По заказу уже вернули деньги в кабинете ЮKassa — заказ отменён целиком. Обновите страницу." };
+        }
+        refund = await createReceiptRefund(gateway, {
+          idempotenceKey: refundKey(o.id, await refundCount(tx, o.id)),
+          paymentId: o.paymentId,
+          amount,
+          email: o.email,
+          tourTitle: row.tourTitle,
+          startsAt: row.startsAt,
+        });
+      } catch (e) {
+        console.error(`Частичная отмена: заказ ${o.id} не изменён`, e);
+        return { ok: false, error: `Возврат не прошёл: ${e instanceof Error ? e.message : String(e)}` };
+      }
+    }
+
+    await tx
+      .update(orders)
+      .set({
+        children: o.children - children,
+        adults: o.adults - adults,
+        refundedAmount: o.refundedAmount + amount,
+        ...(refund ? { refundId: refund.id } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(orders.id, o.id));
+    await logRefund(tx, { orderId: o.id, amount, children, adults, source: "admin", refundId: refund?.id });
+    return { ok: true };
+  });
+}
+
+export type RefundHistoryRow = { id: number; createdAt: Date; amount: number; children: number; adults: number; source: string };
+
+/** История возвратов заказа для админки — по времени. */
+export async function listRefunds(orderId: number, db: Db = sharedDb): Promise<RefundHistoryRow[]> {
+  return db
+    .select({
+      id: orderRefunds.id, createdAt: orderRefunds.createdAt, amount: orderRefunds.amount, children: orderRefunds.children,
+      adults: orderRefunds.adults, source: orderRefunds.source,
+    })
+    .from(orderRefunds)
+    .where(eq(orderRefunds.orderId, orderId))
+    .orderBy(asc(orderRefunds.createdAt), asc(orderRefunds.id));
 }
 
 /**

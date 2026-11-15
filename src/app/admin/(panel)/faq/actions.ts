@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { revalidatePublicSite } from "@/server/revalidate";
-import { requireAdmin } from "@/lib/auth/viewer";
+import { requireAccess } from "@/lib/auth/viewer";
 import { deleteFaqItem, reorderFaq, saveFaqItem, setFaqPublished, type FaqResult, type SaveFaqResult } from "@/server/faq";
 
 function revalidateFaq(id?: number) {
@@ -14,14 +14,14 @@ function revalidateFaq(id?: number) {
 const BAD: FaqResult = { ok: false, error: "Некорректный запрос" };
 
 export async function saveFaqAction(id: number | null, input: unknown): Promise<SaveFaqResult> {
-  await requireAdmin();
+  await requireAccess("content");
   const r = await saveFaqItem(input, id ?? undefined);
   if (r.ok) revalidateFaq(r.id);
   return r;
 }
 
 export async function setFaqPublishedAction(id: number, published: boolean): Promise<FaqResult> {
-  await requireAdmin();
+  await requireAccess("content");
   if (typeof published !== "boolean") return BAD;
   const r = await setFaqPublished(id, published);
   if (r.ok) revalidateFaq();
@@ -29,14 +29,14 @@ export async function setFaqPublishedAction(id: number, published: boolean): Pro
 }
 
 export async function reorderFaqAction(ids: number[]): Promise<FaqResult> {
-  await requireAdmin();
+  await requireAccess("content");
   const r = await reorderFaq(ids);
   if (r.ok) revalidateFaq();
   return r;
 }
 
 export async function deleteFaqAction(id: number): Promise<FaqResult> {
-  await requireAdmin();
+  await requireAccess("content");
   const r = await deleteFaqItem(id);
   if (r.ok) revalidateFaq();
   return r;

@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { revalidatePublicSite } from "@/server/revalidate";
-import { requireAdmin } from "@/lib/auth/viewer";
+import { requireAccess } from "@/lib/auth/viewer";
+import { can } from "@/lib/auth/roles";
 import { idSchema } from "@/lib/validation/tour";
 import {
-  deleteSession, reorderTours, saveSession, saveTour, setTourPublished,
+  deleteSession, reorderTours, saveSession, saveTour, saveTourContent, setTourPublished,
   type SaveSessionResult, type SaveTourResult, type SimpleResult,
 } from "@/server/tours";
 import { uploadImage, UploadError } from "@/server/upload";
@@ -18,17 +19,21 @@ function revalidateAll() {
 }
 
 const BAD: SimpleResult = { ok: false, error: "Некорректный запрос" };
+const NEW_TOUR_ADMIN_ONLY = "Новую экскурсию добавляет администратор: у неё должны быть цены";
 
+/** Без доступа к ценам (редактор) — только тексты, обложка и «главная»; цены и новые экскурсии — полный доступ. */
 export async function saveTourAction(id: number | null, input: unknown): Promise<SaveTourResult> {
-  await requireAdmin();
+  const viewer = await requireAccess("content");
   if (id !== null && !idSchema.safeParse(id).success) return { ok: false, fieldErrors: { form: "Экскурсия не найдена" } };
-  const r = await saveTour(input, id ?? undefined);
+  const pricing = can(viewer.role, "pricing");
+  if (!pricing && id === null) return { ok: false, fieldErrors: { form: NEW_TOUR_ADMIN_ONLY } };
+  const r = pricing ? await saveTour(input, id ?? undefined) : await saveTourContent(id!, input);
   if (r.ok) revalidateAll();
   return r;
 }
 
 export async function setPublishedAction(id: number, published: boolean): Promise<SimpleResult> {
-  await requireAdmin();
+  await requireAccess("content");
   if (typeof published !== "boolean") return BAD;
   const r = await setTourPublished(id, published);
   if (r.ok) revalidateAll();
@@ -36,28 +41,30 @@ export async function setPublishedAction(id: number, published: boolean): Promis
 }
 
 export async function reorderAction(ids: number[]): Promise<SimpleResult> {
-  await requireAdmin();
+  await requireAccess("content");
   const r = await reorderTours(ids);
   if (r.ok) revalidateAll();
   return r;
 }
 
+/** Сеансы (даты, лимиты, скрытие) — только полный доступ: от них зависят продажи и места. */
 export async function saveSessionAction(input: unknown): Promise<SaveSessionResult> {
-  await requireAdmin();
+  await requireAccess("pricing");
   const r = await saveSession(input);
   if (r.ok) revalidateAll();
   return r;
 }
 
 export async function deleteSessionAction(id: number): Promise<SimpleResult> {
-  await requireAdmin();
+  await requireAccess("pricing");
   const r = await deleteSession(id);
   if (r.ok) revalidateAll();
   return r;
 }
 
+/** Обложки экскурсий и новостей. */
 export async function uploadCoverAction(formData: FormData): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
-  await requireAdmin();
+  await requireAccess("content");
   const file = formData.get("file");
   if (!(file instanceof File)) return { ok: false, error: "Выберите файл" };
   try {

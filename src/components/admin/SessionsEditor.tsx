@@ -19,7 +19,7 @@ export type SessionRow = {
 let seq = 0;
 export const newSessionRow = (): SessionRow => ({ key: `new-${++seq}`, startsAt: "", capacity: "8", hidden: false, taken: 0, orders: 0 });
 
-function Row({ tourId, row, onChange, onRemove }: { tourId: number; row: SessionRow; onChange: (r: SessionRow) => void; onRemove: () => void }) {
+function Row({ tourId, row, readOnly, onChange, onRemove }: { tourId: number; row: SessionRow; readOnly: boolean; onChange: (r: SessionRow) => void; onRemove: () => void }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const set = (p: Partial<SessionRow>) => onChange({ ...row, ...p, error: undefined, notice: undefined });
@@ -48,27 +48,27 @@ function Row({ tourId, row, onChange, onRemove }: { tourId: number; row: Session
     <li className="srow">
       <label className="field srow-when">
         <span className="field-label">Дата и время (МСК)</span>
-        <input type="datetime-local" value={row.startsAt} onChange={(e) => set({ startsAt: e.target.value })} />
+        <input type="datetime-local" value={row.startsAt} disabled={readOnly} onChange={(e) => set({ startsAt: e.target.value })} />
       </label>
       <label className="field srow-cap">
         <span className="field-label">Лимит</span>
-        <input type="number" min={1} max={100} inputMode="numeric" value={row.capacity} onChange={(e) => set({ capacity: e.target.value })} />
+        <input type="number" min={1} max={100} inputMode="numeric" value={row.capacity} disabled={readOnly} onChange={(e) => set({ capacity: e.target.value })} />
       </label>
       <span className="srow-taken" title="Подтверждённые и проведённые заявки">
         занято {row.taken}
       </span>
       <label className="check srow-hidden">
-        <input type="checkbox" checked={row.hidden} onChange={(e) => set({ hidden: e.target.checked })} />
+        <input type="checkbox" checked={row.hidden} disabled={readOnly} onChange={(e) => set({ hidden: e.target.checked })} />
         скрыт
       </label>
-      <span className="srow-actions">
+      {!readOnly && <span className="srow-actions">
         <button type="button" className="btn btn-accent" disabled={pending} onClick={save}>
           Сохранить
         </button>
         <button type="button" className="btn btn-ghost" disabled={pending} onClick={remove}>
           Удалить
         </button>
-      </span>
+      </span>}
       {row.error && (
         <p className="form-error srow-msg" role="alert">
           {row.error}
@@ -79,11 +79,18 @@ function Row({ tourId, row, onChange, onRemove }: { tourId: number; row: Session
   );
 }
 
-export function SessionsEditor({ tourId, rows, onChange }: { tourId: number; rows: SessionRow[]; onChange: (rows: SessionRow[]) => void }) {
+/** `readOnly` — только просмотр (редактор): даты и лимиты меняет администратор. */
+export function SessionsEditor({
+  tourId, rows, onChange, readOnly = false,
+}: { tourId: number; rows: SessionRow[]; onChange: (rows: SessionRow[]) => void; readOnly?: boolean }) {
   return (
     <section className="panel-section sessions-editor">
       <h2 className="section-title">Сеансы</h2>
-      <p className="muted section-sub">Каждый сеанс сохраняется отдельной кнопкой. Сеанс с заявками удалить нельзя — только скрыть.</p>
+      <p className="muted section-sub">
+        {readOnly
+          ? "Даты, лимиты и скрытие сеансов меняет администратор."
+          : "Каждый сеанс сохраняется отдельной кнопкой. Сеанс с заявками удалить нельзя — только скрыть."}
+      </p>
       {rows.length === 0 && <p className="empty">Сеансов пока нет.</p>}
       <ul className="srows">
         {rows.map((r) => (
@@ -91,14 +98,17 @@ export function SessionsEditor({ tourId, rows, onChange }: { tourId: number; row
             key={r.key}
             tourId={tourId}
             row={r}
+            readOnly={readOnly}
             onChange={(next) => onChange(rows.map((x) => (x.key === r.key ? next : x)))}
             onRemove={() => onChange(rows.filter((x) => x.key !== r.key))}
           />
         ))}
       </ul>
-      <button type="button" className="btn btn-ghost" onClick={() => onChange([...rows, newSessionRow()])}>
-        + Добавить сеанс
-      </button>
+      {!readOnly && (
+        <button type="button" className="btn btn-ghost" onClick={() => onChange([...rows, newSessionRow()])}>
+          + Добавить сеанс
+        </button>
+      )}
     </section>
   );
 }

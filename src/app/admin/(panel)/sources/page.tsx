@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/viewer";
+import { requireAccess } from "@/lib/auth/viewer";
 import { getSourceReport, SOURCE_PERIODS } from "@/server/admin-orders";
 import { formatRub } from "@/lib/domain/pricing";
 import { pluralRu } from "@/lib/domain/seats";
@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Источники продаж" };
 const DEFAULT_DAYS = 30;
 
 export default async function SourcesPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
-  await requireAdmin();
+  await requireAccess("sources");
   const { days: raw } = await searchParams;
   const days = SOURCE_PERIODS.find((d) => String(d) === raw) ?? DEFAULT_DAYS;
   const rows = await getSourceReport(days);

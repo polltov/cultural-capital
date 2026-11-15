@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/viewer";
+import { requireAccess } from "@/lib/auth/viewer";
+import { can } from "@/lib/auth/roles";
 import { getAdminTour, listAdminTours } from "@/server/tours";
 import { toMoscowLocalInput } from "@/lib/domain/moscow-time";
 import { TourForm } from "@/components/admin/TourForm";
@@ -9,7 +10,7 @@ import { TourForm } from "@/components/admin/TourForm";
 export const metadata: Metadata = { title: "Экскурсия" };
 
 export default async function EditTourPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  const viewer = await requireAccess("content");
   const { id: raw } = await params;
   if (!/^\d{1,9}$/.test(raw)) notFound();
   const id = Number(raw);
@@ -26,6 +27,7 @@ export default async function EditTourPage({ params }: { params: Promise<{ id: s
         key={t.id}
         id={t.id}
         number={position + 1}
+        pricing={can(viewer.role, "pricing")}
         initial={{
           title: t.title, subtitle: t.subtitle, route: t.route, description: t.description, note: t.note,
           meetingPoint: t.meetingPoint, whatToBring: t.whatToBring,

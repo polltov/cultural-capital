@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/viewer";
+import { requireAccess } from "@/lib/auth/viewer";
 import { getAdminNews } from "@/server/news";
 import { NewsForm } from "@/components/admin/NewsForm";
 
 export const metadata: Metadata = { title: "Новость" };
 
 export default async function EditNewsPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  await requireAccess("content");
   const { id: raw } = await params;
   if (!/^\d{1,9}$/.test(raw)) notFound();
   const n = await getAdminNews(Number(raw));

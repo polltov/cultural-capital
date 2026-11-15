@@ -3,8 +3,9 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveUserAction } from "@/app/admin/(panel)/users/actions";
+import type { StaffRole } from "@/lib/auth/roles";
 
-export type UserValues = { login: string; name: string; role: "admin" | "guide"; active: boolean; password: string };
+export type UserValues = { login: string; name: string; role: StaffRole; active: boolean; password: string };
 export const EMPTY_USER: UserValues = { login: "", name: "", role: "guide", active: true, password: "" };
 
 /** Новый сотрудник (`id === null`: логин и пароль обязательны) или правка (логин не меняется, пустой пароль — без смены). */
@@ -49,6 +50,13 @@ export function UserForm({ id, initial, self }: { id: number | null; initial: Us
         <label className="check">
           <input type="radio" name="role" checked={v.role === "admin"} onChange={() => set("role", "admin")} />
           <span><b>Администратор</b> — всё: заказы, возвраты, экскурсии, новости, сотрудники</span>
+        </label>
+        <label className="check">
+          <input type="radio" name="role" checked={v.role === "editor"} onChange={() => set("role", "editor")} />
+          <span>
+            <b>Редактор</b> — новости, вопросы, тексты и обложки экскурсий, источники продаж. Без заказов, цен, сеансов и личных
+            данных покупателей
+          </span>
         </label>
         <label className="check">
           <input type="radio" name="role" checked={v.role === "guide"} onChange={() => set("role", "guide")} />

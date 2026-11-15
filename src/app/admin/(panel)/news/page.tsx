@@ -1,13 +1,13 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/viewer";
+import { requireAccess } from "@/lib/auth/viewer";
 import { listAllNews } from "@/server/news";
 import { formatDateLong, formatDayMonth, formatTime } from "@/lib/domain/moscow-time";
 
 export const metadata: Metadata = { title: "Новости" };
 
 export default async function NewsAdminPage() {
-  await requireAdmin();
+  await requireAccess("content");
   const rows = await listAllNews();
   return (
     <>

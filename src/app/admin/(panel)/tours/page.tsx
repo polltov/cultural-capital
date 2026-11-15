@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/viewer";
+import { requireAccess } from "@/lib/auth/viewer";
+import { can } from "@/lib/auth/roles";
 import { listAdminTours } from "@/server/tours";
 import { formatDayMonth, formatTime } from "@/lib/domain/moscow-time";
 import { TourList } from "@/components/admin/TourList";
@@ -8,15 +9,18 @@ import { TourList } from "@/components/admin/TourList";
 export const metadata: Metadata = { title: "Экскурсии" };
 
 export default async function ToursPage() {
-  await requireAdmin();
+  const viewer = await requireAccess("content");
   const rows = await listAdminTours();
   return (
     <>
       <div className="page-head">
         <h1 className="page-title">Экскурсии</h1>
-        <Link href="/admin/tours/new" className="btn btn-accent">
-          + Новая экскурсия
-        </Link>
+        {/* Новая экскурсия — с ценами, поэтому только при доступе к ценам. */}
+        {can(viewer.role, "pricing") && (
+          <Link href="/admin/tours/new" className="btn btn-accent">
+            + Новая экскурсия
+          </Link>
+        )}
       </div>
       <p className="muted section-sub">Порядок строк — порядок карточек на сайте. Потяните за ручку, чтобы изменить.</p>
       <TourList

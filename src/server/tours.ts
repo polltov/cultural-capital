@@ -4,7 +4,8 @@ import { orders, tours, tourSessions } from "@/db/schema";
 import { slugify, uniqueSlug } from "@/lib/domain/slug";
 import { parseMoscowLocal } from "@/lib/domain/moscow-time";
 import { pluralRu } from "@/lib/domain/seats";
-import { idSchema, sessionSchema, tourSchema } from "@/lib/validation/tour";
+import type { z } from "zod";
+import { idSchema, sessionSchema, tourContentSchema, tourSchema } from "@/lib/validation/tour";
 import { occupiedSeats } from "@/server/orders";
 import { reorderRows } from "@/server/reorder";
 import { seatsTakenSql } from "@/server/seats-sql";
@@ -13,25 +14,30 @@ export type SaveTourResult = { ok: true; id: number } | { ok: false; fieldErrors
 export type SimpleResult = { ok: true } | { ok: false; error: string };
 export type SaveSessionResult = { ok: true; id: number } | { ok: false; error: string };
 
+const NOT_FOUND: SaveTourResult = { ok: false, fieldErrors: { form: "Экскурсия не найдена" } };
+
+function fieldErrorsOf(e: z.ZodError): SaveTourResult {
+  const fieldErrors: Record<string, string> = {};
+  for (const i of e.issues) fieldErrors[String(i.path[0] ?? "form")] ??= i.message;
+  return { ok: false, fieldErrors };
+}
+
+async function updateTour(id: number, values: Partial<typeof tours.$inferInsert>, db: Db): Promise<SaveTourResult> {
+  if (!idSchema.safeParse(id).success) return NOT_FOUND;
+  const updated = await db
+    .update(tours)
+    .set({ ...values, updatedAt: new Date() })
+    .where(eq(tours.id, id))
+    .returning({ id: tours.id });
+  return updated.length === 0 ? NOT_FOUND : { ok: true, id };
+}
+
 export async function saveTour(input: unknown, id?: number, db: Db = sharedDb): Promise<SaveTourResult> {
   const parsed = tourSchema.safeParse(input);
-  if (!parsed.success) {
-    const fieldErrors: Record<string, string> = {};
-    for (const i of parsed.error.issues) fieldErrors[String(i.path[0] ?? "form")] ??= i.message;
-    return { ok: false, fieldErrors };
-  }
+  if (!parsed.success) return fieldErrorsOf(parsed.error);
   const v = parsed.data;
 
-  if (id !== undefined) {
-    if (!idSchema.safeParse(id).success) return { ok: false, fieldErrors: { form: "Экскурсия не найдена" } };
-    const updated = await db
-      .update(tours)
-      .set({ ...v, updatedAt: new Date() })
-      .where(eq(tours.id, id))
-      .returning({ id: tours.id });
-    if (updated.length === 0) return { ok: false, fieldErrors: { form: "Экскурсия не найдена" } };
-    return { ok: true, id };
-  }
+  if (id !== undefined) return updateTour(id, v, db);
 
   const base = slugify(v.title) || "tour";
   for (let attempt = 0; ; attempt++) {
@@ -53,6 +59,16 @@ export async function saveTour(input: unknown, id?: number, db: Db = sharedDb): 
       throw e;
     }
   }
+}
+
+/**
+ * Правка редактора: тексты, обложка и «главная». Цены во входных данных отбрасываются — остаются прежние; новую экскурсию
+ * так не создать (у неё должны быть цены).
+ */
+export async function saveTourContent(id: number, input: unknown, db: Db = sharedDb): Promise<SaveTourResult> {
+  const parsed = tourContentSchema.safeParse(input);
+  if (!parsed.success) return fieldErrorsOf(parsed.error);
+  return updateTour(id, parsed.data, db);
 }
 
 export async function setTourPublished(id: number, published: boolean, db: Db = sharedDb): Promise<SimpleResult> {

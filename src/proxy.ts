@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth/session";
 
 // Оптимистичная проверка: только подпись cookie + редирект.
-// Авторитетная проверка — requireAdmin() в (panel)/layout.tsx и в каждом admin Server Action.
+// Авторитетная проверка — requireStaff() в (panel)/layout.tsx и requireAccess()/requireAdmin() в каждой странице и admin Server Action.
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (pathname === "/admin/login" || pathname.startsWith("/admin/login/")) return NextResponse.next();

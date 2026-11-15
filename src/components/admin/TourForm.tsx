@@ -59,9 +59,10 @@ export function mergeSessionRows(local: SessionRow[], server: SessionRow[]): Ses
   return out;
 }
 
+/** `pricing: false` (редактор): цены и сеансы только для чтения — их меняет администратор, сервер их тоже не примет. */
 export function TourForm({
-  id, initial, initialSessions, number,
-}: { id: number | null; initial: TourValues; initialSessions: SessionRow[]; number: number }) {
+  id, initial, initialSessions, number, pricing,
+}: { id: number | null; initial: TourValues; initialSessions: SessionRow[]; number: number; pricing: boolean }) {
   const router = useRouter();
   const [v, setV] = useState(initial);
   const [rows, setRows] = useState(initialSessions);
@@ -105,7 +106,7 @@ export function TourForm({
   const money = (k: "priceChild" | "priceAdult", label: string) => (
     <label className="field">
       <span className="field-label">{label}</span>
-      <input type="number" min={0} inputMode="numeric" value={v[k]} aria-invalid={!!errors[k]} onChange={(e) => set(k, e.target.value)} />
+      <input type="number" min={0} inputMode="numeric" value={v[k]} readOnly={!pricing} aria-invalid={!!errors[k]} onChange={(e) => set(k, e.target.value)} />
       {errors[k] && <span className="form-error" role="alert">{errors[k]}</span>}
     </label>
   );
@@ -146,6 +147,7 @@ export function TourForm({
             {money("priceChild", "Цена детская, ₽")}
             {money("priceAdult", "Цена взрослая, ₽")}
           </div>
+          {!pricing && <p className="muted hint">Цены меняет администратор.</p>}
           <ImageDrop value={v.coverUrl} onChange={(u) => set("coverUrl", u)} />
           {errors.coverUrl && <p className="form-error" role="alert">{errors.coverUrl}</p>}
           <label className="check">
@@ -162,7 +164,7 @@ export function TourForm({
         {id === null ? (
           <p className="empty">Сеансы можно добавить после создания экскурсии.</p>
         ) : (
-          <SessionsEditor tourId={id} rows={rows} onChange={setRows} />
+          <SessionsEditor tourId={id} rows={rows} onChange={setRows} readOnly={!pricing} />
         )}
       </div>
       {preview}

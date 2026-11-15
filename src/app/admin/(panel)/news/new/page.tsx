@@ -1,12 +1,12 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/viewer";
+import { requireAccess } from "@/lib/auth/viewer";
 import { EMPTY_NEWS, NewsForm } from "@/components/admin/NewsForm";
 
 export const metadata: Metadata = { title: "Новая новость" };
 
 export default async function NewNewsPage() {
-  await requireAdmin();
+  await requireAccess("content");
   return (
     <>
       <p className="crumbs"><Link href="/admin/news">← Все новости</Link></p>

@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/viewer";
+import { requireAccess } from "@/lib/auth/viewer";
 import { getFaqItem } from "@/server/faq";
 import { FaqForm } from "@/components/admin/FaqForm";
 
 export const metadata: Metadata = { title: "Вопрос" };
 
 export default async function EditFaqPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  await requireAccess("content");
   const { id: raw } = await params;
   if (!/^\d{1,9}$/.test(raw)) notFound();
   const item = await getFaqItem(Number(raw));

@@ -17,7 +17,7 @@ const saved = { key: "s-1", id: 1, startsAt: "2030-01-01T11:00", capacity: "8", 
 
 describe("TourForm sessions after tour save", () => {
   it("keeps an unsaved session row when the server sends fresh initial data", () => {
-    const props = { id: 5, number: 1, initial: EMPTY_TOUR };
+    const props = { id: 5, number: 1, initial: EMPTY_TOUR, pricing: true };
     const { rerender } = render(<TourForm {...props} initialSessions={[saved]} />);
     fireEvent.click(screen.getByRole("button", { name: "+ Добавить сеанс" }));
     expect(screen.getAllByLabelText("Дата и время (МСК)")).toHaveLength(2);
@@ -32,7 +32,7 @@ describe("TourForm sessions after tour save", () => {
 describe("TourForm meeting point and what to bring", () => {
   it("shows both fields after the note, filled from initial values", () => {
     const initial = { ...EMPTY_TOUR, meetingPoint: "У колонны", whatToBring: "Удобная обувь" };
-    render(<TourForm id={5} number={1} initial={initial} initialSessions={[]} />);
+    render(<TourForm id={5} number={1} initial={initial} initialSessions={[]} pricing />);
     const meeting = screen.getByLabelText("Место встречи") as HTMLTextAreaElement;
     const bring = screen.getByLabelText("Что взять с собой") as HTMLTextAreaElement;
     expect(meeting.value).toBe("У колонны");
@@ -48,11 +48,25 @@ describe("TourForm meeting point and what to bring", () => {
     const { saveTourAction } = await import("@/app/admin/(panel)/tours/actions");
     const save = vi.mocked(saveTourAction);
     save.mockResolvedValue({ ok: false, fieldErrors: { meetingPoint: "Не длиннее 300 символов" } });
-    render(<TourForm id={5} number={1} initial={EMPTY_TOUR} initialSessions={[]} />);
+    render(<TourForm id={5} number={1} initial={EMPTY_TOUR} initialSessions={[]} pricing />);
     fireEvent.change(screen.getByLabelText("Место встречи"), { target: { value: "Площадь" } });
     fireEvent.change(screen.getByLabelText("Что взять с собой"), { target: { value: "Зонт" } });
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
     expect(await screen.findByText("Не длиннее 300 символов")).toBeTruthy();
     expect(save).toHaveBeenCalledWith(5, expect.objectContaining({ meetingPoint: "Площадь", whatToBring: "Зонт" }));
+  });
+});
+
+describe("TourForm для редактора (без доступа к ценам)", () => {
+  it("цены только для чтения, сеансы без кнопок правки", () => {
+    render(<TourForm id={5} number={1} initial={{ ...EMPTY_TOUR, priceChild: "900" }} initialSessions={[saved]} pricing={false} />);
+    expect((screen.getByLabelText("Цена детская, ₽") as HTMLInputElement).readOnly).toBe(true);
+    expect((screen.getByLabelText("Цена взрослая, ₽") as HTMLInputElement).readOnly).toBe(true);
+    expect((screen.getByLabelText("Дата и время (МСК)") as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByLabelText("Лимит") as HTMLInputElement).disabled).toBe(true);
+    expect(screen.queryByRole("button", { name: "+ Добавить сеанс" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Удалить" })).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Сохранить" })).toHaveLength(1); // только сама форма экскурсии
+    expect(screen.getByText("Даты, лимиты и скрытие сеансов меняет администратор.")).toBeTruthy();
   });
 });

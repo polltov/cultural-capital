@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { requireStaff } from "@/lib/auth/viewer";
+import { requireAccess } from "@/lib/auth/viewer";
 import { getSessionRoster } from "@/server/admin-orders";
 import { formatRub } from "@/lib/domain/pricing";
 import { formatSessionLong } from "@/lib/domain/moscow-time";
@@ -12,7 +12,7 @@ import { toggleCheckin } from "../../checkin/actions";
 export const metadata: Metadata = { title: "Участники сеанса" };
 
 export default async function SessionRosterPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireStaff();
+  await requireAccess("roster");
   const { id: raw } = await params;
   if (!/^\d{1,9}$/.test(raw)) notFound();
   const id = Number(raw);

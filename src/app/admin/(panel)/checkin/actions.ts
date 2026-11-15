@@ -1,12 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireStaff } from "@/lib/auth/viewer";
+import { requireAccess } from "@/lib/auth/viewer";
 import { setCheckedIn } from "@/server/checkin";
 
 /** Отметить приход / снять отметку — со страницы QR-кода и из списка участников сеанса. */
 export async function toggleCheckin(orderId: number, on: boolean): Promise<void> {
-  await requireStaff();
+  await requireAccess("roster");
   if (!Number.isInteger(orderId) || typeof on !== "boolean") return;
   await setCheckedIn(orderId, on);
   revalidatePath("/admin/sessions/[id]", "page");

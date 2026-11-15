@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requireStaff } from "@/lib/auth/viewer";
+import { can } from "@/lib/auth/roles";
 import { getDashboard } from "@/server/admin-orders";
 import { formatDayMonth, formatTime, formatWeekday } from "@/lib/domain/moscow-time";
 import { formatRub } from "@/lib/domain/pricing";
@@ -11,13 +12,15 @@ export const metadata: Metadata = { title: "Сводка" };
 export default async function DashboardPage() {
   const viewer = await requireStaff();
   const { paid7d, upcoming } = await getDashboard();
-  // Гиду — только ближайшие сеансы: выручка и заказы ему не нужны.
-  const guide = viewer.role === "guide";
+  // Сеансы с заполненностью видят все; выручка — с доступом к заказам, ссылки на участников — с доступом к спискам.
+  const orders = can(viewer.role, "orders");
+  const sources = can(viewer.role, "sources");
+  const roster = can(viewer.role, "roster");
   return (
     <>
       <h1 className="page-title">Сводка</h1>
 
-      {!guide && (
+      {orders && (
         <Link href="/admin/orders?status=paid" className="stat-card stat-card--paid">
           <span className="stat-label">Оплачено за 7 дней</span>
           <span className="stat-value">
@@ -26,7 +29,7 @@ export default async function DashboardPage() {
           <span className="stat-link">Открыть список →</span>
         </Link>
       )}
-      {!guide && (
+      {sources && (
         <p className="muted dash-sources">
           Откуда приходят покупатели —{" "}
           <Link href="/admin/sources" className="text-link">
@@ -45,9 +48,8 @@ export default async function DashboardPage() {
             {upcoming.map((s) => {
               const pct = s.capacity > 0 ? Math.min(100, Math.round((s.taken / s.capacity) * 100)) : 0;
               const full = s.taken >= s.capacity;
-              return (
-                <li key={s.sessionId}>
-                  <Link href={`/admin/sessions/${s.sessionId}`} className="session-row">
+              const body = (
+                <>
                     <span className="session-when">
                       <span className="session-date">
                         {formatDayMonth(s.startsAt)}, {formatWeekday(s.startsAt)}
@@ -70,7 +72,17 @@ export default async function DashboardPage() {
                         <span style={{ width: `${pct}%` }} />
                       </span>
                     </span>
-                  </Link>
+                </>
+              );
+              return (
+                <li key={s.sessionId}>
+                  {roster ? (
+                    <Link href={`/admin/sessions/${s.sessionId}`} className="session-row">
+                      {body}
+                    </Link>
+                  ) : (
+                    <div className="session-row">{body}</div>
+                  )}
                 </li>
               );
             })}

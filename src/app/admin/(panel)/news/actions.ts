@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { revalidatePublicSite } from "@/server/revalidate";
-import { requireAdmin } from "@/lib/auth/viewer";
+import { requireAccess } from "@/lib/auth/viewer";
 import { idSchema } from "@/lib/validation/tour";
 import { saveNews, setNewsPublished, type PublishResult, type SaveNewsResult } from "@/server/news";
 
@@ -15,7 +15,7 @@ function revalidateNews(...slugs: (string | null)[]) {
 }
 
 export async function saveNewsAction(id: number | null, input: unknown): Promise<SaveNewsResult> {
-  await requireAdmin();
+  await requireAccess("content");
   if (id !== null && !idSchema.safeParse(id).success) return { ok: false, fieldErrors: { form: "Новость не найдена" } };
   const r = await saveNews(input, id ?? undefined);
   if (r.ok) revalidateNews(r.slug, r.oldSlug);
@@ -23,7 +23,7 @@ export async function saveNewsAction(id: number | null, input: unknown): Promise
 }
 
 export async function setNewsPublishedAction(id: number, publish: boolean): Promise<PublishResult> {
-  await requireAdmin();
+  await requireAccess("content");
   if (typeof publish !== "boolean") return { ok: false, error: "Некорректный запрос" };
   const r = await setNewsPublished(id, publish);
   if (r.ok) revalidateNews(r.slug);

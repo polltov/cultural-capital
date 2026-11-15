@@ -1,13 +1,13 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/viewer";
+import { requireAccess } from "@/lib/auth/viewer";
 import { listAllFaq } from "@/server/faq";
 import { FaqList } from "@/components/admin/FaqList";
 
 export const metadata: Metadata = { title: "Вопросы" };
 
 export default async function FaqAdminPage() {
-  await requireAdmin();
+  await requireAccess("content");
   const rows = await listAllFaq();
   return (
     <>

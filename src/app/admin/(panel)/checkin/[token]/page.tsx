@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { requireStaff } from "@/lib/auth/viewer";
+import { requireAccess } from "@/lib/auth/viewer";
 import { formatSessionLong, formatTime, startOfMoscowDay } from "@/lib/domain/moscow-time";
 import { STATUS_LABELS } from "@/lib/domain/order-status";
 import { formatComposition } from "@/lib/domain/seats";
@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 /** Сюда ведёт QR-код билета: гид видит, чей это билет и на какой сеанс, и отмечает приход одной кнопкой. */
 export default async function CheckinPage({ params }: { params: Promise<{ token: string }> }) {
-  await requireStaff();
+  await requireAccess("roster");
   const { token } = await params;
   const o = await getCheckinOrder(token);
   if (!o) notFound();

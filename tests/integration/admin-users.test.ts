@@ -78,6 +78,29 @@ describe("resolveViewer", () => {
     expect(await resolveViewer({ kind: "user", id, v: 0 }, db)).toBeNull();
   });
 
+  it("редактор: создаётся, входит и получает роль editor", async () => {
+    const c = await createAdminUser({ login: "anna.smm", name: "Анна", role: "editor", password: "editor-pass-1" }, deps);
+    expect(c.ok).toBe(true);
+    const id = c.ok ? c.id : 0;
+    const r = await login("anna.smm", "editor-pass-1");
+    expect(await readSessionToken(r.ok ? r.token : "")).toEqual({ kind: "user", id, v: 0 });
+    expect(await resolveViewer({ kind: "user", id, v: 0 }, db)).toEqual({ id, login: "anna.smm", name: "Анна", role: "editor" });
+  });
+
+  it("гида можно сделать редактором — старые сессии гаснут", async () => {
+    const c = await createAdminUser(guide, deps);
+    const id = c.ok ? c.id : 0;
+    expect(await updateAdminUser(id, { name: "Мария", role: "editor", active: true, password: "" }, { id: null }, deps)).toEqual({ ok: true, id });
+    expect(await getAdminUser(id, db)).toMatchObject({ role: "editor" });
+    expect(await resolveViewer({ kind: "user", id, v: 0 }, db)).toBeNull();
+  });
+
+  it("неизвестную роль не принимает", async () => {
+    const r = await createAdminUser({ ...guide, role: "superuser" }, deps);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.fieldErrors.role).toBeTruthy();
+  });
+
   it("владелец: только с отпечатком текущей учётки", async () => {
     expect(await resolveViewer({ kind: "owner", v: ownerFingerprint()! }, db)).toMatchObject({ id: null, role: "owner" });
     expect(await resolveViewer({ kind: "owner", v: "stale" }, db)).toBeNull();

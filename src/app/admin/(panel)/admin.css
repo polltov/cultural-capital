@@ -43,6 +43,9 @@
   border: 1px solid rgba(34, 41, 58, .22); border-radius: 4px;
 }
 .field input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+/* Только для чтения (цены и сеансы у редактора): видно, что поле не меняется. */
+.field input[readonly], .field input:disabled { background: var(--bg); color: var(--muted); }
+.field input[readonly]:focus { box-shadow: none; border-color: rgba(34, 41, 58, .22); }
 .form-error { color: var(--accent); font-size: 14px; font-weight: 700; }
 .muted { color: var(--muted); }
 
@@ -108,7 +111,7 @@
 .session-row {
   display: grid; grid-template-columns: 150px 1fr 170px; gap: 20px; align-items: center; padding: 14px 20px;
 }
-.session-row:hover { background: rgba(245, 237, 224, .6); }
+a.session-row:hover { background: rgba(245, 237, 224, .6); }
 .session-when { display: flex; gap: 10px; align-items: baseline; }
 .session-date { font-weight: 700; }
 .session-time { color: var(--muted); font-variant-numeric: tabular-nums; }

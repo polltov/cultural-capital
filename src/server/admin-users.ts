@@ -4,9 +4,10 @@ import { z } from "zod";
 import { db as sharedDb, type Db } from "@/db/client";
 import { adminUsers } from "@/db/schema";
 import type { Viewer } from "@/lib/auth/viewer";
+import { STAFF_ROLES, type StaffRole } from "@/lib/auth/roles";
 
 export type AdminUserRow = {
-  id: number; login: string; name: string; role: "admin" | "guide"; active: boolean; lastLoginAt: Date | null; createdAt: Date;
+  id: number; login: string; name: string; role: StaffRole; active: boolean; lastLoginAt: Date | null; createdAt: Date;
 };
 
 export type UserResult = { ok: true; id: number } | { ok: false; error?: string; fieldErrors: Record<string, string> };
@@ -20,7 +21,7 @@ const loginSchema = z
   .toLowerCase()
   .regex(/^[a-z0-9._-]{3,40}$/, "От 3 до 40 символов: латинские буквы, цифры, точка, дефис, подчёркивание");
 const nameSchema = z.string().trim().min(1, "Укажите имя").max(80, "Не длиннее 80 символов");
-const roleSchema = z.enum(["admin", "guide"], { message: "Выберите роль" });
+const roleSchema = z.enum(STAFF_ROLES, { message: "Выберите роль" });
 const passwordSchema = z
   .string()
   .min(PASSWORD_MIN, `Не короче ${PASSWORD_MIN} символов`)

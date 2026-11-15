@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db as sharedDb, type Db } from "@/db/client";
 import { adminUsers } from "@/db/schema";
-import type { Role } from "./roles";
+import { can, hasFullAccess, type Area, type Role } from "./roles";
 import { ownerFingerprint, readSessionToken, SESSION_COOKIE, type SessionSubject } from "./session";
 
 export type Viewer = { id: number | null; login: string; name: string; role: Role };
@@ -34,7 +34,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   return s ? resolveViewer(s) : null;
 });
 
-/** Любой сотрудник, включая гида: сводка сеансов, списки участников, отметка прихода. */
+/** Любой вошедший сотрудник: layout панели и сводка. Остальные страницы и действия проверяют раздел — requireAccess(). */
 export async function requireStaff(): Promise<Viewer> {
   const v = await getViewer();
   if (!v) redirect("/admin/login");
@@ -42,11 +42,21 @@ export async function requireStaff(): Promise<Viewer> {
 }
 
 /**
- * Полный доступ (владелец и администраторы). Вызывать в каждой странице и в начале каждого Server Action админки,
- * кроме разрешённых гиду. Гида отправляет на сводку — её он видит.
+ * Доступ к разделу админки (см. `Area` в roles.ts). Вызывать в каждой странице и в начале каждого Server Action.
+ * Без доступа отправляет на сводку — её видят все.
+ */
+export async function requireAccess(area: Area): Promise<Viewer> {
+  const v = await requireStaff();
+  if (!can(v.role, area)) redirect("/admin");
+  return v;
+}
+
+/**
+ * Полный доступ (владелец и администраторы): заказы, сотрудники, цены и сеансы. Список разрешённых, а не запрещённых
+ * ролей: новая роль не получит доступ сюда сама собой.
  */
 export async function requireAdmin(): Promise<Viewer> {
   const v = await requireStaff();
-  if (v.role === "guide") redirect("/admin");
+  if (!hasFullAccess(v.role)) redirect("/admin");
   return v;
 }

@@ -37,6 +37,9 @@ export const tourSchema = z.object({
 });
 export type TourInput = z.input<typeof tourSchema>;
 
+/** То, что может менять редактор: всё, кроме цен (лишние поля, в том числе цены, отбрасываются). */
+export const tourContentSchema = tourSchema.omit({ priceChild: true, priceAdult: true });
+
 export const idSchema = z.number().int().min(1).max(INT4_MAX);
 
 export const sessionSchema = z.object({

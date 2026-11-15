@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { tours, tourSessions, orders } from "@/db/schema";
 import { getPublishedCatalog } from "@/server/catalog";
-import { saveTour, setTourPublished, reorderTours, saveSession, deleteSession, listAdminTours, getAdminTour } from "@/server/tours";
+import { saveTour, saveTourContent, setTourPublished, reorderTours, saveSession, deleteSession, listAdminTours, getAdminTour } from "@/server/tours";
 
 const H = 3600_000;
 const valid = { title: "Дворцовая площадь", subtitle: "", route: "", description: "", note: "", durationLabel: "2 часа", ageLabel: "6+", priceChild: 1000, priceAdult: 1500, featured: false, coverUrl: null };
@@ -89,6 +89,31 @@ describe("saveTour", () => {
     }
     const edge = await saveTour({ ...valid, meetingPoint: "x".repeat(300), whatToBring: "y".repeat(500) }, undefined, db);
     expect(edge.ok).toBe(true);
+  });
+});
+
+describe("saveTourContent (редактор)", () => {
+  it("меняет тексты, обложку и «главную», но не цены", async () => {
+    const t = await mkTour("a");
+    const r = await saveTourContent(t.id, { ...valid, title: "Новое имя", featured: true, coverUrl: "/assets/x.webp", priceChild: 1, priceAdult: 2 }, db);
+    expect(r).toEqual({ ok: true, id: t.id });
+    const [row] = await db.select().from(tours).where(eq(tours.id, t.id));
+    expect(row).toMatchObject({ title: "Новое имя", featured: true, coverUrl: "/assets/x.webp", priceChild: 1000, priceAdult: 500, slug: "a", published: true });
+  });
+
+  it("обходится без цен во входных данных и проверяет поля как обычно", async () => {
+    const t = await mkTour("a");
+    const noPrices = Object.fromEntries(Object.entries(valid).filter(([k]) => !k.startsWith("price")));
+    expect(await saveTourContent(t.id, { ...noPrices, title: "Без цен" }, db)).toEqual({ ok: true, id: t.id });
+    const bad = await saveTourContent(t.id, { ...noPrices, title: "" }, db);
+    expect(bad.ok).toBe(false);
+    if (!bad.ok) expect(bad.fieldErrors.title).toBeTruthy();
+  });
+
+  it("сообщает о несуществующей экскурсии", async () => {
+    const r = await saveTourContent(99999, valid, db);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.fieldErrors.form).toBe("Экскурсия не найдена");
   });
 });
 

@@ -78,6 +78,13 @@
       "when": 1794773082030,
       "tag": "0010_order_source",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794779668874,
+      "tag": "0011_admin_role_editor",
+      "breakpoints": true
     }
   ]
 }

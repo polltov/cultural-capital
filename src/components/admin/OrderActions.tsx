@@ -33,9 +33,9 @@ type Props = {
   total: number;
   /** Уже возвращено по заказу (частичные отмены). */
   refunded: number;
-  /** Билеты в заказе сейчас и цены по слепку заказа. */
-  children: number;
-  adults: number;
+  /** Билеты в заказе сейчас (детские, взрослые) и цены по слепку заказа. */
+  childTickets: number;
+  adultTickets: number;
   priceChild: number;
   priceAdult: number;
   startsAt: Date;
@@ -50,7 +50,7 @@ const AMOUNT_RE = /^\d{1,9}$/;
 const targetLabel = (t: MoveTarget) =>
   `${formatDayMonth(t.startsAt)}, ${formatWeekday(t.startsAt)}, ${formatTime(t.startsAt)} · свободно ${t.free}`;
 
-export function OrderActions({ id, status, total, refunded, children, adults, priceChild, priceAdult, startsAt, moveTargets, hasTicket }: Props) {
+export function OrderActions({ id, status, total, refunded, childTickets: children, adultTickets: adults, priceChild, priceAdult, startsAt, moveTargets, hasTicket }: Props) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [failure, setFailure] = useState<string | null>(null);

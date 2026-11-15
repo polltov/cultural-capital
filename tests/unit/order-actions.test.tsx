@@ -45,8 +45,8 @@ function setup(
       status={over.status ?? "paid"}
       total={3270}
       refunded={over.refunded ?? 0}
-      children={over.children ?? 2}
-      adults={over.adults ?? 1}
+      childTickets={over.children ?? 2}
+      adultTickets={over.adults ?? 1}
       priceChild={1000}
       priceAdult={1270}
       startsAt={new Date(Date.now() + (over.startsInHours ?? 48) * HOUR)}

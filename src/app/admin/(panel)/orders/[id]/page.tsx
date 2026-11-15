@@ -45,8 +45,8 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         status={o.status}
         total={o.total}
         refunded={o.refundedAmount}
-        children={o.children}
-        adults={o.adults}
+        childTickets={o.children}
+        adultTickets={o.adults}
         priceChild={o.priceChildSnapshot}
         priceAdult={o.priceAdultSnapshot}
         startsAt={o.startsAt}

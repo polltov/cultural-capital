@@ -2,7 +2,8 @@
 # копируется сюда и запускается скриптом deploy.sh при каждой выкладке.
 #   docker compose ps                 — что запущено
 #   docker compose logs -f app        — журнал сайта (cron, caddy, db — журналы задач, HTTPS и базы)
-#   docker compose up -d app cron     — применить правку app.env (без пересборки; restart её не подхватит)
+#   docker compose up -d app cron backup — применить правку app.env (без пересборки; restart её не подхватит);
+#                                        SITE_URL, S3_PUBLIC_URL и пароль в DATABASE_URL — только новой выкладкой
 name: kc
 
 services:
@@ -62,7 +63,8 @@ services:
       - db-data:/var/lib/postgresql/data
     shm_size: 128mb
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "kc", "-d", "kc"]
+      # по TCP: при первом запуске образ сначала поднимает временный сервер только на сокете, а потом перезапускает его
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "kc", "-d", "kc"]
       interval: 5s
       timeout: 5s
       retries: 24
@@ -76,7 +78,7 @@ services:
     build:
       context: ./src/deploy
       dockerfile_inline: |
-        FROM postgres:17
+        FROM postgres:17-trixie
         RUN apt-get update && apt-get install -y --no-install-recommends restic curl ca-certificates \
           && rm -rf /var/lib/apt/lists/*
         COPY --chmod=755 backup.sh /usr/local/bin/kc-backup

@@ -1,12 +1,19 @@
 #!/bin/sh
 # Ночные копии базы — как у сайта гимназии: restic в приватный бакет объектного хранилища Селектела, всё зашифровано,
-# хранятся 14 ежедневных и 8 еженедельных копий. Работает контейнером backup (deploy/compose.yml), в ~/app:
+# хранятся все копии за 7 дней, 14 ежедневных и 8 еженедельных. Работает контейнером backup (deploy/compose.yml), в ~/app:
 #   docker compose logs backup                     — журнал копий
 #   docker compose run --rm backup now             — сделать копию сейчас
-#   docker compose run --rm backup snapshots       — список копий
+#   docker compose run --rm backup snapshots       — список копий (snapshots <id|latest> — одна копия)
 #   bash src/deploy/restore-db.sh <копия|latest>   — восстановить базу (останавливает сайт на время заливки)
 # Настройки — ~/app/backup.env (образец deploy/backup.env.example); база — DATABASE_URL из app.env.
 set -eu
+
+# Пароль базы — через PGPASSWORD, а не в аргументах команд: аргументы видны в списке процессов сервера.
+if [ -n "${DATABASE_URL:-}" ]; then
+  PGPASSWORD="$(printf '%s' "$DATABASE_URL" | sed -n 's#^[a-z]*://[^:/@]*:\([^@]*\)@.*#\1#p')"
+  export PGPASSWORD
+  DB="$(printf '%s' "$DATABASE_URL" | sed 's#^\([a-z]*://[^:/@]*\):[^@]*@#\1@#')"
+fi
 
 log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*"; }
 
@@ -50,8 +57,10 @@ backup() {
   # pg_dump пишет прямо в restic; если он упал, копия не сохраняется. Имя хоста постоянное: у контейнера оно каждый
   # раз новое, а restic считает «14 ежедневных» отдельно для каждого хоста — старые копии не удалялись бы никогда.
   restic backup --quiet --host kc --tag nightly --stdin-filename kc.dump --stdin-from-command -- \
-    pg_dump --format=custom --dbname="$DATABASE_URL" || return 1
-  restic forget --quiet --host kc --tag nightly --keep-daily 14 --keep-weekly 8 --prune || return 1
+    pg_dump --format=custom --dbname="$DB" || return 1
+  # копии за последние 7 дней не удаляются никогда: даже копия пустой базы (например, на новом сервере до
+  # восстановления) не вытеснит хорошую копию того же дня
+  restic forget --quiet --host kc --tag nightly --keep-within 7d --keep-daily 14 --keep-weekly 8 --prune || return 1
   log "копия сделана"
 }
 
@@ -77,19 +86,31 @@ schedule() {
   done
 }
 
-# Заливает копию в базу целиком: сначала удаляет таблицы, потом создаёт их из копии — одной транзакцией.
+# Заливает копию в базу целиком, одной транзакцией: схемы public и drizzle пересоздаются, поэтому копия восстановится
+# и в базу, ушедшую вперёд (новые таблицы и записи о миграциях после копии исчезнут, следующая выкладка их применит).
 restore() {
   configured || return 1
-  restic dump "${1:?какую копию: id или latest}" /kc.dump > /tmp/kc.dump || return 1
-  pg_restore --clean --if-exists --no-owner --single-transaction --exit-on-error --dbname="$DATABASE_URL" /tmp/kc.dump
+  restic dump --host kc "${1:?какую копию: id или latest}" /kc.dump > /tmp/kc.dump || return 1
+  { echo "DROP SCHEMA IF EXISTS drizzle CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;"
+    pg_restore --no-owner --file=- /tmp/kc.dump; } |
+    PGOPTIONS="-c client_min_messages=warning" psql -X -q -v ON_ERROR_STOP=1 --single-transaction --dbname="$DB" >/dev/null || return 1
   rm -f /tmp/kc.dump
   log "база восстановлена из копии $1"
+}
+
+snapshots() {
+  configured || return 1
+  case "${1:-}" in
+    "") restic snapshots --host kc ;;
+    latest) restic snapshots --host kc --latest 1 ;;
+    *) restic snapshots "$1" ;;
+  esac
 }
 
 case "${1:-schedule}" in
   schedule) schedule ;;
   now) run_backup ;;
-  snapshots) configured && restic snapshots ;;
-  restore) restore "${2:-}" ;;
+  snapshots) snapshots "${2:-}" ;;
+  restore) restore "${2:-}" || { log "ОШИБКА: база не восстановлена, она осталась прежней"; exit 1; } ;;
   *) echo "использование: kc-backup [schedule|now|snapshots|restore <копия>]" >&2; exit 2 ;;
 esac

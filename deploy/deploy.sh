@@ -22,7 +22,7 @@ bad="$(grep -E '^[A-Za-z_][A-Za-z0-9_]*=.*\$' app.env | grep -v '^ADMIN_PASSWORD
 [ -z "$bad" ] || fail "в app.env символ \$ в значениях: $bad — замените (например, смените пароль на такой, где нет \$)"
 
 # Домен для HTTPS — из SITE_URL; кириллица переводится в punycode (культурнаястолица.рф → xn--….xn--p1ai).
-site_url="$(grep -E '^SITE_URL=' app.env | tail -n1 | cut -d= -f2- | tr -d "\"' \r")"
+site_url="$( (grep -E '^SITE_URL=' app.env || true) | tail -n1 | cut -d= -f2- | tr -d "\"' \r")"
 [ -n "$site_url" ] || fail "в app.env не задан SITE_URL"
 domain="$(python3 -c '
 import sys, urllib.parse
@@ -31,7 +31,7 @@ print(urllib.parse.urlsplit(u).hostname.encode("idna").decode())' "$site_url")"
 case "$domain" in localhost|*.local|"") fail "SITE_URL ($site_url) должен быть настоящим доменом сайта" ;; esac
 
 # База — контейнер db на этом сервере; её пароль задаётся только в DATABASE_URL (app.env), отсюда его берёт и сама база.
-db_url="$(grep -E '^DATABASE_URL=' app.env | tail -n1 | cut -d= -f2- | tr -d "\"' \r")"
+db_url="$( (grep -E '^DATABASE_URL=' app.env || true) | tail -n1 | cut -d= -f2- | tr -d "\"' \r")"
 db_password="$(python3 -c '
 import re, sys, urllib.parse
 u = urllib.parse.urlsplit(sys.argv[1])
@@ -41,6 +41,7 @@ if u.scheme not in ("postgres", "postgresql") or u.hostname != "db" or u.port no
 if not re.fullmatch(r"[A-Za-z0-9]{24,}", u.password or ""):
     sys.exit("пароль базы в DATABASE_URL — не короче 24 символов, только латинские буквы и цифры")
 print(u.password)' "$db_url")" || fail "исправьте DATABASE_URL в app.env (README, «Сервер в Селектеле»)"
+rm -f .env # прежний .env мог быть создан с открытыми правами — umask действует только на новый файл
 printf 'SITE_DOMAIN=%s\nDB_PASSWORD=%s\n' "$domain" "$db_password" > .env
 
 cp src/deploy/compose.yml src/deploy/Caddyfile .
@@ -48,7 +49,9 @@ cp src/deploy/compose.yml src/deploy/Caddyfile .
 echo "== база"
 docker compose up -d --wait db
 # Пароль из POSTGRES_PASSWORD база берёт только при первом запуске; если его потом сменили в app.env — догоняем.
-printf "ALTER ROLE kc PASSWORD :'pw';\n" | docker compose exec -T db psql -X -q -v ON_ERROR_STOP=1 -v pw="$db_password" -U kc -d kc
+# Пароль идёт через stdin, не в аргументах (аргументы docker exec попадают в журнал событий Docker); в нём только
+# латиница и цифры (проверено выше), так что кавычки в SQL безопасны.
+printf "ALTER ROLE kc PASSWORD '%s';\n" "$db_password" | docker compose exec -T db psql -X -q -v ON_ERROR_STOP=1 -U kc -d kc
 # адрес контейнера базы во внутренней сети — для сборки сайта (compose.yml, app.build.extra_hosts)
 db_ip="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$(docker compose ps -q db)")"
 [ -n "$db_ip" ] || fail "не удалось узнать адрес контейнера базы"

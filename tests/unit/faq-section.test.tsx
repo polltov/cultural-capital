@@ -47,10 +47,14 @@ describe("Faq", () => {
   });
 
   it("offers to write only when there is somewhere to write", () => {
-    const saved = { tg: contacts.telegram, email: operator.email };
+    // Реквизиты в src/lib/legal.ts заполняет владелец: пустой случай задаём явно, не полагаясь на них.
+    const saved = { ...contacts, email: operator.email, phone: operator.phone };
     try {
       contacts.telegram = "";
+      contacts.whatsapp = "";
+      contacts.vk = "";
       operator.email = "";
+      operator.phone = "";
       render(<Faq items={items} />);
       expect(screen.queryByText(/Не нашли ответ/)).toBeNull();
       cleanup();
@@ -59,8 +63,11 @@ describe("Faq", () => {
       expect(screen.getByText(/Не нашли ответ/)).toBeTruthy();
       expect(screen.getByRole("link", { name: "Написать в Telegram" }).getAttribute("href")).toBe("https://t.me/kultstolica");
     } finally {
-      contacts.telegram = saved.tg;
+      contacts.telegram = saved.telegram;
+      contacts.whatsapp = saved.whatsapp;
+      contacts.vk = saved.vk;
       operator.email = saved.email;
+      operator.phone = saved.phone;
     }
   });
 

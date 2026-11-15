@@ -87,6 +87,7 @@ npm run build
 | `SESSION_SECRET` | секрет подписи сессии (не короче 32 символов) |
 | `TELEGRAM_BOT_TOKEN` | токен бота для уведомлений об оплаченных заказах |
 | `TELEGRAM_CHAT_ID` | чат, куда приходят уведомления |
+| `TELEGRAM_API_URL`, `TELEGRAM_RELAY_KEY` | посредник для Telegram и его ключ (раздел «Telegram»); без них запросы идут прямо в `api.telegram.org` |
 | `SITE_URL` | публичный адрес сайта: Open Graph, ссылки в письмах и в уведомлениях Telegram, домен для HTTPS на сервере (кириллический домен можно записать как есть) |
 | `YOOKASSA_SHOP_ID` | идентификатор магазина ЮKassa (для разработки — тестового) |
 | `YOOKASSA_SECRET_KEY` | секретный ключ магазина ЮKassa |

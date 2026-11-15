@@ -74,4 +74,21 @@ describe("notifyAlert", () => {
       err.mockRestore();
     }
   });
+
+  it("goes through the relay when TELEGRAM_API_URL is set: the server in RU cannot reach api.telegram.org", async () => {
+    vi.stubEnv("TELEGRAM_API_URL", " https://relay.example.test/ ");
+    vi.stubEnv("TELEGRAM_RELAY_KEY", "relay-key");
+    await notifyAlert("x");
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://relay.example.test/botbot-token/sendMessage");
+    expect(init.headers).toMatchObject({ "content-type": "application/json", "x-relay-key": "relay-key" });
+  });
+
+  it("never sends the relay key to Telegram itself", async () => {
+    vi.stubEnv("TELEGRAM_RELAY_KEY", "relay-key");
+    await notifyAlert("x");
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.telegram.org/botbot-token/sendMessage");
+    expect(init.headers).not.toHaveProperty("x-relay-key");
+  });
 });

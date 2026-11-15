@@ -19,12 +19,25 @@ function telegramConfig(): { token: string; chatId: string } | null {
   return { token, chatId };
 }
 
+/**
+ * Куда идёт запрос к Bot API. С сервера в России api.telegram.org недоступен, поэтому там задаётся посредник на Vercel
+ * (TELEGRAM_API_URL, тот же, что у сайта гимназии) и его ключ TELEGRAM_RELAY_KEY. Ключ уходит только посреднику.
+ */
+function sendMessageRequest(token: string): { url: string; headers: Record<string, string> } {
+  const relay = (process.env.TELEGRAM_API_URL ?? "").trim().replace(/\/+$/, "");
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  const key = (process.env.TELEGRAM_RELAY_KEY ?? "").trim();
+  if (relay && key) headers["x-relay-key"] = key;
+  return { url: `${relay || "https://api.telegram.org"}/bot${token}/sendMessage`, headers };
+}
+
 /** Отправка в чат владельца; не бросает — ошибки только в лог. */
 async function sendTelegram(cfg: { token: string; chatId: string }, text: string): Promise<void> {
   try {
-    const res = await fetch(`https://api.telegram.org/bot${cfg.token}/sendMessage`, {
+    const { url, headers } = sendMessageRequest(cfg.token);
+    const res = await fetch(url, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers,
       body: JSON.stringify({ chat_id: cfg.chatId, text, parse_mode: "HTML", disable_web_page_preview: true }),
       signal: AbortSignal.timeout(5000),
     });

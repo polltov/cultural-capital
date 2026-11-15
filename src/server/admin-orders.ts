@@ -136,8 +136,8 @@ export async function getSessionRoster(sessionId: number, db: Db = sharedDb): Pr
   if (!s) return null;
   const list = await db
     .select({
-      number: orders.number, name: orders.customerName, phone: orders.phone, children: orders.children,
-      adults: orders.adults, total: orders.total, adminNote: orders.adminNote,
+      id: orders.id, number: orders.number, name: orders.customerName, phone: orders.phone, children: orders.children,
+      adults: orders.adults, total: orders.total, adminNote: orders.adminNote, checkedInAt: orders.checkedInAt,
     })
     .from(orders)
     .where(and(eq(orders.sessionId, sessionId), inArray(orders.status, [...SEAT_HOLDING_STATUSES])))

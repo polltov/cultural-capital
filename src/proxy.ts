@@ -8,7 +8,10 @@ export async function proxy(request: NextRequest) {
   if (pathname === "/admin/login" || pathname.startsWith("/admin/login/")) return NextResponse.next();
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   if (token && (await verifySessionToken(token))) return NextResponse.next();
-  return NextResponse.redirect(new URL("/admin/login", request.url));
+  // Вернём на нужную страницу после входа: гид сканирует QR-код билета, ещё не войдя в админку.
+  const login = new URL("/admin/login", request.url);
+  if (pathname !== "/admin") login.searchParams.set("next", pathname);
+  return NextResponse.redirect(login);
 }
 
 export const config = {

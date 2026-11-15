@@ -360,3 +360,13 @@
   .frow-controls { grid-column: 1 / -1; }
   .frow-controls .switch { margin-right: auto; }
 }
+
+/* Отметка прихода по QR-коду: крупно — гид смотрит на телефон на улице */
+.checkin-banner { font-size: 18px; margin-bottom: 20px; }
+.checkin-btn { min-height: 52px; padding: 0 28px; font-size: 17px; }
+.checkin-cell { white-space: nowrap; }
+.checkin-cell form { display: inline; }
+.checkin-mark { font-weight: 700; color: #3f4a33; }
+.print-only { display: none; }
+@media print { .checkin-cell form { display: none; } .print-only { display: inline; } }
+.roster-hint { margin: -8px 0 16px; }

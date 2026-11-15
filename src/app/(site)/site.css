@@ -470,6 +470,11 @@ main:focus{outline:none}
 .order-rows dd{font-size:15.5px;color:var(--ink)}
 .order-ticket .t-note{margin-bottom:16px;padding:10px 14px;border-left:2px solid var(--gold);background:rgba(194,154,91,.14);font-family:var(--sans);font-size:13.5px;line-height:1.55;color:var(--text)}
 .order-bring{white-space:pre-line}
+.order-qr{display:flex;align-items:center;gap:16px;margin:0 0 16px;padding:12px;border:1px solid var(--gold-line);border-radius:4px;background:#fff}
+.order-qr-code{flex:none;width:132px;height:132px}
+.order-qr-code svg{display:block;width:100%;height:100%}
+.order-qr figcaption{font-family:var(--sans);font-size:13.5px;line-height:1.5;color:var(--text)}
+@media (max-width:420px){.order-qr{flex-direction:column;align-items:flex-start}.order-qr-code{width:168px;height:168px}}
 .order-bring b{display:block;margin-bottom:4px;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
 .order-receipt{margin-top:14px;font-family:var(--sans);font-size:13px;line-height:1.5;color:var(--muted)}
 .order-terms,.order-contacts{margin-top:18px;font-family:var(--sans);font-size:14px;line-height:1.55;color:var(--muted)}

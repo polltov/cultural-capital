@@ -43,6 +43,13 @@
       "when": 1794755913849,
       "tag": "0005_order_mail_marks",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794756310253,
+      "tag": "0006_order_checkin",
+      "breakpoints": true
     }
   ]
 }

@@ -2,6 +2,7 @@ import { and, eq, isNotNull } from "drizzle-orm";
 import { db as sharedDb, type Db } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
 import { formatOrderNumber } from "@/lib/domain/order-number";
+import { ticketQrImageUrl } from "@/lib/checkin";
 import { siteUrl } from "@/lib/site-url";
 import { sendMail } from "./mail/send";
 import { abandonedEmail, cancelledEmail, reminderEmail, sorryEmail, ticketEmail, type TicketData } from "./mail/templates";
@@ -24,6 +25,7 @@ async function load(orderId: number, db: Db): Promise<Loaded | null> {
       orderId: row.o.id, number: formatOrderNumber(row.o.number), tourTitle: row.title, startsAt: row.startsAt,
       meetingPoint: row.meetingPoint, whatToBring: row.whatToBring, children: row.o.children, adults: row.o.adults,
       total: row.o.total, name: row.o.customerName, email: row.o.email, url: `${siteUrl()}/order/${row.o.accessToken}`,
+      qrImageUrl: ticketQrImageUrl(row.o.accessToken),
     },
   };
 }

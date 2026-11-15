@@ -1,5 +1,7 @@
 export type RosterRow = {
-  number: string; name: string; phone: string; children: number; adults: number; total: number; adminNote: string | null;
+  id: number; number: string; name: string; phone: string; children: number; adults: number; total: number; adminNote: string | null;
+  /** Когда гид отметил приход (по QR-коду или в списке); `null` — не отмечен. */
+  checkedInAt: Date | null;
 };
 export type Roster = {
   session: { tourTitle: string; startsAt: Date; capacity: number };
@@ -7,7 +9,7 @@ export type Roster = {
   totals: { children: number; adults: number };
 };
 
-const HEADER = ["Номер", "Имя", "Телефон", "Детей", "Взрослых", "Сумма", "Заметка"];
+const HEADER = ["Номер", "Имя", "Телефон", "Детей", "Взрослых", "Сумма", "Заметка", "Пришли"];
 
 /** Защита от формул Excel: значения из публичной формы не должны выполняться как формулы. */
 const guard = (s: string) => (/^[=+\-@]/.test(s) ? `'${s}` : s);
@@ -25,6 +27,7 @@ export function rosterToCsv(roster: Roster): string {
         String(r.adults),
         String(r.total),
         quote(guard(r.adminNote ?? "")),
+        r.checkedInAt ? "да" : "",
       ].join(";"),
     );
   }

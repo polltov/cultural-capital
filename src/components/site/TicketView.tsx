@@ -27,7 +27,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-function PaidTicket({ ticket: t }: { ticket: TicketData }) {
+function PaidTicket({ ticket: t, qr }: { ticket: TicketData; qr?: string }) {
   const meetingPoint = t.meetingPoint.trim();
   const bring = t.whatToBring.trim();
   return (
@@ -49,6 +49,13 @@ function PaidTicket({ ticket: t }: { ticket: TicketData }) {
             <Row label="Состав">{formatComposition(t.children, t.adults)}</Row>
             <Row label="Имя">{t.name}</Row>
           </dl>
+          {qr && (
+            <figure className="order-qr">
+              {/* SVG строит наш сервер из адреса отметки прихода (src/server/qr.ts), пользовательского ввода в нём нет */}
+              <div className="order-qr-code" role="img" aria-label="QR-код билета" dangerouslySetInnerHTML={{ __html: qr }} />
+              <figcaption>Покажите QR-код гиду на встрече — он отметит, что вы пришли</figcaption>
+            </figure>
+          )}
           {bring && (
             <div className="t-note order-bring">
               <b>Что взять с собой</b>
@@ -99,10 +106,10 @@ function UnpaidState({ title, text }: { title: string; text: string }) {
  * Страница заказа по состоянию: билет (оплачен/проведён), ожидание оплаты, «не оплачен» / «оплата не прошла», «отменён».
  * Серверный компонент; клиентские — только опрос (`AwaitPayment`) и печать (`PrintButton`).
  */
-export function TicketView({ view, ticket, refunded }: OrderPageData) {
+export function TicketView({ view, ticket, refunded, qr }: OrderPageData) {
   return (
     <section className="order-view">
-      {view === "paid" && <PaidTicket ticket={ticket} />}
+      {view === "paid" && <PaidTicket ticket={ticket} qr={qr} />}
       {view === "awaiting" && (
         <>
           <AwaitPayment />

@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { safeAdminNext } from "@/lib/auth/next-path";
 import { SESSION_COOKIE, SESSION_MAX_AGE_SEC } from "@/lib/auth/session";
 import { attemptLogin } from "@/server/admin-auth";
 import { clientIp } from "@/server/client-ip";
@@ -20,7 +21,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     path: "/",
     maxAge: SESSION_MAX_AGE_SEC,
   });
-  redirect("/admin");
+  redirect(safeAdminNext(formData.get("next")));
 }
 
 // Без requireAdmin(): выход только удаляет cookie — для неавторизованного это no-op, утечки данных нет.

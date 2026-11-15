@@ -3,10 +3,11 @@
 import { useActionState } from "react";
 import { loginAction, type LoginState } from "@/app/admin/login/actions";
 
-export function LoginForm() {
+export function LoginForm({ next = "/admin" }: { next?: string }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(loginAction, null);
   return (
     <form action={action} className="login-form" noValidate>
+      <input type="hidden" name="next" value={next} />
       <label className="field">
         <span className="field-label">Логин</span>
         <input name="login" autoComplete="username" required defaultValue={state?.login ?? ""} autoFocus />

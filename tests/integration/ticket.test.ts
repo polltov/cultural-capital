@@ -42,6 +42,7 @@ describe("loadTicket", () => {
       orderId: o.id, number: "КС-0057", tourTitle: "Египетский зал", startsAt: STARTS, meetingPoint: "У главного входа",
       whatToBring: "Вода", children: 2, adults: 1, total: 3270, name: "Анна", email: "anna@example.com",
       url: "https://x.test/order/tok_abc",
+      qrImageUrl: "https://x.test/order/tok_abc/qr",
     });
   });
 

@@ -7,14 +7,17 @@ const mk = (rows: Roster["rows"]): Roster => ({
   totals: { children: 0, adults: 0 },
 });
 const row = (o: Partial<Roster["rows"][number]> = {}) => ({
-  number: "КС-0001", name: "Анна", phone: "+79111234567", children: 1, adults: 2, total: 3000, adminNote: null, ...o,
+  id: 1, number: "КС-0001", name: "Анна", phone: "+79111234567", children: 1, adults: 2, total: 3000, adminNote: null, checkedInAt: null, ...o,
 });
 
 describe("rosterToCsv", () => {
   it("starts with BOM, header, CRLF", () => {
     const csv = rosterToCsv(mk([row()]));
     expect(csv.startsWith("﻿")).toBe(true);
-    expect(csv).toBe("﻿Номер;Имя;Телефон;Детей;Взрослых;Сумма;Заметка\r\nКС-0001;Анна;+79111234567;1;2;3000;\r\n");
+    expect(csv).toBe("﻿Номер;Имя;Телефон;Детей;Взрослых;Сумма;Заметка;Пришли\r\nКС-0001;Анна;+79111234567;1;2;3000;;\r\n");
+  });
+  it("marks checked-in orders with «да»", () => {
+    expect(rosterToCsv(mk([row({ checkedInAt: new Date() })]))).toContain(";3000;;да\r\n");
   });
   it("quotes fields with ; \" CR LF", () => {
     const csv = rosterToCsv(mk([row({ name: 'А;Б', adminNote: 'он "сказал"\nпозвонить' })]));
@@ -24,7 +27,7 @@ describe("rosterToCsv", () => {
   it("guards formula injection in name and note, not phone", () => {
     const csv = rosterToCsv(mk([row({ name: "=1+1", adminNote: "@cmd" })]));
     expect(csv).toContain(";'=1+1;");
-    expect(csv).toContain(";'@cmd\r\n");
+    expect(csv).toContain(";'@cmd;\r\n");
     expect(csv).toContain(";+79111234567;");
   });
 });

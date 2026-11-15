@@ -1,19 +1,19 @@
 import { eq } from "drizzle-orm";
 import { db as sharedDb, type Db } from "@/db/client";
 import { orders } from "@/db/schema";
+import { checkinUrl, ORDER_TOKEN } from "@/lib/checkin";
 import type { OrderStatus } from "@/lib/domain/order-status";
 import { FINAL_PAYMENT_STATUSES, syncPayment, type SyncOutcome } from "@/server/payment-sync";
 import { paymentGateway } from "@/server/payments/gateway";
+import { qrSvg } from "@/server/qr";
 import type { PaymentGateway } from "@/server/payments/types";
 import { loadTicket } from "@/server/ticket";
 import type { TicketData } from "@/server/mail/templates";
 
 /** `declined` — тот же «не оплачен» (`expired`), но платёж ЮKassa отменён: карту отклонили или оплату прервали. */
 export type OrderView = "awaiting" | "paid" | "expired" | "declined" | "cancelled";
-export type OrderPageData = { view: OrderView; ticket: TicketData; refunded: number };
-
-/** 32 байта в base64url — ровно то, что выдаёт `startCheckout`. */
-const TOKEN = /^[A-Za-z0-9_-]{43}$/;
+/** `qr` — SVG QR-кода для отметки прихода; есть только у действующего билета (`paid`). */
+export type OrderPageData = { view: OrderView; ticket: TicketData; refunded: number; qr?: string };
 
 /** Старые заявки (`new` / `confirmed`) страницы заказа не имеют. */
 const VIEWS: Partial<Record<OrderStatus, OrderView>> = {
@@ -49,7 +49,7 @@ export async function loadOrderPage(
   token: string,
   deps: { db?: Db; gateway?: PaymentGateway } = {},
 ): Promise<{ data: OrderPageData; outcome: SyncOutcome | null } | null> {
-  if (!TOKEN.test(token)) return null;
+  if (!ORDER_TOKEN.test(token)) return null;
   const db = deps.db ?? sharedDb;
 
   let order = await findByToken(db, token);
@@ -71,5 +71,6 @@ export async function loadOrderPage(
   if (!view) return null;
   const ticket = await loadTicket(order.id, db);
   if (!ticket) return null;
-  return { data: { view, ticket, refunded: order.refunded }, outcome };
+  const qr = view === "paid" ? await qrSvg(checkinUrl(token)) : undefined;
+  return { data: { view, ticket, refunded: order.refunded, ...(qr ? { qr } : {}) }, outcome };
 }

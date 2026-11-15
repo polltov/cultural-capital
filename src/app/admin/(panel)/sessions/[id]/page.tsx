@@ -6,6 +6,8 @@ import { getSessionRoster } from "@/server/admin-orders";
 import { formatRub } from "@/lib/domain/pricing";
 import { formatSessionLong } from "@/lib/domain/moscow-time";
 import { PrintButton } from "@/components/admin/PrintButton";
+import { formatTime } from "@/lib/domain/moscow-time";
+import { toggleCheckin } from "../../checkin/actions";
 
 export const metadata: Metadata = { title: "Участники сеанса" };
 
@@ -18,6 +20,7 @@ export default async function SessionRosterPage({ params }: { params: Promise<{ 
   if (!roster) notFound();
   const { session, rows, totals } = roster;
   const taken = totals.children + totals.adults;
+  const arrived = rows.filter((r) => r.checkedInAt).reduce((a, r) => a + r.children + r.adults, 0);
 
   return (
     <div className="roster">
@@ -28,7 +31,9 @@ export default async function SessionRosterPage({ params }: { params: Promise<{ 
       <p className="roster-meta">
         {formatSessionLong(session.startsAt)} · <strong>Занято {taken} из {session.capacity}</strong>
         <span className="muted"> (детей {totals.children}, взрослых {totals.adults})</span>
+        {arrived > 0 && <> · Пришли {arrived} из {taken}</>}
       </p>
+      <p className="hint muted no-print roster-hint">Приход отмечается по QR-коду на билете: отсканируйте его камерой телефона, на котором вы вошли в админку.</p>
 
       <div className="btn-row no-print roster-actions">
         <PrintButton />
@@ -50,6 +55,7 @@ export default async function SessionRosterPage({ params }: { params: Promise<{ 
               <th className="num">Взрослых</th>
               <th className="num">Сумма</th>
               <th>Заметка</th>
+              <th>Пришли</th>
             </tr>
           </thead>
           <tbody>
@@ -62,6 +68,23 @@ export default async function SessionRosterPage({ params }: { params: Promise<{ 
                 <td className="num">{r.adults}</td>
                 <td className="num">{formatRub(r.total)}</td>
                 <td>{r.adminNote}</td>
+                <td className="checkin-cell">
+                  {r.checkedInAt ? (
+                    <>
+                      <span className="checkin-mark">✓ {formatTime(r.checkedInAt)}</span>{" "}
+                      <form action={toggleCheckin.bind(null, r.id, false)}>
+                        <button type="submit" className="btn btn-ghost" aria-label={`Снять отметку ${r.number}`}>×</button>
+                      </form>
+                    </>
+                  ) : (
+                    <>
+                      <span className="print-only" aria-hidden="true">☐</span>
+                      <form action={toggleCheckin.bind(null, r.id, true)}>
+                        <button type="submit" className="btn btn-ghost">Пришли</button>
+                      </form>
+                    </>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

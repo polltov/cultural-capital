@@ -18,8 +18,8 @@ new="$(grep -E '^DATABASE_URL=' app.env | tail -n1 | cut -d= -f2- | sed -E "s/^[
 [ -n "$new" ] || fail "в app.env не задан DATABASE_URL"
 
 PG_IMAGE="${PG_IMAGE:-postgres:18-alpine}"
-# новая база — с сертификатом Селектела; старая — без него (иначе libpq проверял бы им сертификат Neon)
-pg() { docker run --rm -i -v "$APP_DIR/certs:/certs:ro" -e PGSSLROOTCERT=/certs/root.crt "$PG_IMAGE" "$@"; }
+# новая база — контейнер db на этом сервере, виден только во внутренней сети kc_default (deploy/compose.yml)
+pg() { docker run --rm -i --network kc_default "$PG_IMAGE" "$@"; }
 pg_old() { docker run --rm "$PG_IMAGE" "$@"; }
 
 echo "== проверка новой базы"

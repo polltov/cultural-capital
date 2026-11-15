@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
 # Выкладка сайта на сервере. Запускается из GitHub Actions (.github/workflows/deploy.yml) после того, как свежий код
 # распакован в ~/app/src, или вручную: bash ~/app/src/deploy/deploy.sh
-#   1. проверяет app.env; 2. применяет миграции к базе; 3. собирает образ сайта; 4. перезапускает сайт, расписание
-#   задач и HTTPS; 5. ждёт, пока сайт ответит.
+#   1. проверяет app.env; 2. запускает базу и применяет к ней миграции; 3. собирает образ сайта; 4. перезапускает
+#   сайт, расписание задач, HTTPS и ночные копии базы; 5. ждёт, пока сайт ответит.
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-$HOME/app}"
 cd "$APP_DIR"
 fail() { echo "ОШИБКА: $*" >&2; exit 1; }
+umask 077 # .env с паролем базы — только для владельца
 
 [ -f app.env ] || fail "нет $APP_DIR/app.env — скопируйте src/deploy/app.env.example в app.env и заполните (README, «Сервер в Селектеле»)"
-mkdir -p certs
-[ -f certs/root.crt ] || echo "ВНИМАНИЕ: нет certs/root.crt — сертификат базы Селектела (README, «Сервер в Селектеле»)" >&2
 
 # В app.env Docker раскрывает $ в значениях без кавычек, а сборка Next — даже в кавычках: такое значение молча
 # испортится. Хешу пароля владельца $ нужен (он используется только при работе сайта) — он в одинарных кавычках;
@@ -30,9 +29,30 @@ import sys, urllib.parse
 u = sys.argv[1] if "://" in sys.argv[1] else "https://" + sys.argv[1]
 print(urllib.parse.urlsplit(u).hostname.encode("idna").decode())' "$site_url")"
 case "$domain" in localhost|*.local|"") fail "SITE_URL ($site_url) должен быть настоящим доменом сайта" ;; esac
-printf 'SITE_DOMAIN=%s\n' "$domain" > .env
+
+# База — контейнер db на этом сервере; её пароль задаётся только в DATABASE_URL (app.env), отсюда его берёт и сама база.
+db_url="$(grep -E '^DATABASE_URL=' app.env | tail -n1 | cut -d= -f2- | tr -d "\"' \r")"
+db_password="$(python3 -c '
+import re, sys, urllib.parse
+u = urllib.parse.urlsplit(sys.argv[1])
+if u.scheme not in ("postgres", "postgresql") or u.hostname != "db" or u.port not in (None, 5432) \
+        or u.username != "kc" or u.path != "/kc":
+    sys.exit("DATABASE_URL в app.env должен быть вида postgresql://kc:<пароль>@db:5432/kc")
+if not re.fullmatch(r"[A-Za-z0-9]{24,}", u.password or ""):
+    sys.exit("пароль базы в DATABASE_URL — не короче 24 символов, только латинские буквы и цифры")
+print(u.password)' "$db_url")" || fail "исправьте DATABASE_URL в app.env (README, «Сервер в Селектеле»)"
+printf 'SITE_DOMAIN=%s\nDB_PASSWORD=%s\n' "$domain" "$db_password" > .env
 
 cp src/deploy/compose.yml src/deploy/Caddyfile .
+
+echo "== база"
+docker compose up -d --wait db
+# Пароль из POSTGRES_PASSWORD база берёт только при первом запуске; если его потом сменили в app.env — догоняем.
+printf "ALTER ROLE kc PASSWORD :'pw';\n" | docker compose exec -T db psql -X -q -v ON_ERROR_STOP=1 -v pw="$db_password" -U kc -d kc
+# адрес контейнера базы во внутренней сети — для сборки сайта (compose.yml, app.build.extra_hosts)
+db_ip="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$(docker compose ps -q db)")"
+[ -n "$db_ip" ] || fail "не удалось узнать адрес контейнера базы"
+printf 'DB_IP=%s\n' "$db_ip" >> .env
 
 echo "== миграции базы"
 docker compose build tools
@@ -42,7 +62,14 @@ echo "== сборка сайта"
 docker compose build app
 
 echo "== запуск"
-docker compose up -d --remove-orphans app cron caddy
+services=(db app cron caddy)
+if [ -f backup.env ]; then
+  docker compose build backup
+  services+=(backup)
+else
+  echo "ВНИМАНИЕ: нет $APP_DIR/backup.env — ночные копии базы не делаются (README, «Бэкапы»)" >&2
+fi
+docker compose up -d --remove-orphans "${services[@]}"
 # Caddyfile подключён файлом: новую версию Caddy подхватывает по команде, без обрыва соединений
 docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
 

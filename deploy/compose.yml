@@ -1,33 +1,31 @@
-# Сайт на сервере в Селектеле. Лежит в ~/app рядом с app.env (секреты), certs/ (сертификат базы) и src/ (код);
+# Сайт на сервере в Селектеле. Лежит в ~/app рядом с app.env (секреты) и src/ (код);
 # копируется сюда и запускается скриптом deploy.sh при каждой выкладке.
 #   docker compose ps                 — что запущено
-#   docker compose logs -f app        — журнал сайта (cron, caddy — журналы задач и HTTPS)
+#   docker compose logs -f app        — журнал сайта (cron, caddy, db — журналы задач, HTTPS и базы)
 #   docker compose up -d app cron     — применить правку app.env (без пересборки; restart её не подхватит)
 name: kc
 
-x-app-env: &app-env
-  env_file: [app.env]
-  environment:
-    # сертификат управляемой базы Селектела: строка подключения с sslmode=verify-full проверяет его
-    NODE_EXTRA_CA_CERTS: /certs/root.crt
-  volumes:
-    - ./certs:/certs:ro
-
 services:
   app:
-    <<: *app-env
+    env_file: [app.env]
     build:
       context: ./src
       target: app
       secrets: [appenv]
+      # Сборка заранее собирает страницы с данными из базы, а во внутреннюю сеть контейнеров она не попадает:
+      # собираем в сети сервера, откуда виден адрес контейнера базы, и имя db ведёт на него (DB_IP пишет deploy.sh).
+      network: host
+      extra_hosts: ["db:${DB_IP:-127.0.0.1}"]
     image: kc-app:latest
     volumes:
-      - ./certs:/certs:ro
       - images-cache:/app/.next/cache/images
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
   cron:
-    <<: *app-env
+    env_file: [app.env]
     image: kc-app:latest
     command: ["node", "cron.mjs"]
     # проверка «сайт отвечает» из образа здесь не к месту: сайт работает в соседнем контейнере
@@ -51,13 +49,61 @@ services:
     depends_on: [app]
     restart: unless-stopped
 
+  # База PostgreSQL на этом же сервере (как у сайта гимназии); данные — в томе db-data, копии — сервис backup.
+  # Порт наружу не открыт: к базе ходят только контейнеры этого проекта (и сборка сайта, см. app.build).
+  # Пароль — из DATABASE_URL в app.env: deploy.sh кладёт его в .env и сверяет с базой при каждой выкладке.
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: kc
+      POSTGRES_DB: kc
+      POSTGRES_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD не задан — запустите deploy.sh}"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    shm_size: 128mb
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "kc", "-d", "kc"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+    stop_grace_period: 1m
+    restart: unless-stopped
+
+  # Ночные копии базы, как у сайта гимназии: restic → приватный бакет Selectel S3, 03:30 по Москве (deploy/backup.sh).
+  # Запускается deploy.sh, только когда есть backup.env; образ — тот же postgres, чтобы pg_dump совпадал с базой.
+  backup:
+    build:
+      context: ./src/deploy
+      dockerfile_inline: |
+        FROM postgres:17-alpine
+        RUN apk add --no-cache restic curl
+        COPY --chmod=755 backup.sh /usr/local/bin/kc-backup
+        ENTRYPOINT ["kc-backup"]
+        CMD ["schedule"]
+    image: kc-backup:latest
+    env_file:
+      - path: app.env
+      - path: backup.env
+        required: false
+    environment:
+      RESTIC_CACHE_DIR: /cache
+    volumes:
+      - restic-cache:/cache
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
   # Миграции, сид, перенос данных: docker compose run --rm tools npm run db:migrate
   tools:
-    <<: *app-env
+    env_file: [app.env]
     build:
       context: ./src
       target: tools
     image: kc-tools:latest
+    depends_on:
+      db:
+        condition: service_healthy
     profiles: [tools]
 
 secrets:
@@ -65,6 +111,8 @@ secrets:
     file: ./app.env
 
 volumes:
+  db-data:
+  restic-cache:
   images-cache:
   caddy-data:
   caddy-config:

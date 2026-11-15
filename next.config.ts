@@ -1,10 +1,19 @@
 import type { NextConfig } from "next";
 
+// Публичный адрес контейнера с фото в объектном хранилище Селектела (см. src/server/s3.ts). Читается при сборке:
+// на сервере сборка получает те же переменные, что и сайт (deploy/README.md).
+const imagesUrl = (process.env.S3_PUBLIC_URL ?? "").trim().replace(/\/+$/, "");
+
 const nextConfig: NextConfig = {
+  // Сайт работает на своём сервере в Docker: сборка кладёт в .next/standalone всё нужное для `node server.js`.
+  output: "standalone",
+  // Адрес фото — и в серверный, и в браузерный код (обложка в билете рисуется в браузере), см. src/lib/images.ts.
+  env: { IMAGES_URL: imagesUrl },
   // globalNotFound: фирменная 404 для несуществующих адресов при двух корневых layout (сайт и админка)
   experimental: { serverActions: { bodySizeLimit: "10mb" }, globalNotFound: true },
   images: {
-    remotePatterns: [{ protocol: "https", hostname: "*.public.blob.vercel-storage.com" }],
+    // уменьшенные копии под экран делаются только для фото из своего контейнера
+    remotePatterns: imagesUrl ? [new URL(`${imagesUrl}/**`)] : [],
     // к стандартному набору добавлены 320 и 480: обложки в карточках и фото первого экрана занимают 280–440 px,
     // без промежуточных размеров обычный экран получал картинку в полтора раза больше нужной
     imageSizes: [32, 48, 64, 96, 128, 256, 320, 384, 480],

@@ -7,3 +7,9 @@ node_modules/
 .env*.local
 next-env.d.ts
 *.tsbuildinfo
+
+# секреты сервера Селектела, если готовить их в папке проекта (README, «Сервер в Селектеле»)
+app.env
+deploy_key
+deploy_key.pub
+root.crt

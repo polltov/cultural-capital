@@ -43,7 +43,7 @@ export async function checkPassword(password: string, hash: string | null): Prom
 
 /**
  * Кто вошёл. Владелец — учётка из окружения; его токен несёт отпечаток логина и хеша пароля, поэтому после смены пароля
- * в Vercel старые сессии владельца перестают действовать. Сотрудник — id и версия токена из `admin_users`.
+ * в app.env на сервере старые сессии владельца перестают действовать. Сотрудник — id и версия токена из `admin_users`.
  */
 export type SessionSubject = { kind: "owner"; v: string } | { kind: "user"; id: number; v: number };
 

@@ -1,0 +1,25 @@
+# HTTPS для сайта: Caddy сам получает и продлевает сертификат Let's Encrypt для домена из SITE_URL
+# (deploy.sh пишет его в punycode в файл .env рядом с compose.yml как SITE_DOMAIN).
+
+{$SITE_DOMAIN} {
+	# Обложки до 8 МБ уходят формой в админке; Next принимает до 10 МБ, больше не пускаем вовсе.
+	request_body {
+		max_size 12MB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	reverse_proxy app:3000 {
+		# X-Forwarded-For Caddy ставит сам (подделку от посетителя отбрасывает); X-Real-IP от посетителя не пускаем
+		header_up -X-Real-IP
+		# пока сайт перезапускается после выкладки, запросы ждут, а не получают ошибку
+		lb_try_duration 30s
+		# страницы приходят по частям (streaming) — отдаём сразу, без буфера
+		flush_interval -1
+	}
+}
+
+www.{$SITE_DOMAIN} {
+	redir https://{$SITE_DOMAIN}{uri} permanent
+}

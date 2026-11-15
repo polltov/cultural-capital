@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPage } from "@/components/site/LegalPage";
-import { ogrnLabel, operator, or } from "@/lib/legal";
+import { ogrnLabel, operator, or, processors } from "@/lib/legal";
 
 export const metadata: Metadata = { title: "Согласие на обработку персональных данных" };
 
@@ -41,11 +41,10 @@ export default function ConsentPage() {
         работу сайта и оплату заказа:
       </p>
       <ul>
-        <li>Vercel Inc. (хостинг, серверы во Франкфурте, Германия);</li>
-        <li>Neon Inc. (база данных, серверы во Франкфурте, Германия);</li>
+        <li>{processors.hosting} (Россия) — хостинг сайта и база данных, серверы в России;</li>
         <li>НКО «ЮМани» (ООО), сервис ЮKassa (Россия) — приём оплаты и формирование кассового чека;</li>
-        <li>Resend, Inc. (США) — отправка писем по заказу (билет, напоминание об экскурсии);</li>
-        <li>Telegram — уведомление администратора об оплаченном заказе.</li>
+        <li>{or(processors.mail)} (Россия) — отправка писем по заказу (билет, напоминание об экскурсии);</li>
+        <li>Telegram — уведомление администратора об оплаченном заказе (трансграничная передача).</li>
       </ul>
 
       <h2>Срок действия и отзыв</h2>

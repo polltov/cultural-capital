@@ -1,0 +1,60 @@
+name: Deploy
+
+# Выкладка на сервер в Селектеле: код из main уходит по SSH в ~/app/src, там deploy/deploy.sh применяет миграции,
+# собирает образ и перезапускает сайт. Запускается сама после слияния в main и вручную (Actions → Deploy → Run workflow).
+# Нужны секреты репозитория (README, «Сервер в Селектеле»): DEPLOY_HOST, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+    steps:
+      - name: Сервер настроен?
+        id: check
+        run: |
+          if [ -z "$DEPLOY_HOST" ]; then
+            echo "::notice::Сервер в Селектеле ещё не подключён (нет секрета DEPLOY_HOST) — выкладка пропущена."
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.skip != '1'
+
+      - name: Ключ SSH
+        if: steps.check.outputs.skip != '1'
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Код на сервер
+        if: steps.check.outputs.skip != '1'
+        run: |
+          git archive --format=tar HEAD | ssh -o BatchMode=yes "deploy@$DEPLOY_HOST" '
+            set -e
+            rm -rf ~/app/src.new && mkdir -p ~/app/src.new
+            tar -x -C ~/app/src.new
+            rm -rf ~/app/src && mv ~/app/src.new ~/app/src'
+          ssh -o BatchMode=yes "deploy@$DEPLOY_HOST" "echo '${{ github.sha }}' > ~/app/src/.git-commit"
+
+      - name: Сборка и запуск
+        if: steps.check.outputs.skip != '1'
+        run: ssh -o BatchMode=yes "deploy@$DEPLOY_HOST" 'bash ~/app/src/deploy/deploy.sh'

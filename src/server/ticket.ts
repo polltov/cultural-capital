@@ -4,13 +4,13 @@ import { orders, tours, tourSessions } from "@/db/schema";
 import { formatOrderNumber } from "@/lib/domain/order-number";
 import { siteUrl } from "@/lib/site-url";
 import { sendMail } from "./mail/send";
-import { cancelledEmail, sorryEmail, ticketEmail, type TicketData } from "./mail/templates";
+import { abandonedEmail, cancelledEmail, reminderEmail, sorryEmail, ticketEmail, type TicketData } from "./mail/templates";
 
-type Loaded = { ticket: TicketData; refunded: number };
+type Loaded = { ticket: TicketData; refunded: number; slug: string };
 
 async function load(orderId: number, db: Db): Promise<Loaded | null> {
   const [row] = await db
-    .select({ o: orders, title: tours.title, meetingPoint: tours.meetingPoint, whatToBring: tours.whatToBring, startsAt: tourSessions.startsAt })
+    .select({ o: orders, title: tours.title, slug: tours.slug, meetingPoint: tours.meetingPoint, whatToBring: tours.whatToBring, startsAt: tourSessions.startsAt })
     .from(orders)
     .innerJoin(tourSessions, eq(orders.sessionId, tourSessions.id))
     .innerJoin(tours, eq(tourSessions.tourId, tours.id))
@@ -19,6 +19,7 @@ async function load(orderId: number, db: Db): Promise<Loaded | null> {
   if (!row || !row.o.accessToken || !row.o.email) return null;
   return {
     refunded: row.o.refundedAmount,
+    slug: row.slug,
     ticket: {
       orderId: row.o.id, number: formatOrderNumber(row.o.number), tourTitle: row.title, startsAt: row.startsAt,
       meetingPoint: row.meetingPoint, whatToBring: row.whatToBring, children: row.o.children, adults: row.o.adults,
@@ -73,4 +74,14 @@ export function sendCancelled(orderId: number, db: Db = sharedDb): Promise<boole
 /** Письмо-извинение: поздняя оплата, а мест уже нет. */
 export function sendSorry(orderId: number, db: Db = sharedDb): Promise<boolean> {
   return deliver("извинение", orderId, db, (l) => sorryEmail(l.ticket));
+}
+
+/** Напоминание накануне экскурсии. Отметку `reminder_sent_at` ставит вызывающий (до отправки, см. `runDaily`). */
+export function sendReminder(orderId: number, db: Db = sharedDb): Promise<boolean> {
+  return deliver("напоминание", orderId, db, (l) => reminderEmail(l.ticket));
+}
+
+/** «Вы не завершили оплату» со ссылкой на покупку на странице экскурсии. */
+export function sendAbandoned(orderId: number, db: Db = sharedDb): Promise<boolean> {
+  return deliver("незавершённая оплата", orderId, db, (l) => abandonedEmail(l.ticket, `${siteUrl()}/tours/${l.slug}#booking`));
 }

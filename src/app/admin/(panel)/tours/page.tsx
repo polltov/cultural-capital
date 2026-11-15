@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireAdmin } from "@/lib/auth/viewer";
 import { listAdminTours } from "@/server/tours";
 import { formatDayMonth, formatTime } from "@/lib/domain/moscow-time";
 import { TourList } from "@/components/admin/TourList";

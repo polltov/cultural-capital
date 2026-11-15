@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireAdmin } from "@/lib/auth/viewer";
 import { getOrder } from "@/server/admin-orders";
 import { listMoveTargets } from "@/server/refunds";
 import { paymentStatusLabel } from "@/lib/domain/order-status";

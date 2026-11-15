@@ -9,7 +9,7 @@ const { requireAdmin, refundOrder, moveOrder, sendTicket, sendCancelled, revalid
   revalidatePath: vi.fn(),
   after: vi.fn(),
 }));
-vi.mock("@/lib/auth/session", () => ({ requireAdmin }));
+vi.mock("@/lib/auth/viewer", () => ({ requireAdmin }));
 vi.mock("@/server/refunds", () => ({ refundOrder, moveOrder }));
 vi.mock("@/server/ticket", () => ({ sendTicket, sendCancelled }));
 vi.mock("@/server/orders", () => ({ setAdminNote: vi.fn(), transitionOrder: vi.fn() }));

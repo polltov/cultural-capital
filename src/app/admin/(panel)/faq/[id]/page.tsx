@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/auth/session";
+import { requireAdmin } from "@/lib/auth/viewer";
 import { getFaqItem } from "@/server/faq";
 import { FaqForm } from "@/components/admin/FaqForm";
 

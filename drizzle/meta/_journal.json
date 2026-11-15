@@ -50,6 +50,13 @@
       "when": 1794756310253,
       "tag": "0006_order_checkin",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794756833376,
+      "tag": "0007_admin_users",
+      "breakpoints": true
     }
   ]
 }

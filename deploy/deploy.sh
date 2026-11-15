@@ -64,14 +64,25 @@ docker compose build app
 echo "== запуск"
 services=(db app cron caddy)
 if [ -f backup.env ]; then
-  docker compose build backup
-  services+=(backup)
+  # сбой сборки образа копий не мешает выложить сайт: прежний контейнер копий продолжит работать
+  if docker compose build backup; then
+    services+=(backup)
+  else
+    echo "ВНИМАНИЕ: образ ночных копий не собрался — работает прежний (docker compose logs backup)" >&2
+  fi
 else
   echo "ВНИМАНИЕ: нет $APP_DIR/backup.env — ночные копии базы не делаются (README, «Бэкапы»)" >&2
 fi
 docker compose up -d --remove-orphans "${services[@]}"
-# Caddyfile подключён файлом: новую версию Caddy подхватывает по команде, без обрыва соединений
-docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+# Caddyfile подключён файлом: новую версию Caddy подхватывает по команде, без обрыва соединений. Только что
+# запущенный Caddy принимает команды не сразу — ждём до 20 секунд, последняя попытка показывает ошибку.
+reload_caddy() { docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile "$@"; }
+reloaded=""
+for _ in $(seq 1 20); do
+  if reload_caddy >/dev/null 2>&1; then reloaded=1; break; fi
+  sleep 1
+done
+[ -n "$reloaded" ] || reload_caddy
 
 echo "== проверка"
 for _ in $(seq 1 30); do

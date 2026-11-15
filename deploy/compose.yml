@@ -53,7 +53,7 @@ services:
   # Порт наружу не открыт: к базе ходят только контейнеры этого проекта (и сборка сайта, см. app.build).
   # Пароль — из DATABASE_URL в app.env: deploy.sh кладёт его в .env и сверяет с базой при каждой выкладке.
   db:
-    image: postgres:17-alpine
+    image: postgres:17
     environment:
       POSTGRES_USER: kc
       POSTGRES_DB: kc
@@ -71,12 +71,14 @@ services:
 
   # Ночные копии базы, как у сайта гимназии: restic → приватный бакет Selectel S3, 03:30 по Москве (deploy/backup.sh).
   # Запускается deploy.sh, только когда есть backup.env; образ — тот же postgres, чтобы pg_dump совпадал с базой.
+  # Не alpine: его DNS-клиент сбоит на некоторых серверах имён (apk не находил свои зеркала), Debian — нет.
   backup:
     build:
       context: ./src/deploy
       dockerfile_inline: |
-        FROM postgres:17-alpine
-        RUN apk add --no-cache restic curl
+        FROM postgres:17
+        RUN apt-get update && apt-get install -y --no-install-recommends restic curl ca-certificates \
+          && rm -rf /var/lib/apt/lists/*
         COPY --chmod=755 backup.sh /usr/local/bin/kc-backup
         ENTRYPOINT ["kc-backup"]
         CMD ["schedule"]

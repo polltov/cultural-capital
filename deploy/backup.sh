@@ -34,14 +34,24 @@ configured() {
 # Каждый шаг проверяется явно: функция вызывается и из if, где set -e не действует.
 backup() {
   configured || return 1
-  if ! restic cat config >/dev/null 2>&1; then
+  # коды restic: 10 — хранилища ещё нет (создаём), 12 — неверный RESTIC_PASSWORD, остальное — нет доступа к S3
+  rc=0
+  restic cat config >/dev/null 2>&1 || rc=$?
+  if [ "$rc" = 10 ]; then
     log "хранилища копий ещё нет — создаю"
     restic init || return 1
+  elif [ "$rc" = 12 ]; then
+    log "неверный RESTIC_PASSWORD в backup.env"
+    return 1
+  elif [ "$rc" != 0 ]; then
+    log "нет доступа к хранилищу копий (restic, код $rc): проверьте RESTIC_REPOSITORY и S3-ключ в backup.env"
+    return 1
   fi
-  # pg_dump пишет прямо в restic; если он упал, копия не сохраняется
-  restic backup --quiet --tag nightly --stdin-filename kc.dump --stdin-from-command -- \
+  # pg_dump пишет прямо в restic; если он упал, копия не сохраняется. Имя хоста постоянное: у контейнера оно каждый
+  # раз новое, а restic считает «14 ежедневных» отдельно для каждого хоста — старые копии не удалялись бы никогда.
+  restic backup --quiet --host kc --tag nightly --stdin-filename kc.dump --stdin-from-command -- \
     pg_dump --format=custom --dbname="$DATABASE_URL" || return 1
-  restic forget --quiet --tag nightly --keep-daily 14 --keep-weekly 8 --prune || return 1
+  restic forget --quiet --host kc --tag nightly --keep-daily 14 --keep-weekly 8 --prune || return 1
   log "копия сделана"
 }
 

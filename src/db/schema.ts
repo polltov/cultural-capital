@@ -84,6 +84,8 @@ export const orders = pgTable(
     index("orders_status_created_idx").on(t.status, t.createdAt),
     index("orders_session_idx").on(t.sessionId),
     uniqueIndex("orders_payment_id_idx").on(t.paymentId),
+    // Личный кабинет и дневная задача ищут заказы по email без учёта регистра.
+    index("orders_email_lower_idx").on(sql`lower(${t.email})`),
   ],
 );
 
@@ -171,6 +173,23 @@ export const adminUsers = pgTable("admin_users", {
   createdAt: ts("created_at").notNull().defaultNow(),
   updatedAt: ts("updated_at").notNull().defaultNow(),
 });
+
+/**
+ * Одноразовые ссылки входа в личный кабинет покупателя: в БД только SHA-256 токена. Ссылка живёт 30 минут и гасится при входе.
+ */
+export const customerLoginTokens = pgTable(
+  "customer_login_tokens",
+  {
+    id: serial("id").primaryKey(),
+    /** В нижнем регистре: заказы ищутся по email без учёта регистра. */
+    email: text("email").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: ts("expires_at").notNull(),
+    usedAt: ts("used_at"),
+    createdAt: ts("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("customer_login_tokens_expires_idx").on(t.expiresAt)],
+);
 
 export const rateLimitHits = pgTable(
   "rate_limit_hits",

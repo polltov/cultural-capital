@@ -237,7 +237,10 @@ export function Footer() {
           </div>
           <nav className="foot-col" aria-label="Разделы сайта">
             <p className="foot-h">Разделы</p>
-            <ul>{NAV.map((n) => <li key={n.href}><Link href={n.href}>{n.label}</Link></li>)}</ul>
+            <ul>
+              {NAV.map((n) => <li key={n.href}><Link href={n.href}>{n.label}</Link></li>)}
+              <li><Link href="/account">Мои билеты</Link></li>
+            </ul>
           </nav>
           {contacts.length > 0 && (
             <div className="foot-col">

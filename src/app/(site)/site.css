@@ -115,6 +115,7 @@ main:focus{outline:none}
 .menu-nav a{padding:16px 0;border-bottom:1px solid var(--line-2);font-family:var(--display);font-size:27px;line-height:1.2;text-decoration:none}
 .menu-nav a:hover{color:var(--terra)}
 .menu-cta{margin-top:28px}
+.menu-account{display:inline-flex;align-items:center;min-height:44px;margin-top:12px;font-family:var(--sans);font-size:16px;font-weight:700;color:var(--terra);text-decoration:none}
 .menu-contacts{display:grid;gap:14px;margin-top:30px;font-family:var(--sans)}
 .menu-contacts a{display:flex;flex-direction:column;font-size:17px;text-decoration:none}
 .menu-contacts span{font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
@@ -479,6 +480,31 @@ main:focus{outline:none}
 .order-receipt{margin-top:14px;font-family:var(--sans);font-size:13px;line-height:1.5;color:var(--muted)}
 .order-terms,.order-contacts{margin-top:18px;font-family:var(--sans);font-size:14px;line-height:1.55;color:var(--muted)}
 .order-state+.order-contacts{margin-top:28px}
+
+/* Личный кабинет покупателя */
+.acc{max-width:640px;margin:0 auto;padding:24px 0 var(--sec);font-family:var(--sans);color:var(--text)}
+.acc .order-h1{margin-bottom:12px}
+.acc-lead{margin:0 0 20px;font-size:16px;line-height:1.6}
+.acc-lead a,.acc-small a{color:var(--terra)}
+.acc-small{margin-top:18px;font-size:14px}
+.acc-form{display:flex;flex-direction:column;align-items:flex-start;gap:10px;max-width:440px}
+.acc-label{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+.acc-input{width:100%;min-height:50px;padding:11px 14px;border:1px solid var(--line-2);border-radius:4px;background:#fff;font:inherit;font-size:16px;color:var(--ink)}
+.acc-input:focus{border-color:var(--terra);outline:2px solid var(--terra);outline-offset:0}
+.acc-input[aria-invalid=true]{border-color:var(--terra)}
+.acc-error{font-size:14px;color:var(--terra)}
+.acc-note{padding:14px 16px;border-left:2px solid var(--gold);background:rgba(194,154,91,.14);font-size:15px;line-height:1.55}
+.acc-who{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px;margin:4px 0 24px;padding-bottom:14px;border-bottom:1px solid var(--gold-line);font-size:14px;color:var(--muted)}
+.acc-logout{min-height:44px;padding:0 4px;border:none;background:none;font:inherit;font-weight:700;color:var(--terra);cursor:pointer}
+.acc-h2{margin:8px 0 12px;font-family:var(--display);font-weight:400;font-size:22px;color:var(--ink)}
+.acc-orders{list-style:none;display:flex;flex-direction:column;gap:10px;margin:0 0 28px;padding:0}
+.acc-order-link{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border:1px solid var(--gold-line);border-radius:6px;background:var(--card);color:var(--ink);text-decoration:none;transition:border-color .18s}
+.acc-order-link:hover{border-color:var(--terra)}
+.acc-order-when{font-size:13px;font-weight:700;letter-spacing:.04em;color:var(--terra)}
+.acc-order-title{font-family:var(--serif,inherit);font-size:18px;line-height:1.3}
+.acc-order-meta{font-size:13.5px;color:var(--muted)}
+.acc-orders--past .acc-order-when{color:var(--muted)}
+.acc-status--cancelled{color:var(--terra)}
 
 /* ========== 21. Окно покупки ========== */
 .bk-dialog{width:min(540px,100vw - 32px);max-height:calc(100dvh - 32px);margin:auto;padding:0;overflow:auto;border:none;border-radius:12px;background:var(--card);color:var(--ink);box-shadow:0 30px 70px rgba(18,23,31,.45);font-family:var(--sans)}

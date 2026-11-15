@@ -30,6 +30,7 @@ export function SiteHeader({ cta = { href: "/afisha", label: "Купить би�
           {NAV.map((n) => <Link key={n.href} href={n.href}>{n.label}</Link>)}
         </nav>
         <div className="top-actions">
+          <Link className="top-write" href="/account">Мои билеты</Link>
           {writeUs && <a className="top-write" href={writeUs} {...externalProps(writeUs)}>Написать</a>}
           <Link className="btn btn--primary btn--sm top-cta" href={cta.href}>{cta.label}</Link>
           <button type="button" className="burger" aria-label="Меню" aria-haspopup="dialog" onClick={() => menu.current?.showModal()}>
@@ -49,6 +50,7 @@ export function SiteHeader({ cta = { href: "/afisha", label: "Купить би�
             {NAV.map((n) => <Link key={n.href} href={n.href} onClick={close}>{n.label}</Link>)}
           </nav>
           <Link className="btn btn--primary menu-cta" href={cta.href} onClick={close}>{cta.label}</Link>
+          <Link className="menu-account" href="/account" onClick={close}>Мои билеты</Link>
           {contacts.length > 0 && (
             <ul className="menu-contacts">
               {contacts.map((c) => (

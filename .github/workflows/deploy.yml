@@ -1,8 +1,10 @@
 name: Deploy
 
-# Выкладка на сервер в Селектеле: код из main уходит по SSH в ~/app/src, там deploy/deploy.sh применяет миграции,
-# собирает образ и перезапускает сайт. Запускается сама после слияния в main и вручную (Actions → Deploy → Run workflow).
-# Нужны секреты репозитория (README, «Сервер в Селектеле»): DEPLOY_HOST, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS.
+# Выкладка на сервер в Селектеле. Образ сайта собирается здесь (на сервере с 1 ГБ памяти сборка Next не поместилась
+# бы) и уходит на сервер по SSH вместе с кодом; там deploy/deploy.sh применяет миграции, перезапускает сайт и
+# обновляет страницы. Запускается сама после слияния в main и вручную (Actions → Deploy → Run workflow).
+# Нужны секреты репозитория (README, «Сервер в Селектеле»): DEPLOY_HOST, DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS. Пока их
+# нет, образ всё равно собирается — так видно, что сборка не сломана, — а выкладка пропускается.
 
 on:
   push:
@@ -22,17 +24,43 @@ jobs:
     timeout-minutes: 30
     env:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      # временная пустая база для сборки (сервис ниже): заранее собираемые страницы читают её схему
+      BUILD_DATABASE_URL: postgresql://kc:build@127.0.0.1:5432/kc
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: kc
+          POSTGRES_PASSWORD: build
+          POSTGRES_DB: kc
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U kc -d kc"
+          --health-interval 5s --health-timeout 5s --health-retries 20
     steps:
       - name: Сервер настроен?
         id: check
         run: |
           if [ -z "$DEPLOY_HOST" ]; then
-            echo "::notice::Сервер в Селектеле ещё не подключён (нет секрета DEPLOY_HOST) — выкладка пропущена."
+            echo "::notice::Сервер в Селектеле ещё не подключён (нет секрета DEPLOY_HOST) — образ собирается, выкладка пропущена."
             echo "skip=1" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: actions/checkout@v4
-        if: steps.check.outputs.skip != '1'
+
+      - name: Сборка образа сайта
+        run: |
+          set -euo pipefail
+          # схема для временной базы — тем же drizzle-kit, что и при разработке
+          docker build --target tools -t kc-tools .
+          docker run --rm --network host -e DATABASE_URL="$BUILD_DATABASE_URL" kc-tools npm run db:migrate
+          # адреса сайта и хранилища обложек попадают в образ; deploy.sh сверяет их с app.env по меткам образа
+          set -a; . deploy/build.env; set +a
+          { grep -E '^(SITE_URL|S3_PUBLIC_URL)=' deploy/build.env; echo "DATABASE_URL=$BUILD_DATABASE_URL"; } > "$RUNNER_TEMP/build.env"
+          docker build --network host --target app -t kc-app:latest \
+            --secret id=appenv,src="$RUNNER_TEMP/build.env" \
+            --label kc.site-url="$SITE_URL" --label kc.s3-public-url="$S3_PUBLIC_URL" --label kc.commit="$GITHUB_SHA" .
+          docker image ls kc-app:latest
 
       - name: Ключ SSH
         if: steps.check.outputs.skip != '1'
@@ -55,6 +83,12 @@ jobs:
             rm -rf ~/app/src && mv ~/app/src.new ~/app/src'
           ssh -o BatchMode=yes "deploy@$DEPLOY_HOST" "echo '${{ github.sha }}' > ~/app/src/.git-commit"
 
-      - name: Сборка и запуск
+      - name: Образ на сервер
+        if: steps.check.outputs.skip != '1'
+        run: |
+          set -o pipefail
+          docker save kc-app:latest | gzip -1 | ssh -o BatchMode=yes "deploy@$DEPLOY_HOST" 'gunzip | docker load'
+
+      - name: Запуск
         if: steps.check.outputs.skip != '1'
         run: ssh -o BatchMode=yes "deploy@$DEPLOY_HOST" 'bash ~/app/src/deploy/deploy.sh'

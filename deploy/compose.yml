@@ -1,23 +1,17 @@
 # Сайт на сервере в Селектеле. Лежит в ~/app рядом с app.env (секреты) и src/ (код);
-# копируется сюда и запускается скриптом deploy.sh при каждой выкладке.
+# копируется сюда и запускается скриптом deploy.sh при каждой выкладке. Образ сайта kc-app собирает GitHub Actions
+# и присылает готовым (.github/workflows/deploy.yml) — на сервере он не собирается.
 #   docker compose ps                 — что запущено
 #   docker compose logs -f app        — журнал сайта (cron, caddy, db — журналы задач, HTTPS и базы)
-#   docker compose up -d app cron backup — применить правку app.env (без пересборки; restart её не подхватит);
-#                                        SITE_URL, S3_PUBLIC_URL и пароль в DATABASE_URL — только новой выкладкой
+#   docker compose up -d app cron backup — применить правку app.env (restart её не подхватит); пароль в DATABASE_URL —
+#                                        только новой выкладкой, SITE_URL и S3_PUBLIC_URL — ещё и правкой deploy/build.env
 name: kc
 
 services:
   app:
     env_file: [app.env]
-    build:
-      context: ./src
-      target: app
-      secrets: [appenv]
-      # Сборка заранее собирает страницы с данными из базы, а во внутреннюю сеть контейнеров она не попадает:
-      # собираем в сети сервера, откуда виден адрес контейнера базы, и имя db ведёт на него (DB_IP пишет deploy.sh).
-      network: host
-      extra_hosts: ["db:${DB_IP:-127.0.0.1}"]
     image: kc-app:latest
+    pull_policy: never
     volumes:
       - images-cache:/app/.next/cache/images
     depends_on:
@@ -28,6 +22,7 @@ services:
   cron:
     env_file: [app.env]
     image: kc-app:latest
+    pull_policy: never
     command: ["node", "cron.mjs"]
     # проверка «сайт отвечает» из образа здесь не к месту: сайт работает в соседнем контейнере
     healthcheck:
@@ -51,7 +46,7 @@ services:
     restart: unless-stopped
 
   # База PostgreSQL на этом же сервере (как у сайта гимназии); данные — в томе db-data, копии — сервис backup.
-  # Порт наружу не открыт: к базе ходят только контейнеры этого проекта (и сборка сайта, см. app.build).
+  # Порт наружу не открыт: к базе ходят только контейнеры этого проекта.
   # Пароль — из DATABASE_URL в app.env: deploy.sh кладёт его в .env и сверяет с базой при каждой выкладке.
   db:
     image: postgres:17
@@ -109,10 +104,6 @@ services:
       db:
         condition: service_healthy
     profiles: [tools]
-
-secrets:
-  appenv:
-    file: ./app.env
 
 volumes:
   db-data:

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Выкладка сайта на сервере. Запускается из GitHub Actions (.github/workflows/deploy.yml) после того, как свежий код
-# распакован в ~/app/src, или вручную: bash ~/app/src/deploy/deploy.sh
-#   1. проверяет app.env; 2. запускает базу и применяет к ней миграции; 3. собирает образ сайта; 4. перезапускает
-#   сайт, расписание задач, HTTPS и ночные копии базы; 5. ждёт, пока сайт ответит.
+# распакован в ~/app/src, а собранный там образ сайта kc-app загружен в Docker; или вручную:
+#   bash ~/app/src/deploy/deploy.sh
+#   1. проверяет app.env и образ; 2. запускает базу и применяет миграции из нового образа; 3. перезапускает сайт,
+#   расписание задач, HTTPS и ночные копии базы; 4. ждёт, пока сайт ответит; 5. обновляет публичные страницы.
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-$HOME/app}"
@@ -12,9 +13,8 @@ umask 077 # .env с паролем базы — только для владел
 
 [ -f app.env ] || fail "нет $APP_DIR/app.env — скопируйте src/deploy/app.env.example в app.env и заполните (README, «Сервер в Селектеле»)"
 
-# В app.env Docker раскрывает $ в значениях без кавычек, а сборка Next — даже в кавычках: такое значение молча
-# испортится. Хешу пароля владельца $ нужен (он используется только при работе сайта) — он в одинарных кавычках;
-# в остальных значениях $ быть не должно.
+# В app.env Docker раскрывает $ в значениях без кавычек: такое значение молча испортится. Хешу пароля владельца $ нужен —
+# он в одинарных кавычках; в остальных значениях $ быть не должно.
 if grep -Eq "^ADMIN_PASSWORD_HASH=[^']*\\$" app.env; then
   fail "ADMIN_PASSWORD_HASH в app.env надо взять в одинарные кавычки: ADMIN_PASSWORD_HASH='\$2b\$12\$...'"
 fi
@@ -29,6 +29,19 @@ import sys, urllib.parse
 u = sys.argv[1] if "://" in sys.argv[1] else "https://" + sys.argv[1]
 print(urllib.parse.urlsplit(u).hostname.encode("idna").decode())' "$site_url")"
 case "$domain" in localhost|*.local|"") fail "SITE_URL ($site_url) должен быть настоящим доменом сайта" ;; esac
+
+# Образ сайта собран в GitHub Actions с адресами из deploy/build.env — они должны совпадать с app.env, иначе превью
+# ссылок и фото обложек вели бы не туда.
+docker image inspect kc-app:latest >/dev/null 2>&1 ||
+  fail "нет образа сайта kc-app:latest — его присылает выкладка из GitHub Actions (Actions → Deploy → Run workflow)"
+env_value() { (grep -E "^$1=" app.env || true) | tail -n1 | cut -d= -f2- | tr -d "\"' \r"; }
+for pair in "SITE_URL kc.site-url" "S3_PUBLIC_URL kc.s3-public-url"; do
+  read -r var label <<< "$pair"
+  want="$(env_value "$var")"
+  got="$(docker image inspect -f "{{index .Config.Labels \"$label\"}}" kc-app:latest)"
+  [ "${want%/}" = "${got%/}" ] ||
+    fail "$var в app.env («$want») не совпадает с deploy/build.env, с которым собран образ («$got») — исправьте и выложите заново"
+done
 
 # База — контейнер db на этом сервере; её пароль задаётся только в DATABASE_URL (app.env), отсюда его берёт и сама база.
 db_url="$( (grep -E '^DATABASE_URL=' app.env || true) | tail -n1 | cut -d= -f2- | tr -d "\"' \r")"
@@ -52,17 +65,10 @@ docker compose up -d --wait db
 # Пароль идёт через stdin, не в аргументах (аргументы docker exec попадают в журнал событий Docker); в нём только
 # латиница и цифры (проверено выше), так что кавычки в SQL безопасны.
 printf "ALTER ROLE kc PASSWORD '%s';\n" "$db_password" | docker compose exec -T db psql -X -q -v ON_ERROR_STOP=1 -U kc -d kc
-# адрес контейнера базы во внутренней сети — для сборки сайта (compose.yml, app.build.extra_hosts)
-db_ip="$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$(docker compose ps -q db)")"
-[ -n "$db_ip" ] || fail "не удалось узнать адрес контейнера базы"
-printf 'DB_IP=%s\n' "$db_ip" >> .env
 
 echo "== миграции базы"
-docker compose build tools
-docker compose run --rm -T tools npm run db:migrate
-
-echo "== сборка сайта"
-docker compose build app
+# из нового образа, пока работает прежняя версия сайта (поэтому схема меняется только добавлением)
+docker compose run --rm -T --no-deps app node migrate.mjs
 
 echo "== запуск"
 services=(db app cron caddy)
@@ -90,6 +96,9 @@ done
 echo "== проверка"
 for _ in $(seq 1 30); do
   if docker compose exec -T app node -e "fetch('http://127.0.0.1:3000/robots.txt').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"; then
+    echo "== обновление страниц"
+    docker compose exec -T app node --input-type=module - < src/deploy/after-deploy.mjs ||
+      fail "сайт работает, но страницы не обновились — в них могут быть пустые списки экскурсий (docker compose logs app)"
     docker image prune -f >/dev/null
     echo "Готово: https://$domain ($(cat src/.git-commit 2>/dev/null || echo 'версия неизвестна'))"
     exit 0

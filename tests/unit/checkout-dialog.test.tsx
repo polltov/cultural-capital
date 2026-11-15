@@ -11,6 +11,8 @@ vi.mock("@/app/(site)/actions", () => ({ startCheckoutAction, releaseHoldAction 
 // Как в Next: `useRouter()` отдаёт один и тот же объект между рендерами.
 const router = { refresh };
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
+const { reachGoal } = vi.hoisted(() => ({ reachGoal: vi.fn() }));
+vi.mock("@/lib/analytics", async (orig) => ({ ...(await orig<typeof import("@/lib/analytics")>()), reachGoal }));
 
 import { CheckoutDialog } from "@/components/site/CheckoutDialog";
 import { formatRub } from "@/lib/domain/pricing";
@@ -381,5 +383,26 @@ describe("виджет оплаты", () => {
     await pay();
     unmount();
     expect(FakeWidget.instances[0].destroy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("цели Метрики", () => {
+  it("открытие окна — checkout_open; переход к оплате — checkout_pay с суммой заказа", async () => {
+    reachGoal.mockReset();
+    startCheckoutAction.mockResolvedValue(ok());
+    toPayStep();
+    expect(reachGoal).toHaveBeenCalledWith("checkout_open");
+    fillValid();
+    await pay();
+    expect(reachGoal).toHaveBeenCalledWith("checkout_pay", { order_price: 3270, currency: "RUB" });
+  });
+
+  it("ошибка сервера — без checkout_pay", async () => {
+    reachGoal.mockReset();
+    startCheckoutAction.mockResolvedValue({ ok: false, error: "Мест не осталось" });
+    toPayStep();
+    fillValid();
+    await act(async () => { click(PAY); });
+    expect(reachGoal).not.toHaveBeenCalledWith("checkout_pay", expect.anything());
   });
 });

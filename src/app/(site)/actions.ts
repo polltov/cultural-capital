@@ -1,5 +1,7 @@
 "use server";
 
+import { cookies } from "next/headers";
+import { ATTRIBUTION_COOKIE, parseAttribution } from "@/lib/attribution";
 import { revalidatePublicSite } from "@/server/revalidate";
 import { releaseHold, startCheckout } from "@/server/checkout";
 import { clientIp } from "@/server/client-ip";
@@ -18,7 +20,9 @@ export async function startCheckoutAction(_prev: CheckoutResult | null, formData
     consent: formData.get("consent") === "on",
     website: formData.get("website") ?? "",
   };
-  const result = await startCheckout(input, ip);
+  // Источник визита — из cookie, которую ставит src/components/site/Analytics.tsx; испорченная cookie даёт null.
+  const attribution = parseAttribution((await cookies()).get(ATTRIBUTION_COOKIE)?.value);
+  const result = await startCheckout(input, ip, {}, attribution);
   // Удержание занимает места: главная, афиша и страница экскурсии должны показать новый остаток сразу, а не через 5 минут.
   if (result.ok) revalidatePublicSite();
   return result;

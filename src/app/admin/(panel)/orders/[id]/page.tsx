@@ -6,6 +6,7 @@ import { getOrder } from "@/server/admin-orders";
 import { listMoveTargets, listRefunds } from "@/server/refunds";
 import { paymentStatusLabel } from "@/lib/domain/order-status";
 import { formatOrderNumber } from "@/lib/domain/order-number";
+import { attributionLabel } from "@/lib/attribution";
 import { formatRub } from "@/lib/domain/pricing";
 import { formatComposition } from "@/lib/domain/seats";
 import { formatSessionLong, formatDayMonth, formatTime } from "@/lib/domain/moscow-time";
@@ -105,6 +106,20 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         <dd>
           {formatDayMonth(o.createdAt)}, {formatTime(o.createdAt)} (МСК)
         </dd>
+        {online && (
+          <>
+            <dt>Источник</dt>
+            <dd>
+              {o.utmSource ? attributionLabel({ source: o.utmSource, medium: o.utmMedium, campaign: o.utmCampaign }) : <span className="muted">прямой заход</span>}
+              {(o.utmContent || o.utmTerm) && (
+                <span className="block muted">
+                  {[o.utmContent && `объявление: ${o.utmContent}`, o.utmTerm && `ключевое слово: ${o.utmTerm}`].filter(Boolean).join(" · ")}
+                </span>
+              )}
+              {o.referrer && o.referrer !== o.utmSource && <span className="block muted">перешёл с {o.referrer}</span>}
+            </dd>
+          </>
+        )}
       </dl>
 
       {online && (

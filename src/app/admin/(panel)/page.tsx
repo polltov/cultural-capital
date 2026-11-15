@@ -26,6 +26,14 @@ export default async function DashboardPage() {
           <span className="stat-link">Открыть список →</span>
         </Link>
       )}
+      {!guide && (
+        <p className="muted dash-sources">
+          Откуда приходят покупатели —{" "}
+          <Link href="/admin/sources" className="text-link">
+            источники продаж
+          </Link>
+        </p>
+      )}
 
       <section className="panel-section">
         <h2 className="section-title">Ближайшие сеансы</h2>

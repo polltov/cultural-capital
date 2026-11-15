@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { preloadCriticalFonts } from "@/lib/critical-fonts";
 import { siteIcons } from "@/lib/site-icons";
 import { siteUrl } from "@/lib/site-url";
+import { Analytics } from "@/components/site/Analytics";
 import "../fonts.css";
 import "./site.css";
 
@@ -38,7 +39,10 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   preloadCriticalFonts();
   return (
     <html lang="ru" data-scroll-behavior="smooth">
-      <body>{children}</body>
+      <body>
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }

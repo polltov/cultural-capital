@@ -189,6 +189,15 @@
 .orders-table tbody tr:first-child td { border-top: 0; }
 .orders-table tbody tr:hover { background: rgba(245, 237, 224, .6); }
 .order-link { font-weight: 700; color: var(--accent); white-space: nowrap; }
+/* Отчёт «Источники продаж»: в отличие от списка заказов, таблица остаётся и на телефоне — с прокруткой вбок. */
+.period-switch { margin-bottom: 20px; }
+.dash-sources { margin: 12px 0 0; font-size: 14px; }
+.report-table { width: 100%; border-collapse: collapse; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); }
+.report-table th { text-align: left; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.report-table th.num { text-align: right; }
+.report-table td { padding: 12px 14px; border-top: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+.report-table tbody tr:first-child td { border-top: 0; }
+.report-table tfoot td { font-weight: 700; border-top: 2px solid var(--line); }
 .order-cards { display: none; list-style: none; gap: 10px; flex-direction: column; }
 .order-card { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); }
 .order-card-top, .order-card-bottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; }

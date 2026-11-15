@@ -338,3 +338,23 @@ describe("releaseHold", () => {
     expect((await db.select().from(orders))[0].status).toBe("awaiting_payment");
   });
 });
+
+describe("startCheckout: источник визита", () => {
+  it("записывает метки и домен источника в заказ", async () => {
+    const { s } = await setup();
+    const attribution = { source: "vk", medium: "cpc", campaign: "zima", content: "video", term: "", referrer: "vk.com" };
+    const r = await startCheckout({ ...valid, sessionId: s.id }, "1.1.1.1", deps(), attribution);
+    expect(r.ok).toBe(true);
+    const [o] = await db.select().from(orders);
+    expect(o).toMatchObject({
+      utmSource: "vk", utmMedium: "cpc", utmCampaign: "zima", utmContent: "video", utmTerm: null, referrer: "vk.com",
+    });
+  });
+
+  it("без источника — пустые поля", async () => {
+    const { s } = await setup();
+    await startCheckout({ ...valid, sessionId: s.id }, "1.1.1.1", deps());
+    const [o] = await db.select().from(orders);
+    expect(o).toMatchObject({ utmSource: null, utmMedium: null, utmCampaign: null, referrer: null });
+  });
+});

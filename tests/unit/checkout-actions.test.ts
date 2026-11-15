@@ -1,13 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { startCheckout, releaseHold, revalidatePath } = vi.hoisted(() => ({
+const { startCheckout, releaseHold, revalidatePath, cookieJar } = vi.hoisted(() => ({
   startCheckout: vi.fn(),
   releaseHold: vi.fn(),
   revalidatePath: vi.fn(),
+  cookieJar: new Map<string, string>(),
 }));
 vi.mock("@/server/checkout", () => ({ startCheckout, releaseHold }));
 vi.mock("@/server/client-ip", () => ({ clientIp: async () => "9.9.9.9" }));
 vi.mock("next/cache", () => ({ revalidatePath }));
+vi.mock("next/headers", () => ({
+  cookies: async () => ({ get: (name: string) => (cookieJar.has(name) ? { name, value: cookieJar.get(name)! } : undefined) }),
+}));
 
 import { releaseHoldAction, startCheckoutAction } from "@/app/(site)/actions";
 
@@ -17,6 +21,7 @@ beforeEach(() => {
   startCheckout.mockReset();
   releaseHold.mockReset();
   revalidatePath.mockReset();
+  cookieJar.clear();
 });
 
 function form(fields: Record<string, string>) {
@@ -33,7 +38,22 @@ describe("startCheckoutAction", () => {
     await startCheckoutAction(null, form(fields));
     expect(startCheckout).toHaveBeenCalledWith({
       sessionId: "2", children: "2", adults: "1", name: "Анна", phone: "+7 (999) 123-45-67", email: "a@b.ru", consent: true, website: "",
-    }, "9.9.9.9");
+    }, "9.9.9.9", {}, null);
+  });
+
+  it("передаёт источник визита из cookie kc_src", async () => {
+    startCheckout.mockResolvedValue({ ok: false });
+    cookieJar.set("kc_src", encodeURIComponent(JSON.stringify({ source: "vk", medium: "cpc", campaign: "zima", content: "", term: "", referrer: "vk.com" })));
+    await startCheckoutAction(null, form(fields));
+    expect(startCheckout.mock.calls[0][3]).toEqual({ source: "vk", medium: "cpc", campaign: "zima", content: "", term: "", referrer: "vk.com" });
+  });
+
+  it("испорченная cookie источника не мешает покупке", async () => {
+    startCheckout.mockResolvedValue({ ok: false });
+    cookieJar.set("kc_src", "%%%garbage");
+    await startCheckoutAction(null, form(fields));
+    expect(startCheckout).toHaveBeenCalledTimes(1);
+    expect(startCheckout.mock.calls[0][3]).toBeNull();
   });
 
   it("без чекбокса consent — false; пустые поля — пустые строки", async () => {

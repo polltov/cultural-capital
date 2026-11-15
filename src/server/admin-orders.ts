@@ -48,6 +48,37 @@ export async function getDashboard(db: Db = sharedDb): Promise<Dashboard> {
   return { paid7d, upcoming };
 }
 
+export const SOURCE_PERIODS = [7, 30, 90] as const;
+export type SourceRow = {
+  source: string | null; medium: string | null; campaign: string | null;
+  started: number; paid: number; tickets: number; revenue: number;
+};
+
+const PAID = sql`${orders.status} in ('paid', 'done')`;
+
+/**
+ * Заказы, оформленные за `days` дней, по источнику визита (src/lib/attribution.ts): сколько покупок начато, сколько
+ * оплачено (`paid` и проведённые `done`; отменённые с возвратом не входят), билетов и сумма оплаченных за вычетом
+ * частичных возвратов. Персональных данных в отчёте нет. Сначала источники с наибольшей суммой.
+ */
+export async function getSourceReport(days: number, db: Db = sharedDb): Promise<SourceRow[]> {
+  const since = new Date(Date.now() - days * 24 * 3600_000);
+  const revenue = sql<number>`coalesce(sum(${orders.total} - ${orders.refundedAmount}) filter (where ${PAID}), 0)::int`;
+  return db
+    .select({
+      source: orders.utmSource, medium: orders.utmMedium, campaign: orders.utmCampaign,
+      started: sql<number>`count(*)::int`,
+      paid: sql<number>`(count(*) filter (where ${PAID}))::int`,
+      tickets: sql<number>`coalesce(sum(${orders.children} + ${orders.adults}) filter (where ${PAID}), 0)::int`,
+      revenue,
+    })
+    .from(orders)
+    // Только онлайн-покупки: старые заявки без оплаты (`new`, `confirmed`) к рекламе отношения не имеют.
+    .where(and(gte(orders.createdAt, since), sql`${orders.accessToken} is not null`))
+    .groupBy(orders.utmSource, orders.utmMedium, orders.utmCampaign)
+    .orderBy(desc(revenue), desc(sql`count(*)`), asc(orders.utmSource));
+}
+
 export const ORDERS_PAGE_SIZE = 30;
 
 export type OrderFilters = { status?: OrderStatus | "all"; tourId?: number; sessionId?: number; q?: string; page?: number };
@@ -59,6 +90,8 @@ export type OrderRow = {
 export type OrderDetail = OrderRow & {
   email: string | null; comment: string; adminNote: string; priceChildSnapshot: number; priceAdultSnapshot: number; updatedAt: Date;
   paymentId: string | null; paidAt: Date | null; ticketSentAt: Date | null; accessToken: string | null;
+  utmSource: string | null; utmMedium: string | null; utmCampaign: string | null; utmContent: string | null;
+  utmTerm: string | null; referrer: string | null;
 };
 
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
@@ -114,6 +147,8 @@ export async function getOrder(id: number, db: Db = sharedDb): Promise<OrderDeta
       sessionId: orders.sessionId, startsAt: tourSessions.startsAt, tourId: tourSessions.tourId, tourTitle: tours.title,
       paymentId: orders.paymentId, paymentStatus: orders.paymentStatus, paidAt: orders.paidAt, refundedAmount: orders.refundedAmount,
       ticketSentAt: orders.ticketSentAt, accessToken: orders.accessToken,
+      utmSource: orders.utmSource, utmMedium: orders.utmMedium, utmCampaign: orders.utmCampaign,
+      utmContent: orders.utmContent, utmTerm: orders.utmTerm, referrer: orders.referrer,
     })
     .from(orders)
     .innerJoin(tourSessions, eq(orders.sessionId, tourSessions.id))

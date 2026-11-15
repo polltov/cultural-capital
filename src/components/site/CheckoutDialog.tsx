@@ -9,6 +9,7 @@ import { maskPhone } from "@/lib/domain/phone-mask";
 import { formatComposition } from "@/lib/domain/seats";
 import type { CatalogSession, CatalogTour } from "@/server/catalog";
 import { PaymentWidget } from "./PaymentWidget";
+import { GOALS, reachGoal } from "@/lib/analytics";
 
 export type CheckoutDialogProps = {
   tour: Pick<CatalogTour["tour"], "title" | "priceChild" | "priceAdult">;
@@ -139,6 +140,7 @@ export function CheckoutDialog({ tour, sessions, initialSessionId, onClose }: Ch
   useEffect(() => {
     const d = ref.current;
     if (d && !d.open) d.showModal();
+    reachGoal(GOALS.checkoutOpen);
   }, []);
 
   // Смена шага (и возврат к форме после удержания) убирает кнопку, на которой стоял фокус: ставим его на название шага.
@@ -169,6 +171,9 @@ export function CheckoutDialog({ tour, sessions, initialSessionId, onClose }: Ch
           orderToken: result.orderToken, confirmationToken: result.confirmationToken,
           expiresAt: Date.now() + result.holdSeconds * 1000, fields, summary: label, phase: "paying",
         });
+        // Сумма отправленного заказа — для дохода по цели в Метрике; сервер считает её по тем же ценам.
+        const amount = orderTotal({ children: fields.children, adults: fields.adults, priceChild: tour.priceChild, priceAdult: tour.priceAdult });
+        reachGoal(GOALS.checkoutPay, { order_price: amount, currency: "RUB" });
         return;
       }
       const errors = result.fieldErrors ?? {};

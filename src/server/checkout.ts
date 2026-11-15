@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db as sharedDb, type Db } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
 import { checkoutSchema, type CheckoutResult } from "@/lib/validation/checkout";
+import type { Attribution } from "@/lib/attribution";
 import { orderTotal } from "@/lib/domain/pricing";
 import { formatOrderNumber } from "@/lib/domain/order-number";
 import { HOLD_MINUTES } from "@/lib/domain/seats";
@@ -34,11 +35,15 @@ async function alertGatewayDown(e: unknown, db: Db): Promise<void> {
   }
 }
 
-/** Заказ с удержанием мест на 15 минут + платёж в ЮKassa. Шлюз по умолчанию создаётся лениво — только если дошли до оплаты. */
+/**
+ * Заказ с удержанием мест на 15 минут + платёж в ЮKassa. Шлюз по умолчанию создаётся лениво — только если дошли до оплаты.
+ * `attribution` — источник визита из cookie браузера (src/lib/attribution.ts), записывается в заказ для отчёта по источникам.
+ */
 export async function startCheckout(
   input: unknown,
   ip: string,
   deps: { db?: Db; gateway?: PaymentGateway } = {},
+  attribution: Attribution | null = null,
 ): Promise<CheckoutResult> {
   const db = deps.db ?? sharedDb;
 
@@ -89,6 +94,9 @@ export async function startCheckout(
         sessionId: s.id, customerName: v.name, phone: v.phone, email: v.email,
         children: v.children, adults: v.adults, priceChildSnapshot: s.priceChild, priceAdultSnapshot: s.priceAdult, total,
         status: "awaiting_payment", holdExpiresAt, accessToken, consentAt: new Date(),
+        utmSource: attribution?.source || null, utmMedium: attribution?.medium || null,
+        utmCampaign: attribution?.campaign || null, utmContent: attribution?.content || null,
+        utmTerm: attribution?.term || null, referrer: attribution?.referrer || null,
       })
       .returning({ id: orders.id, number: orders.number });
     return { order: { ...o, total }, session: s } as const;

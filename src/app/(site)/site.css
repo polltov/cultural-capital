@@ -417,6 +417,13 @@ main:focus{outline:none}
 .booking-empty .contact-buttons{margin-top:0}
 .booking-empty .contact-buttons .btn{width:100%}
 /* полоса покупки внизу экрана на телефоне */
+/* Плашка согласия на Яндекс Метрику (src/components/site/Analytics.tsx): над нижней панелью покупки, не на весь экран */
+.consent-bar{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:45;display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;max-width:680px;margin:0 auto;padding:16px 20px;background:var(--card);border:1px solid var(--line-2);border-radius:4px;box-shadow:0 18px 40px -24px rgba(34,41,58,.55)}
+.consent-text{flex:1 1 300px;margin:0;font-size:14px;line-height:1.5;color:var(--text)}
+.consent-text a{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+.consent-actions{display:flex;flex:none;gap:8px}
+@media (max-width:560px){.consent-actions{flex:1 1 100%}.consent-actions .btn{flex:1}}
+.consent-choice{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
 .buybar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:none;align-items:center;justify-content:space-between;gap:16px;padding:12px var(--pad) calc(12px + env(safe-area-inset-bottom));background:rgba(251,246,240,.96);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:0 -1px 0 var(--line),0 -12px 24px -18px rgba(34,41,58,.4);transform:translateY(110%);visibility:hidden;transition:transform .3s var(--ease),visibility 0s .3s}
 .buybar.is-shown{transform:none;visibility:visible;transition:transform .3s var(--ease)}
 .buybar-price{font-family:var(--display);font-size:21px;line-height:1.1}

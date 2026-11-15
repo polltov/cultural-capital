@@ -76,6 +76,16 @@ export const orders = pgTable(
     abandonedMailSentAt: ts("abandoned_mail_sent_at"),
     /** Гид отметил приход по QR-коду или в списке участников; снятая отметка — `null`. */
     checkedInAt: ts("checked_in_at"),
+    /**
+     * Источник визита, после которого оформлен заказ (src/lib/attribution.ts): UTM-метки или домен сайта-источника.
+     * `null` — прямой заход или заказ, оформленный до того, как источники начали записываться.
+     */
+    utmSource: text("utm_source"),
+    utmMedium: text("utm_medium"),
+    utmCampaign: text("utm_campaign"),
+    utmContent: text("utm_content"),
+    utmTerm: text("utm_term"),
+    referrer: text("referrer"),
     createdAt: ts("created_at").notNull().defaultNow(),
     updatedAt: ts("updated_at").notNull().defaultNow(),
   },

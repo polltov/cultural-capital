@@ -7,7 +7,7 @@ import { occupiedSeats } from "@/server/orders";
 import { paymentGateway } from "@/server/payments/gateway";
 import { createReceiptRefund } from "@/server/payments/refund";
 import type { GatewayRefund, PaymentGateway } from "@/server/payments/types";
-import { reconcileExternalRefund } from "@/server/refunds";
+import { logRefund, reconcileExternalRefund } from "@/server/refunds";
 import { notifyAlert, notifyPaidOrder } from "@/server/telegram";
 import { sendCancelled, sendSorry, sendTicket } from "@/server/ticket";
 
@@ -152,6 +152,7 @@ export async function syncPayment(
     const refundFailedBefore = await hasJournalNote(tx, paymentId, "late_refund_failed");
     if (refundFailedBefore) {
       if (payment.refundedAmount !== null && Number(payment.refundedAmount) >= o.total) {
+        await logRefund(tx, { orderId: o.id, amount: o.total - o.refundedAmount, children: o.children, adults: o.adults, source: "external" });
         return finish("late_refunded", { status: "cancelled", refundedAmount: o.total }, "refunded_externally");
       }
     } else if (o.children + o.adults <= session.capacity - (await occupiedSeats(tx, o.sessionId))) {
@@ -176,6 +177,7 @@ export async function syncPayment(
       // Оплатить такой заказ уже нельзя, а возврат ждёт повтора: `expired` + `payment_status = succeeded` (по ним его найдёт ночная задача).
       return finish(refundFailedBefore ? "noop" : "late_refund_failed", o.status === "awaiting_payment" ? { status: "expired" } : {}, "late_refund_failed");
     }
+    await logRefund(tx, { orderId: o.id, amount: o.total, children: o.children, adults: o.adults, source: "late", refundId: refund.id });
     return finish("late_refunded", { status: "cancelled", refundedAmount: o.total, refundId: refund.id });
   });
 }

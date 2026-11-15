@@ -21,7 +21,7 @@ const AFTER_START_MS = 3 * 3600_000;
 const CLOSING_SKIPPED_REFUNDED = "closing_skipped_refunded";
 
 /** Исход обработки прошедшего заказа: чек и/или «Проведён» — или пропуск из-за возврата мимо сайта (тревога после коммита). */
-type ClosingResult = { closed: boolean; done: boolean } | { refunded: "cancelled" | "done"; number: number } | null;
+type ClosingResult = { closed: boolean; done: boolean } | { refunded: "cancelled" | "done" | "partial"; number: number } | null;
 
 /**
  * Ночная уборка платежей. Порядок важен: сначала опрос платежей по заказам с истёкшим удержанием (webhook мог потеряться,
@@ -143,7 +143,13 @@ export async function runNightly(deps: { db?: Db; gateway?: PaymentGateway; now?
           if (await hasJournalNote(tx, o.paymentId, CLOSING_SKIPPED_REFUNDED)) return null;
           const payment = await gatewayOrThrow().getPayment(o.paymentId);
           if (Number(payment.refundedAmount) > 0) {
+            // Возврат мимо сайта — заказ отменяется; частичная отмена из админки (сайт о ней знает) — заказ проведён, но чек
+            // «Полный расчёт» на остаток автоматически не выбивается: сумма остатка не равна стоимости оставшихся билетов.
+            const external = Math.round(Number(payment.refundedAmount)) > o.refundedAmount;
             const cancelled = await reconcileExternalRefund(tx, o, payment);
+            if (!cancelled && o.status === "paid") {
+              await tx.update(orders).set({ status: "done", updatedAt: new Date() }).where(eq(orders.id, o.id));
+            }
             await recordPaymentEvent(
               {
                 source: "cron", event: `payment.${payment.status}`, paymentId: o.paymentId, orderId: o.id,
@@ -151,7 +157,7 @@ export async function runNightly(deps: { db?: Db; gateway?: PaymentGateway; now?
               },
               tx,
             );
-            return { refunded: cancelled ? "cancelled" : "done", number: o.number };
+            return { refunded: cancelled ? "cancelled" : external ? "done" : "partial", number: o.number };
           }
           if (!o.email) throw new Error("у заказа нет email для закрывающего чека");
           const items = paymentItems(
@@ -183,7 +189,9 @@ export async function runNightly(deps: { db?: Db; gateway?: PaymentGateway; now?
         await notifyAlert(
           result.refunded === "cancelled"
             ? `Возврат по заказу ${n} оформлен в кабинете ЮKassa — на сайте заказ отменён автоматически`
-            : `Возврат по заказу ${n} оформлен в кабинете ЮKassa — закрывающий чек по нему не выбит`,
+            : result.refunded === "done"
+              ? `Возврат по заказу ${n} оформлен в кабинете ЮKassa — закрывающий чек по нему не выбит`
+              : `По заказу ${n} отменена часть билетов — закрывающий чек на остаток не выбит автоматически, оформите его в кабинете ЮKassa`,
         );
         continue;
       }

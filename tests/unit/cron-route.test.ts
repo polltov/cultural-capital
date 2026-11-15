@@ -49,7 +49,7 @@ describe("GET /api/cron/nightly", () => {
     const res = await call("Bearer s3cret");
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual(failed);
-    expect(mocks.notifyAlert).toHaveBeenCalledExactlyOnceWith("Ночная задача: ошибок — 2. Подробности в логах Vercel.");
+    expect(mocks.notifyAlert).toHaveBeenCalledExactlyOnceWith("Ночная задача: ошибок — 2. Подробности в журнале сайта на сервере.");
   });
 
   it("an unauthorized call never alerts", async () => {

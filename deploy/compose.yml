@@ -1,0 +1,70 @@
+# Сайт на сервере в Селектеле. Лежит в ~/app рядом с app.env (секреты), certs/ (сертификат базы) и src/ (код);
+# копируется сюда и запускается скриптом deploy.sh при каждой выкладке.
+#   docker compose ps                 — что запущено
+#   docker compose logs -f app        — журнал сайта (cron, caddy — журналы задач и HTTPS)
+#   docker compose up -d app cron     — применить правку app.env (без пересборки; restart её не подхватит)
+name: kc
+
+x-app-env: &app-env
+  env_file: [app.env]
+  environment:
+    # сертификат управляемой базы Селектела: строка подключения с sslmode=verify-full проверяет его
+    NODE_EXTRA_CA_CERTS: /certs/root.crt
+  volumes:
+    - ./certs:/certs:ro
+
+services:
+  app:
+    <<: *app-env
+    build:
+      context: ./src
+      target: app
+      secrets: [appenv]
+    image: kc-app:latest
+    volumes:
+      - ./certs:/certs:ro
+      - images-cache:/app/.next/cache/images
+    restart: unless-stopped
+
+  cron:
+    <<: *app-env
+    image: kc-app:latest
+    command: ["node", "cron.mjs"]
+    # проверка «сайт отвечает» из образа здесь не к месту: сайт работает в соседнем контейнере
+    healthcheck:
+      disable: true
+    depends_on: [app]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    environment:
+      SITE_DOMAIN: "${SITE_DOMAIN:?SITE_DOMAIN не задан — запустите deploy.sh}"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [app]
+    restart: unless-stopped
+
+  # Миграции, сид, перенос данных: docker compose run --rm tools npm run db:migrate
+  tools:
+    <<: *app-env
+    build:
+      context: ./src
+      target: tools
+    image: kc-tools:latest
+    profiles: [tools]
+
+secrets:
+  appenv:
+    file: ./app.env
+
+volumes:
+  images-cache:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,15 @@
+.git
+.github
+.next
+.vercel
+.claude
+.superpowers
+node_modules
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+next-env.d.ts
+docs
+tests
+docker-compose.test.yml

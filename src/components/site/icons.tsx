@@ -35,6 +35,3 @@ export const IconCompass = (p: P) => <Svg {...p}><circle cx="12" cy="12" r="9" /
 export const IconArrow = (p: P) => <Svg {...p}><path d="M4 12h15M14 6.5l5.5 5.5-5.5 5.5" /></Svg>;
 export const IconMenu = (p: P) => <Svg {...p}><path d="M4 7.5h16M4 12h16M4 16.5h16" /></Svg>;
 export const IconClose = (p: P) => <Svg {...p}><path d="M6 6l12 12M18 6 6 18" /></Svg>;
-export const IconStar = (p: P) => (
-  <Svg {...p} fill="currentColor" stroke="none"><path d="m12 3.2 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 17l-5.4 2.9 1.1-6.1-4.5-4.2 6.1-.8L12 3.2Z" /></Svg>
-);

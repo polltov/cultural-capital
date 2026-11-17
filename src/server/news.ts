@@ -68,6 +68,11 @@ export async function setNewsPublished(id: number, publish: boolean, db: Db = sh
 
 const published = isNotNull(news.publishedAt);
 
+export async function hasPublishedNews(db: Db = sharedDb): Promise<boolean> {
+  const [row] = await db.select({ id: news.id }).from(news).where(published).limit(1);
+  return row !== undefined;
+}
+
 export type NewsCard = { id: number; slug: string; title: string; excerpt: string; coverUrl: string | null; publishedAt: Date };
 const cardCols = { id: news.id, slug: news.slug, title: news.title, excerpt: news.excerpt, coverUrl: news.coverUrl, publishedAt: news.publishedAt };
 

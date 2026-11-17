@@ -13,8 +13,15 @@ describe("редактируемый контент сайта", () => {
 
   it("сохраняет пустой список и позволяет скрыть все отзывы", () => {
     expect(parseSiteSection("route", { ...defaultSiteContent.route, items: [] })?.items).toEqual([]);
-    const items = defaultSiteContent.reviews.items.map((item) => ({ ...item, published: false })).reverse();
+    const items = [
+      { id: "review-b", quote: "Особенно понравился рассказ о набережных.", name: "Алексей", about: "", published: false },
+      { id: "review-a", quote: "Дети с удовольствием прошли маршрут.", name: "Анна", about: "", published: false },
+    ];
     expect(parseSiteSection("reviews", { ...defaultSiteContent.reviews, items })?.items).toEqual(items);
+  });
+
+  it("не подставляет отзывы-заглушки до публикации редактором", () => {
+    expect(defaultSiteContent.reviews.items).toEqual([]);
   });
 
   it("принимает фото из public и своего хранилища, отвергает чужие адреса", () => {

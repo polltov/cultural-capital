@@ -39,6 +39,15 @@ const WIDE_FACT = 22;
 /** Названия длиннее этого набираются кеглем поменьше, чтобы не занимать весь первый экран. */
 const LONG_TITLE = 36;
 
+// Ширина обложки совпадает с колонкой .tour-hero-grid с учётом полей .wrap и промежутка между колонками.
+const COVER_SIZES = [
+  "(max-width: 759px) calc(100vw - 40px)",
+  "(max-width: 899px) calc(100vw - 64px)",
+  "(max-width: 1099px) calc(50vw - 52px)",
+  "(max-width: 1279px) calc(50vw - 72px)",
+  "568px",
+].join(", ");
+
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -165,7 +174,7 @@ export default async function TourPage({ params }: Props) {
             {/* та же обложка, что у карточки в каталоге: при переходе из каталога она перетекает сюда (transitions.tsx) */}
             <TourCoverTransition slug={tour.slug}>
               <div className="tour-media">
-                <TourCover src={tour.coverUrl} alt={tour.title} seed={tour.slug} variant={variants[tour.slug]} sizes="(max-width: 900px) 100vw, 600px" preload />
+                <TourCover src={tour.coverUrl} alt={tour.title} seed={tour.slug} variant={variants[tour.slug]} sizes={COVER_SIZES} loading="eager" />
               </div>
             </TourCoverTransition>
           </div>

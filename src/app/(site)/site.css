@@ -235,17 +235,14 @@ main:focus{outline:none}
 .rev-arrow{display:grid;place-items:center;width:50px;height:50px;border:1px solid var(--line-2);border-radius:50%;background:transparent;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
 .rev-arrow svg{width:20px;height:20px}
 .rev-arrow--prev svg{transform:scaleX(-1)}
-.rev-arrow:hover:not(:disabled){border-color:var(--ink);background:var(--ink);color:var(--card)}
-.rev-arrow:disabled{opacity:.35;cursor:default}
+.rev-arrow:hover:not([aria-disabled=true]){border-color:var(--ink);background:var(--ink);color:var(--card)}
+.rev-arrow[aria-disabled=true]{opacity:.35;cursor:default}
 .reviews-track{display:grid;grid-auto-flow:column;grid-auto-columns:calc((100% - 2 * 26px) / 3);gap:26px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scrollbar-width:none;margin:-10px -12px 0;padding:10px 12px 24px;scroll-padding:0 12px}
 .reviews-track::-webkit-scrollbar{display:none}
 .reviews-track:focus-visible{outline:2px solid var(--terra);outline-offset:-2px;border-radius:12px}
 .review{scroll-snap-align:start}
 .review figure{position:relative;display:flex;flex-direction:column;height:100%;margin:0;padding:30px 30px 26px;background:var(--card);border-radius:10px;box-shadow:var(--shadow)}
-.stars{display:flex;align-items:center;gap:3px;color:var(--gold)}
-/* декоративная кавычка — в строке со звёздами, а не поверх текста */
-.stars::after{content:"«";margin-left:auto;font-family:var(--accent);font-style:italic;font-size:56px;line-height:.5;color:var(--gold);opacity:.4}
-.stars svg{width:16px;height:16px}
+.review-mark{align-self:flex-end;font-family:var(--accent);font-style:italic;font-size:56px;line-height:.5;color:var(--gold);opacity:.4}
 .quote{flex:1;margin-top:18px;font-family:var(--accent);font-style:italic;font-size:20px;line-height:1.5;color:var(--ink)}
 .who{display:flex;flex-direction:column;gap:2px;margin-top:24px;padding-top:16px;border-top:1px solid var(--gold-line);font-family:var(--sans);font-size:13.5px;color:var(--muted)}
 .who b{font-size:15.5px;color:var(--ink)}
@@ -666,7 +663,8 @@ main:focus{outline:none}
   .route-step::before{top:2px;left:-9px}
   .route-num{margin-bottom:8px;font-size:34px}
   .reviews-track{grid-auto-columns:86%;gap:16px}
-  .reviews-nav{display:none}
+  .reviews-nav{margin-inline-start:auto}
+  .rev-arrow{width:44px;height:44px}
   .review figure{padding:26px 24px 22px}
   .quote{font-size:18px}
   .private-card{padding:36px 24px;border-radius:10px}

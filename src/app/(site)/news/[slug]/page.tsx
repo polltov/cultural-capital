@@ -42,7 +42,7 @@ export default async function NewsArticlePage({ params }: Props) {
           </header>
           {n.coverUrl && (
             <div className="article-cover">
-              <TourCover src={n.coverUrl} alt="" seed={n.slug} sizes="(max-width: 800px) 100vw, 760px" preload />
+              <TourCover src={n.coverUrl} alt="" seed={n.slug} sizes="(max-width: 800px) 100vw, 760px" loading="preload" />
             </div>
           )}
           <Markdown className="md">{n.body}</Markdown>

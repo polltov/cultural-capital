@@ -1,4 +1,5 @@
-import { contactLinks } from "@/lib/contacts";
+import { contactLinks, requestTourContact, REQUEST_TOUR_LABEL } from "@/lib/contacts";
+import { loadPublishedCatalog } from "@/server/catalog";
 import { getSiteContent } from "@/server/site-content";
 import { NAV } from "./Logo";
 import { Footer, SkipLink } from "./StaticSections";
@@ -15,8 +16,16 @@ export async function SiteShell({ children, cta, mainClassName }: {
   cta?: { href: string; label: string };
   mainClassName?: string;
 }) {
-  const { content } = await getSiteContent();
+  const [{ content }, catalog] = await Promise.all([
+    getSiteContent(),
+    cta ? [] : loadPublishedCatalog(),
+  ]);
   const contacts = contactLinks(content.contacts);
+  const canBuy = catalog.some(({ sessions }) => sessions.some((session) => session.free > 0));
+  const request = requestTourContact(contacts);
+  const headerAction = cta ?? (canBuy
+    ? { href: "/afisha", label: "Купить билет" }
+    : request && { href: request.href, label: REQUEST_TOUR_LABEL });
   const nav = NAV.filter(({ href }) => {
     if (href === "/#about") return content.why.items.length > 0;
     if (href === "/#reviews") return content.reviews.items.some((review) => review.published);
@@ -26,7 +35,7 @@ export async function SiteShell({ children, cta, mainClassName }: {
     <PageTransition>
       <div className="site">
         <SkipLink />
-        <SiteHeader cta={cta} contacts={contacts} nav={nav} />
+        <SiteHeader cta={headerAction} contacts={contacts} nav={nav} />
         <main id="main" className={mainClassName} tabIndex={-1}>{children}</main>
         <Footer contacts={contacts} nav={nav} description={content.footer.description} />
       </div>

@@ -39,5 +39,11 @@ export function writeUsHref(links = contactLinks()): string | null {
   return links.find(({ kind }) => kind !== "phone")?.href ?? null;
 }
 
+export const REQUEST_TOUR_LABEL = "Запросить экскурсию";
+
+export function requestTourContact(links: ContactLink[]): ContactLink | undefined {
+  return links.find(({ kind }) => kind !== "phone") ?? links[0];
+}
+
 /** Атрибуты внешней ссылки: мессенджеры и соцсети открываются в новой вкладке. */
 export const externalProps = (href: string) => (href.startsWith("http") ? { target: "_blank", rel: "noopener" } : {});

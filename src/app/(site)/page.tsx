@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { contactLinks } from "@/lib/contacts";
+import { contactLinks, requestTourContact } from "@/lib/contacts";
 import { siteOpenGraph } from "@/lib/site-metadata";
 import { getSiteContent } from "@/server/site-content";
-import { getPublishedCatalog } from "@/server/catalog";
+import { loadPublishedCatalog } from "@/server/catalog";
 import { listPublishedFaq } from "@/server/faq";
 import { getLatestNews } from "@/server/news";
 import { nextAvailable, scheduleOf } from "@/lib/domain/schedule";
@@ -33,22 +33,24 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function HomePage() {
   const [catalog, latestNews, faq, { content }] = await Promise.all([
-    getPublishedCatalog(), getLatestNews(3), listPublishedFaq(), getSiteContent(),
+    loadPublishedCatalog(), getLatestNews(3), listPublishedFaq(), getSiteContent(),
   ]);
   const contacts = contactLinks(content.contacts);
   const organization = organizationLd(contacts, content.hero.mainPhoto.url);
   const reviews = content.reviews.items.filter((review) => review.published);
   const schedule = scheduleOf(catalog);
+  const next = nextAvailable(schedule);
+  const request = next ? undefined : requestTourContact(contacts);
   const faqData = faqLd(faq);
   return (
     <SiteShell>
       <JsonLd data={faqData ? [organization, faqData] : organization} />
       <BookingProvider catalog={catalog}>
-        <Hero next={nextAvailable(schedule)} content={content.hero} />
+        <Hero next={next} content={content.hero} requestHref={request?.href} />
         <Catalog items={catalog} />
         <AfishaPreview items={schedule.slice(0, PREVIEW_DATES)} total={schedule.length} contacts={contacts} />
         <Why content={content.why} />
-        <Route content={content.route} />
+        <Route content={content.route} onlineBooking={next !== null} />
         {reviews.length > 0 && <ReviewsCarousel content={{ ...content.reviews, items: reviews }} />}
         <PrivateTours content={content.privateTours} contacts={contacts} />
         <NewsBlock items={latestNews} />

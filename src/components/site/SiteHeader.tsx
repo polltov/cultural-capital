@@ -6,7 +6,7 @@ import { externalProps, writeUsHref, type ContactLink } from "@/lib/contacts";
 import { IconClose, IconMenu } from "./icons";
 import { Logo, NAV } from "./Logo";
 
-export function SiteHeader({ cta = { href: "/afisha", label: "Купить билет" }, contacts, nav = NAV }: {
+export function SiteHeader({ cta, contacts, nav = NAV }: {
   cta?: { href: string; label: string };
   contacts: ContactLink[];
   nav?: typeof NAV;
@@ -34,8 +34,8 @@ export function SiteHeader({ cta = { href: "/afisha", label: "Купить би�
         </nav>
         <div className="top-actions">
           <Link className="top-write" href="/account">Мои билеты</Link>
-          {writeUs && <a className="top-write" href={writeUs} {...externalProps(writeUs)}>Написать</a>}
-          <Link className="btn btn--primary btn--sm top-cta" href={cta.href}>{cta.label}</Link>
+          {writeUs && writeUs !== cta?.href && <a className="top-write" href={writeUs} {...externalProps(writeUs)}>Написать</a>}
+          {cta && <Link className="btn btn--primary btn--sm top-cta" href={cta.href} {...externalProps(cta.href)}>{cta.label}</Link>}
           <button type="button" className="burger" aria-label="Меню" aria-haspopup="dialog" onClick={() => menu.current?.showModal()}>
             <IconMenu />
           </button>
@@ -52,7 +52,7 @@ export function SiteHeader({ cta = { href: "/afisha", label: "Купить би�
           <nav className="menu-nav" aria-label="Разделы">
             {nav.map((n) => <Link key={n.href} href={n.href} onClick={close}>{n.label}</Link>)}
           </nav>
-          <Link className="btn btn--primary menu-cta" href={cta.href} onClick={close}>{cta.label}</Link>
+          {cta && <Link className="btn btn--primary menu-cta" href={cta.href} {...externalProps(cta.href)} onClick={close}>{cta.label}</Link>}
           <Link className="menu-account" href="/account" onClick={close}>Мои билеты</Link>
           {contacts.length > 0 && (
             <ul className="menu-contacts">

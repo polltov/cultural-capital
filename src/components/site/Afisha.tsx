@@ -14,7 +14,7 @@ export function EmptySchedule({ contacts }: { contacts: ContactLink[] }) {
       {hasContacts && (
         <>
           <p>Напишите нам — сообщим, когда откроется запись, или подберём индивидуальную экскурсию.</p>
-          <ContactButtons contacts={contacts} />
+          <ContactButtons contacts={contacts} requestTour />
         </>
       )}
     </div>
@@ -31,7 +31,7 @@ export function AfishaPreview({ items, total, contacts }: { items: ScheduleRow[]
           id="afisha-title"
           align="start"
           title={<>Ближайшие <em>даты</em></>}
-          lead={items.length > 0 ? `Выберите день — места держатся за вами ${HOLD_MINUTES} минут, пока вы оплачиваете.` : undefined}
+          lead={items.some(({ session }) => session.free > 0) ? `Выберите день — места держатся за вами ${HOLD_MINUTES} минут, пока вы оплачиваете.` : undefined}
           action={total > 0 ? <Link className="link-more" href="/afisha">Вся афиша{total > items.length ? ` · ${total}` : ""} <span aria-hidden="true">→</span></Link> : undefined}
         />
         {items.length > 0 ? <ScheduleList items={items} /> : <EmptySchedule contacts={contacts} />}

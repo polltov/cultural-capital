@@ -1,4 +1,3 @@
-import { cache } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -14,11 +13,11 @@ import { TourCover } from "@/components/site/TourCover";
 import { BACK_TO_CATALOG, NAV_BACK, TourCoverTransition } from "@/components/site/transitions";
 import { IconAge, IconArrow, IconBag, IconClock, IconGroup, IconInfo, IconPin, IconReturn, IconTicket } from "@/components/site/icons";
 import { getSiteContent } from "@/server/site-content";
-import { contactLinks, type ContactLink } from "@/lib/contacts";
+import { contactLinks, externalProps, requestTourContact, REQUEST_TOUR_LABEL, type ContactLink } from "@/lib/contacts";
 import { CANCEL_TERMS } from "@/lib/domain/refund-policy";
 import { coverVariants, headlinePrice, routeStops, tourMetaDescription } from "@/lib/domain/tour-text";
 import { breadcrumbLd, tourLd } from "@/lib/seo";
-import { findTour, getPublishedCatalog } from "@/server/catalog";
+import { findTour, getPublishedCatalog, loadPublishedCatalog } from "@/server/catalog";
 
 // Как и главная: даты и свободные места обновляются раз в 5 минут, а после покупок и правок в админке — сразу.
 export const revalidate = 300;
@@ -40,13 +39,10 @@ const WIDE_FACT = 22;
 /** Названия длиннее этого набираются кеглем поменьше, чтобы не занимать весь первый экран. */
 const LONG_TITLE = 36;
 
-// Метаданные и страница — один запрос каталога на рендер.
-const loadCatalog = cache(() => getPublishedCatalog());
-
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const item = findTour(await loadCatalog(), (await params).slug);
+  const item = findTour(await loadPublishedCatalog(), (await params).slug);
   if (!item) return { title: "Экскурсия не найдена" };
   const { tour } = item;
   const description = tourMetaDescription(tour);
@@ -77,25 +73,29 @@ function Facts({ items }: { items: { icon: React.ReactNode; label: string; value
 }
 
 /** Вместо кнопки покупки, когда купить нечего: что случилось, куда пойти дальше и (если есть контакты) кому написать. */
-function SoldOut({ hasDates, contacts }: { hasDates: boolean; contacts: ContactLink[] }) {
+function SoldOut({ hasDates, hasSchedule, contacts }: {
+  hasDates: boolean;
+  hasSchedule: boolean;
+  contacts: ContactLink[];
+}) {
   const hasContacts = contacts.length > 0;
   return (
     <div className="booking-empty">
-      <p>{hasDates ? "На эти даты все места разобраны — новые появятся в афише." : "Даты этой экскурсии скоро появятся в афише."}</p>
-      <Link className="btn btn--ghost btn--block" href="/afisha">Смотреть афишу</Link>
+      <p>{hasDates ? "На ближайшие даты все места разобраны." : "Даты этой экскурсии уточняются."}</p>
       {hasContacts && (
         <>
-          <p>Или напишите нам — сообщим о новых датах или проведём экскурсию для вашей семьи.</p>
-          <ContactButtons contacts={contacts} />
+          <p>Свяжитесь с нами, чтобы узнать о новых датах или договориться об индивидуальной экскурсии.</p>
+          <ContactButtons contacts={contacts} requestTour />
         </>
       )}
+      {hasSchedule && <Link className="btn btn--ghost btn--block" href="/afisha">Смотреть афишу</Link>}
     </div>
   );
 }
 
 export default async function TourPage({ params }: Props) {
   const { slug } = await params;
-  const [catalog, { content }] = await Promise.all([loadCatalog(), getSiteContent()]);
+  const [catalog, { content }] = await Promise.all([loadPublishedCatalog(), getSiteContent()]);
   const item = findTour(catalog, slug);
   if (!item) notFound();
 
@@ -117,6 +117,9 @@ export default async function TourPage({ params }: Props) {
   const groupSize = sessions.length > 0 ? Math.max(...sessions.map((s) => s.capacity)) : null;
   const price = headlinePrice(tour);
   const canBuy = sessions.some((s) => s.free > 0);
+  const hasSchedule = catalog.some((entry) => entry.sessions.length > 0);
+  const contacts = contactLinks(content.contacts);
+  const request = requestTourContact(contacts);
 
   const facts = [
     tour.durationLabel.trim() && { icon: <IconClock />, label: "Длительность", value: tour.durationLabel.trim() },
@@ -127,7 +130,7 @@ export default async function TourPage({ params }: Props) {
   ].filter((f): f is { icon: React.ReactElement; label: string; value: string } => Boolean(f));
 
   return (
-    // кнопка в шапке ведёт к датам этой экскурсии, а если купить здесь нечего — в общую афишу (по умолчанию)
+    // Кнопка в шапке ведёт к датам этой экскурсии, когда есть свободные места.
     <SiteShell cta={canBuy ? { href: "#booking", label: "Купить билет" } : undefined}>
       <JsonLd data={[...tourLd(tour, sessions), breadcrumbLd([{ name: "Главная", path: "/" }, { name: "Экскурсии", path: "/#catalog" }, { name: tour.title, path: `/tours/${tour.slug}` }])]} />
       <BookingProvider catalog={bookable}>
@@ -150,7 +153,9 @@ export default async function TourPage({ params }: Props) {
               <div className="tour-cta">
                 {canBuy ? (
                   <a className="btn btn--dark" href="#booking">Выбрать дату <IconArrow /></a>
-                ) : (
+                ) : request ? (
+                  <a className="btn btn--dark" href={request.href} {...externalProps(request.href)}>{REQUEST_TOUR_LABEL} <IconArrow /></a>
+                ) : hasSchedule && (
                   <Link className="btn btn--dark" href="/afisha">Смотреть афишу <IconArrow /></Link>
                 )}
                 <p className="tour-price">{price.price}{price.note && <small>{price.note}</small>}</p>
@@ -200,7 +205,7 @@ export default async function TourPage({ params }: Props) {
             </section>
           </div>
           <aside className="tour-aside" aria-label="Покупка билетов">
-            <BookingPanel tour={{ id: tour.id, title: tour.title, priceChild: tour.priceChild, priceAdult: tour.priceAdult }} sessions={sessions} fallback={<SoldOut hasDates={sessions.length > 0} contacts={contactLinks(content.contacts)} />} />
+            <BookingPanel tour={{ id: tour.id, title: tour.title, priceChild: tour.priceChild, priceAdult: tour.priceAdult }} sessions={sessions} fallback={<SoldOut hasDates={sessions.length > 0} hasSchedule={hasSchedule} contacts={contacts} />} />
           </aside>
         </div>
 

@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Markdown } from "@/components/Markdown";
 import { ogrnLabel, operator } from "@/lib/legal";
-import { contactLinks, externalProps, type ContactLink } from "@/lib/contacts";
+import { contactLinks, externalProps, requestTourContact, REQUEST_TOUR_LABEL, type ContactLink } from "@/lib/contacts";
 import { formatDayMonth, formatTime, formatWeekday } from "@/lib/domain/moscow-time";
 import { pluralRu, seatsBadge } from "@/lib/domain/seats";
 import { defaultSiteContent, type SiteContent } from "@/lib/site-content";
@@ -22,7 +22,8 @@ export function SkipLink() {
 type Next = ScheduleItem<CatalogTour["tour"]> | null;
 
 /** Первый экран: обещание, два пути (выбрать экскурсию / ближайшие даты) и подсказка с ближайшим сеансом. */
-export function Hero({ next, content }: { next: Next; content: SiteContent["hero"] }) {
+export function Hero({ next, content, requestHref }: { next: Next; content: SiteContent["hero"]; requestHref?: string }) {
+  const showTicket = next !== null || content.ticket !== defaultSiteContent.hero.ticket;
   return (
     <section className="hero" aria-labelledby="hero-title">
       <div className="wrap hero-grid">
@@ -31,13 +32,22 @@ export function Hero({ next, content }: { next: Next; content: SiteContent["hero
           <h1 className="hero-title" id="hero-title"><Emphasis text={content.title} nowrapTail={content.title === defaultSiteContent.hero.title} /></h1>
           <p className="hero-sub">{content.description}</p>
           <div className="hero-actions">
-            <Link className="btn btn--dark" href="/#catalog">{content.catalogLabel} <IconArrow /></Link>
-            <Link className="btn btn--ghost" href="/#afisha">{content.datesLabel}</Link>
+            {requestHref ? (
+              <>
+                <a className="btn btn--dark" href={requestHref} {...externalProps(requestHref)}>{REQUEST_TOUR_LABEL} <IconArrow /></a>
+                <Link className="btn btn--ghost" href="/#catalog">{content.catalogLabel}</Link>
+              </>
+            ) : (
+              <>
+                <Link className="btn btn--dark" href="/#catalog">{content.catalogLabel} <IconArrow /></Link>
+                <Link className="btn btn--ghost" href="/#afisha">{content.datesLabel}</Link>
+              </>
+            )}
           </div>
           <ul className="hero-facts">
             <li><IconGroup />{content.group}</li>
             <li><IconCompass />{content.route}</li>
-            <li><IconTicket />{content.ticket}</li>
+            {showTicket && <li><IconTicket />{content.ticket}</li>}
           </ul>
         </div>
         <div className="hero-visual">
@@ -108,16 +118,30 @@ export function Why({ content = defaultSiteContent.why }: { content?: SiteConten
   );
 }
 
-export function Route({ content = defaultSiteContent.route }: { content?: SiteContent["route"] }) {
+export function Route({ content = defaultSiteContent.route, onlineBooking = true }: {
+  content?: SiteContent["route"];
+  onlineBooking?: boolean;
+}) {
   if (content.items.length === 0) return null;
+
+  const [purchase, ticket] = defaultSiteContent.route.items;
+  const items = onlineBooking ? content.items : content.items.map((item) => {
+    if (item.id === purchase.id && item.title === purchase.title && item.body === purchase.body) {
+      return { ...item, title: "Запрашиваете экскурсию", body: "Свяжитесь с нами, чтобы подобрать маршрут и дату." };
+    }
+    if (item.id === ticket.id && item.title === ticket.title && item.body === ticket.body) {
+      return { ...item, title: "Уточняем детали встречи", body: "Подскажем, где встретиться и что взять с собой." };
+    }
+    return item;
+  });
   return (
     <section className="route" aria-labelledby="route-title">
       <div className="wrap">
         <p className="kicker kicker--light">{content.kicker}</p>
         <h2 className="route-title" id="route-title"><Emphasis text={content.title} /></h2>
         <p className="route-lead">{content.lead}</p>
-        <ol className={content.items.length === 6 ? "route-steps" : "route-steps route-steps--custom"}>
-          {content.items.map((item, i) => (
+        <ol className={items.length === 6 ? "route-steps" : "route-steps route-steps--custom"}>
+          {items.map((item, i) => (
             <li className="route-step" key={item.id}>
               <span className="route-num">{i + 1}</span>
               <h3>{item.title}</h3>
@@ -131,14 +155,21 @@ export function Route({ content = defaultSiteContent.route }: { content?: SiteCo
 }
 
 /** Первые два канала связи показываются кнопками. */
-export function ContactButtons({ contacts, max = 2, light = false }: { contacts: ContactLink[]; max?: number; light?: boolean }) {
-  const links = contacts.slice(0, max);
+export function ContactButtons({ contacts, max = 2, light = false, requestTour = false }: {
+  contacts: ContactLink[];
+  max?: number;
+  light?: boolean;
+  requestTour?: boolean;
+}) {
+  const request = requestTour ? requestTourContact(contacts) : undefined;
+  const ordered = request ? [request, ...contacts.filter((contact) => contact !== request)] : contacts;
+  const links = ordered.slice(0, max);
   if (links.length === 0) return null;
   return (
     <div className="contact-buttons">
       {links.map((c, i) => (
         <a key={c.kind} className={`btn ${i === 0 ? (light ? "btn--light" : "btn--dark") : light ? "btn--ghost-light" : "btn--ghost"}`} href={c.href} {...externalProps(c.href)}>
-          {c.kind === "phone" ? `Позвонить: ${c.value}` : c.kind === "email" ? "Написать на почту" : `Написать в ${c.label}`}
+          {c === request ? REQUEST_TOUR_LABEL : c.kind === "phone" ? `Позвонить: ${c.value}` : c.kind === "email" ? "Написать на почту" : `Написать в ${c.label}`}
         </a>
       ))}
     </div>

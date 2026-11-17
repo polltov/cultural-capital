@@ -6,9 +6,9 @@ import { ScheduleList } from "@/components/site/Schedule";
 import { SiteShell } from "@/components/site/SiteShell";
 import { contactLinks } from "@/lib/contacts";
 import { getSiteContent } from "@/server/site-content";
-import { groupByMonth, scheduleOf } from "@/lib/domain/schedule";
+import { groupByMonth, nextAvailable, scheduleOf } from "@/lib/domain/schedule";
 import { HOLD_MINUTES, pluralRu } from "@/lib/domain/seats";
-import { getPublishedCatalog } from "@/server/catalog";
+import { loadPublishedCatalog } from "@/server/catalog";
 import { NAV_BACK } from "@/components/site/transitions";
 
 // Как главная: даты и места обновляются раз в 5 минут и сразу после покупок и правок в админке.
@@ -21,8 +21,10 @@ export const metadata: Metadata = {
 };
 
 export default async function AfishaPage() {
-  const [catalog, { content }] = await Promise.all([getPublishedCatalog(), getSiteContent()]);
-  const months = groupByMonth(scheduleOf(catalog));
+  const [catalog, { content }] = await Promise.all([loadPublishedCatalog(), getSiteContent()]);
+  const schedule = scheduleOf(catalog);
+  const months = groupByMonth(schedule);
+  const canBuy = nextAvailable(schedule) !== null;
   return (
     <SiteShell mainClassName="afisha-page">
       <BookingProvider catalog={catalog}>
@@ -33,7 +35,9 @@ export default async function AfishaPage() {
           <header className="page-head">
             <p className="kicker">Афиша</p>
             <h1 className="page-title">Все <em>даты</em> экскурсий</h1>
-            <p className="page-lead">Выберите день и купите билет онлайн — места держатся за вами {HOLD_MINUTES} минут, пока вы оплачиваете, а билет и чек приходят на почту.</p>
+            {canBuy && (
+              <p className="page-lead">Выберите день и купите билет онлайн — места держатся за вами {HOLD_MINUTES} минут, пока вы оплачиваете, а билет и чек приходят на почту.</p>
+            )}
           </header>
           {months.length === 0 ? (
             <EmptySchedule contacts={contactLinks(content.contacts)} />

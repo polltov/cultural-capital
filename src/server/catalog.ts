@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { and, asc, eq, gt, inArray } from "drizzle-orm";
 import { db as sharedDb, type Db } from "@/db/client";
 import { orders, tours, tourSessions } from "@/db/schema";
@@ -63,6 +64,9 @@ export async function getPublishedCatalog(db: Db = sharedDb): Promise<CatalogTou
       .map((s) => ({ id: s.id, startsAt: s.startsAt, free: freeSeats(s.capacity, s.occupied), capacity: s.capacity })),
   }));
 }
+
+/** Каталог для серверных компонентов и метаданных в пределах одного рендера. */
+export const loadPublishedCatalog = cache(() => getPublishedCatalog());
 
 /** Опубликованная экскурсия по адресу страницы — из того же каталога (с местами), чтобы цифры совпадали с главной. */
 export function findTour(catalog: CatalogTour[], slug: string): CatalogTour | null {

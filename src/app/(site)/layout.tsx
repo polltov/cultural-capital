@@ -8,6 +8,9 @@ import { Analytics } from "@/components/site/Analytics";
 import "../fonts.css";
 import "./site.css";
 
+// Кнопка в общей шапке зависит от ближайших сеансов, которые со временем уходят из афиши.
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
   title: {

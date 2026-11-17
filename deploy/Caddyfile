@@ -1,6 +1,14 @@
 # HTTPS для сайта: Caddy сам получает и продлевает сертификат Let's Encrypt для домена из SITE_URL
 # (deploy.sh пишет его в punycode в файл .env рядом с compose.yml как SITE_DOMAIN).
 
+(app_proxy_options) {
+	# X-Forwarded-For Caddy ставит сам; X-Real-IP от посетителя не пускаем.
+	header_up -X-Real-IP
+	# Пока приложение перезапускается, запросы ждут новую версию.
+	lb_try_duration 30s
+	flush_interval -1
+}
+
 {$SITE_DOMAIN} {
 	# Обложки до 8 МБ уходят формой в админке; Next принимает до 10 МБ, больше не пускаем вовсе.
 	request_body {
@@ -10,13 +18,25 @@
 		Strict-Transport-Security "max-age=31536000"
 		-Server
 	}
-	reverse_proxy app:3000 {
-		# X-Forwarded-For Caddy ставит сам (подделку от посетителя отбрасывает); X-Real-IP от посетителя не пускаем
-		header_up -X-Real-IP
-		# пока сайт перезапускается после выкладки, запросы ждут, а не получают ошибку
-		lb_try_duration 30s
-		# страницы приходят по частям (streaming) — отдаём сразу, без буфера
-		flush_interval -1
+	@hermitageHTML {
+		path /tours/egipetskiy-zal-ermitazha
+		method GET HEAD
+		header Accept *text/html*
+		header Accept-Encoding *zstd*
+		not header RSC 1
+	}
+	# Более длинное окно Zstandard сжимает повтор встроенной обложки в HTML и в данных React.
+	handle @hermitageHTML {
+		encode zstd gzip
+		reverse_proxy app:3000 {
+			import app_proxy_options
+			header_up Accept-Encoding identity
+		}
+	}
+	handle {
+		reverse_proxy app:3000 {
+			import app_proxy_options
+		}
 	}
 }
 

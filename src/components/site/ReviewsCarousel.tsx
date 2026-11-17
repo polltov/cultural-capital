@@ -1,17 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { SiteContent } from "@/lib/site-content";
+import { Emphasis } from "./Emphasis";
 import { IconArrow, IconStar } from "./icons";
 
-const REVIEWS = [
-  { quote: "Дочь теперь ищет львов по всему Петербургу. Экскурсия была не про даты и цифры, а про историю, которую она проживала.", name: "Ольга", about: "мама двоих детей" },
-  { quote: "Сын-подросток обычно скучает на любых экскурсиях. Здесь два часа пролетели, а вечером он ещё гуглил про сфинксов и атлантов.", name: "Игорь", about: "отец 13-летнего сына" },
-  { quote: "Приехали из Москвы на выходные. Гид сразу нашла общий язык и с 5-летним, и со мной. Уехали влюблённые в Петербург заново.", name: "Марина", about: "Москва" },
-  { quote: "Не ожидала, что вечерняя прогулка по мостам может быть настолько атмосферной. Не туристический пересказ Википедии, а живой рассказ.", name: "Елена", about: "гостья из Калининграда" },
-];
-
 /** Отзывы лентой: на компьютере видно три, на телефоне листаются пальцем; стрелки сдвигают на один отзыв. */
-export function ReviewsCarousel() {
+export function ReviewsCarousel({ content }: { content: SiteContent["reviews"] }) {
   const track = useRef<HTMLUListElement>(null);
   const [edge, setEdge] = useState({ start: true, end: false });
 
@@ -39,8 +34,8 @@ export function ReviewsCarousel() {
       <div className="wrap">
         <div className="shead shead--start">
           <div className="shead-text">
-            <p className="kicker">Что говорят</p>
-            <h2 className="stitle" id="reviews-title">Отзывы <em>наших гостей</em></h2>
+            <p className="kicker">{content.kicker}</p>
+            <h2 className="stitle" id="reviews-title"><Emphasis text={content.title} /></h2>
           </div>
           <div className="reviews-nav">
             <button type="button" className="rev-arrow rev-arrow--prev" aria-label="Предыдущий отзыв" disabled={edge.start} onClick={() => step(-1)}><IconArrow /></button>
@@ -49,8 +44,8 @@ export function ReviewsCarousel() {
         </div>
         {/* лента прокручивается — с клавиатуры тоже: фокус на ней и стрелки ← → */}
         <ul className="reviews-track" ref={track} onScroll={update} aria-label="Отзывы" tabIndex={0}>
-          {REVIEWS.map((r) => (
-            <li className="review" key={r.name}>
+          {content.items.map((r) => (
+            <li className="review" key={r.id}>
               <figure>
                 <p className="stars" role="img" aria-label="Оценка 5 из 5">{[0, 1, 2, 3, 4].map((i) => <IconStar key={i} />)}</p>
                 <blockquote className="quote">{r.quote}</blockquote>

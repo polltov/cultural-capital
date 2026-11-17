@@ -2,12 +2,17 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import OfferPage from "@/app/(site)/offer/page";
+import type { ReactNode } from "react";
 import { Footer } from "@/components/site/StaticSections";
 
 // Реквизиты в src/lib/legal.ts заполняет владелец; тест не должен зависеть от того, заполнены они или нет.
 vi.mock("@/lib/legal", async (orig) => ({
   ...(await orig<typeof import("@/lib/legal")>()),
   operator: { name: "", inn: "", ogrn: "", address: "", email: "", phone: "" },
+}));
+
+vi.mock("@/components/site/SiteShell", () => ({
+  SiteShell: ({ children }: { children: ReactNode }) => <main>{children}</main>,
 }));
 
 afterEach(cleanup);

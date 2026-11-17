@@ -4,6 +4,8 @@ import { EmptySchedule } from "@/components/site/Afisha";
 import { BookingProvider } from "@/components/site/Booking";
 import { ScheduleList } from "@/components/site/Schedule";
 import { SiteShell } from "@/components/site/SiteShell";
+import { contactLinks } from "@/lib/contacts";
+import { getSiteContent } from "@/server/site-content";
 import { groupByMonth, scheduleOf } from "@/lib/domain/schedule";
 import { HOLD_MINUTES, pluralRu } from "@/lib/domain/seats";
 import { getPublishedCatalog } from "@/server/catalog";
@@ -19,7 +21,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AfishaPage() {
-  const catalog = await getPublishedCatalog();
+  const [catalog, { content }] = await Promise.all([getPublishedCatalog(), getSiteContent()]);
   const months = groupByMonth(scheduleOf(catalog));
   return (
     <SiteShell mainClassName="afisha-page">
@@ -34,7 +36,7 @@ export default async function AfishaPage() {
             <p className="page-lead">Выберите день и купите билет онлайн — места держатся за вами {HOLD_MINUTES} минут, пока вы оплачиваете, а билет и чек приходят на почту.</p>
           </header>
           {months.length === 0 ? (
-            <EmptySchedule />
+            <EmptySchedule contacts={contactLinks(content.contacts)} />
           ) : (
             months.map((m) => (
               <section className="month" key={m.key} aria-labelledby={`m-${m.key}`}>

@@ -36,6 +36,14 @@ describe("uploadImage", () => {
     expect(h.get("authorization")).not.toContain("s3-secret-key");
   });
 
+  it("принимает изображение главной только с сигнатурой заявленного формата", async () => {
+    const fetchImpl = ok();
+    await expect(uploadImage(file("image/png"), "site", fetchImpl)).rejects.toThrow(/заявленного формата/);
+    expect(fetchImpl).not.toHaveBeenCalled();
+    const png = new File([Uint8Array.from([137, 80, 78, 71, 13, 10, 26, 10])], "home.png", { type: "image/png" });
+    expect(await uploadImage(png, "site", fetchImpl)).toMatch(/\/site\/home-[a-z0-9]{8}\.png$/);
+  });
+
   it("каждый раз новое имя: одноимённые файлы не затирают друг друга", async () => {
     const fetchImpl = ok();
     const a = await uploadImage(file("image/png", 10, "x.png"), "news", fetchImpl);

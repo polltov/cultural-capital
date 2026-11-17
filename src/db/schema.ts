@@ -3,6 +3,8 @@ import {
   boolean, check, index, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uniqueIndex,
 } from "drizzle-orm/pg-core";
 
+import type { SiteSection } from "@/lib/site-content";
+
 const ts = (name: string) => timestamp(name, { withTimezone: true });
 
 export const orderStatus = pgEnum("order_status", [
@@ -212,3 +214,10 @@ export const rateLimitHits = pgTable(
   },
   (t) => [index("rate_limit_hits_key_created_idx").on(t.key, t.createdAt)],
 );
+
+/** Один независимо сохраняемый блок публичного сайта на строку. */
+export const siteContent = pgTable("site_content", {
+  section: text("section").$type<SiteSection>().primaryKey(),
+  content: jsonb("content").notNull(),
+  revision: integer("revision").notNull(),
+});

@@ -803,3 +803,10 @@ main:focus{outline:none}
   .order-ticket .ticket-photo{display:none}
   .ticket.order-ticket .perf .t-stub{font-size:11px;color:var(--ink)}
 }
+
+/* Редактируемые тексты могут быть длиннее исходных. */
+:is(.hero-copy, .why, .route, .reviews, .private-copy, .foot-tag, .foot-col) { overflow-wrap: anywhere; }
+@media (min-width: 900px) {
+  .route-steps--custom { grid-template-columns: repeat(auto-fit, minmax(146px, 1fr)); row-gap: 38px; }
+  .route-steps--custom::before { display: none; }
+}

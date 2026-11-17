@@ -8,21 +8,30 @@ const MAX = 8 * 1024 * 1024;
 
 /** Загрузка обложки: перетаскивание или клик. Ошибка показывается рядом и не трогает остальную форму. */
 export function ImageDrop({
-  value, onChange, folder = "tours", label = "Обложка",
-}: { value: string | null; onChange: (url: string | null) => void; folder?: "tours" | "news"; label?: string }) {
+  value, onChange, folder = "tours", label = "Обложка", removeLabel = "Убрать", hideRemove = false, onBusyChange,
+}: {
+  value: string | null;
+  onChange: (url: string | null) => void;
+  folder?: "tours" | "news" | "site";
+  label?: string;
+  removeLabel?: string;
+  hideRemove?: boolean;
+  onBusyChange?: (busy: boolean) => void;
+}) {
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [over, setOver] = useState(false);
   const [pending, start] = useTransition();
 
   function upload(file: File | undefined) {
-    if (!file) return;
+    if (!file || pending) return;
     setError(null);
     if (!TYPES.includes(file.type)) return setError("Подходят только изображения JPG, PNG или WebP");
     if (file.size > MAX) return setError("Файл больше 8 МБ — выберите фото поменьше");
     const fd = new FormData();
     fd.set("file", file);
     fd.set("folder", folder);
+    onBusyChange?.(true);
     start(async () => {
       try {
         const r = await uploadCoverAction(fd);
@@ -30,6 +39,8 @@ export function ImageDrop({
         else setError(r.error);
       } catch {
         setError("Не удалось загрузить фото. Попробуйте ещё раз");
+      } finally {
+        onBusyChange?.(false);
       }
     });
   }
@@ -52,7 +63,7 @@ export function ImageDrop({
       >
         {value ? (
           // eslint-disable-next-line @next/next/no-img-element -- превью обложки из хранилища, без оптимизатора
-          <img src={value} alt="Обложка" className="drop-img" />
+          <img src={value} alt={label} className="drop-img" />
         ) : (
           <span className="muted">Перетащите фото сюда</span>
         )}
@@ -60,9 +71,9 @@ export function ImageDrop({
           <button type="button" className="btn btn-ghost" disabled={pending} onClick={() => input.current?.click()}>
             {pending ? "Загрузка…" : value ? "Заменить фото" : "Выбрать фото"}
           </button>
-          {value && (
+          {value && !hideRemove && (
             <button type="button" className="btn btn-ghost" disabled={pending} onClick={() => onChange(null)}>
-              Убрать
+              {removeLabel}
             </button>
           )}
         </div>

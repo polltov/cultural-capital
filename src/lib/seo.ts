@@ -1,6 +1,5 @@
 // Микроразметка schema.org (JSON-LD) для поисковиков: организация, экскурсия с её сеансами, хлебные крошки.
-import { contactLinks } from "./contacts";
-import { operator } from "./legal";
+import { contactLinks, type ContactLink } from "./contacts";
 import { siteUrl } from "./site-url";
 import { toMoscowIso } from "./domain/moscow-time";
 import { priceLines, routeStops, tourMetaDescription } from "./domain/tour-text";
@@ -13,20 +12,22 @@ export const absoluteUrl = (path: string) => (/^https?:\/\//i.test(path) ? path 
 
 const provider = () => ({ "@type": "Organization", name: NAME, url: siteUrl() });
 
-export function organizationLd() {
-  const sameAs = contactLinks().filter((c) => c.external).map((c) => c.href);
+export function organizationLd(links: ContactLink[] = contactLinks(), image = "/assets/dvortsovaya.jpg") {
+  const phone = links.find((link) => link.kind === "phone")?.value;
+  const email = links.find((link) => link.kind === "email")?.value;
+  const sameAs = links.filter((c) => c.external).map((c) => c.href);
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: NAME,
     url: siteUrl(),
     logo: absoluteUrl("/brand/icon-512.png"),
-    image: absoluteUrl("/assets/dvortsovaya.jpg"),
+    image: absoluteUrl(image),
     description: "Экскурсии по Санкт-Петербургу для детей и взрослых: авторские маршруты, маленькие группы, история через игру.",
     areaServed: { "@type": "City", name: "Санкт-Петербург" },
     address: CITY,
-    ...(operator.phone.trim() ? { telephone: operator.phone.trim() } : {}),
-    ...(operator.email.trim() ? { email: operator.email.trim() } : {}),
+    ...(phone ? { telephone: phone } : {}),
+    ...(email ? { email } : {}),
     ...(sameAs.length ? { sameAs } : {}),
   };
 }

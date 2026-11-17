@@ -21,6 +21,7 @@ const ITEMS: Item[] = [
   { href: "/admin/sources", label: "Источники", area: "sources", desktopOnly: true, icon: svg("M4 20V10M10 20V4M16 20v-7M22 20H2") },
   { href: "/admin/news", label: "Новости", area: "content", icon: svg("M5 5h11v14H6a1 1 0 0 1-1-1zM16 9h3v9a1 1 0 0 1-1 1h-2M8 9h5M8 13h5") },
   { href: "/admin/faq", label: "Вопросы", area: "content", icon: svg("M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM9.4 9.3a2.7 2.7 0 0 1 5.2.9c0 1.7-2.6 2.2-2.6 3.8M12 17h.01") },
+  { href: "/admin/site", label: "Сайт", area: "content", icon: svg("M3 5h18v14H3zM3 9h18M6 7h1M9 7h1M7 13h10M7 16h6") },
   { href: "/admin/users", label: "Сотрудники", area: "staff", desktopOnly: true, icon: svg("M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 12 0v1M16 3.5a4 4 0 0 1 0 7M22 21v-1a6 6 0 0 0-4-5.6") },
 ];
 

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { contactLinks } from "@/lib/contacts";
 import { SiteHeader } from "@/components/site/SiteHeader";
 
 /**
@@ -15,7 +16,7 @@ export default function SiteError({ error, retry }: { error: Error & { digest?: 
 
   return (
     <div className="site">
-      <SiteHeader />
+      <SiteHeader contacts={contactLinks()} />
       <main id="main">
         <div className="wrap nf" role="alert">
           <div className="nf-art" aria-hidden="true" />

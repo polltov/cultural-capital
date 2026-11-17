@@ -1,30 +1,22 @@
 import type { Metadata, Viewport } from "next";
 import { preloadCriticalFonts } from "@/lib/critical-fonts";
 import { siteIcons } from "@/lib/site-icons";
+import { defaultSiteContent } from "@/lib/site-content";
+import { siteOpenGraph } from "@/lib/site-metadata";
 import { siteUrl } from "@/lib/site-url";
 import { Analytics } from "@/components/site/Analytics";
 import "../fonts.css";
 import "./site.css";
 
-const DESCRIPTION =
-  "Экскурсии по Санкт-Петербургу для детей и взрослых: авторские маршруты, маленькие группы до 8 человек, история через игру. Билеты онлайн.";
-
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
   title: {
-    default: "Культурная Столица — экскурсии по Петербургу для детей и взрослых",
+    default: defaultSiteContent.seo.title,
     template: "%s — Культурная Столица",
   },
-  description: DESCRIPTION,
+  description: defaultSiteContent.seo.description,
   applicationName: "Культурная Столица",
-  openGraph: {
-    type: "website",
-    siteName: "Культурная Столица",
-    locale: "ru_RU",
-    title: "Культурная Столица — экскурсии по Петербургу для семьи",
-    description: "Авторские маршруты для детей и взрослых. Маленькие группы до 8 человек.",
-    images: [{ url: "/brand/og.jpg", width: 1200, height: 630, alt: "Культурная Столица — экскурсии по Петербургу" }],
-  },
+  openGraph: siteOpenGraph(defaultSiteContent.seo),
   icons: siteIcons,
   formatDetection: { telephone: false },
 };

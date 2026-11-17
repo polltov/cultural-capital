@@ -2,15 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { contactLinks, externalProps, writeUsHref } from "@/lib/contacts";
+import { externalProps, writeUsHref, type ContactLink } from "@/lib/contacts";
 import { IconClose, IconMenu } from "./icons";
 import { Logo, NAV } from "./Logo";
 
-export function SiteHeader({ cta = { href: "/afisha", label: "Купить билет" } }: { cta?: { href: string; label: string } }) {
+export function SiteHeader({ cta = { href: "/afisha", label: "Купить билет" }, contacts, nav = NAV }: {
+  cta?: { href: string; label: string };
+  contacts: ContactLink[];
+  nav?: typeof NAV;
+}) {
   const [scrolled, setScrolled] = useState(false);
   const menu = useRef<HTMLDialogElement>(null);
-  const writeUs = writeUsHref();
-  const contacts = contactLinks();
+  const writeUs = writeUsHref(contacts);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -27,7 +30,7 @@ export function SiteHeader({ cta = { href: "/afisha", label: "Купить би�
       <div className="wrap top-row">
         <Logo />
         <nav className="nav" aria-label="Основное меню">
-          {NAV.map((n) => <Link key={n.href} href={n.href}>{n.label}</Link>)}
+          {nav.map((n) => <Link key={n.href} href={n.href}>{n.label}</Link>)}
         </nav>
         <div className="top-actions">
           <Link className="top-write" href="/account">Мои билеты</Link>
@@ -47,7 +50,7 @@ export function SiteHeader({ cta = { href: "/afisha", label: "Купить би�
             <button type="button" className="burger" aria-label="Закрыть меню" onClick={close}><IconClose /></button>
           </div>
           <nav className="menu-nav" aria-label="Разделы">
-            {NAV.map((n) => <Link key={n.href} href={n.href} onClick={close}>{n.label}</Link>)}
+            {nav.map((n) => <Link key={n.href} href={n.href} onClick={close}>{n.label}</Link>)}
           </nav>
           <Link className="btn btn--primary menu-cta" href={cta.href} onClick={close}>{cta.label}</Link>
           <Link className="menu-account" href="/account" onClick={close}>Мои билеты</Link>

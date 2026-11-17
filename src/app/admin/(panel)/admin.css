@@ -391,3 +391,21 @@ a.session-row:hover { background: rgba(245, 237, 224, .6); }
 .user-roles .check input { width: 18px; height: 18px; min-height: 0; margin: 3px 0 0; padding: 0; flex: none; box-shadow: none; }
 .users-table tr.is-off td { color: var(--muted); }
 .partial-grid { display: flex; flex-wrap: wrap; gap: 16px; } .partial-grid .field { flex: 1 1 180px; }
+
+/* Редактирование публичных блоков */
+.site-editor { display: grid; gap: 12px; max-width: 820px; }
+.site-editor > .section-sub { margin: 0; }
+.site-edit-section { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.site-edit-section > summary { padding: 12px 16px; cursor: pointer; font-weight: 700; min-height: 44px; }
+.site-edit-section > summary small { margin-inline-start: 12px; font-weight: 400; }
+.site-edit-form { display: grid; gap: 18px; padding: 16px; border-top: 1px solid var(--line); }
+.site-edit-fields, .site-edit-card { display: grid; gap: 14px; min-width: 0; }
+.site-edit-form > fieldset { padding: 0; border: 0; margin: 0; }
+.site-edit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.site-edit-card { padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); }
+.site-edit-card legend { padding-inline: 6px; color: var(--muted); font-size: 14px; }
+.site-edit-list ol { display: grid; gap: 12px; margin: 0 0 12px; padding: 0; list-style: none; }
+@media (max-width: 600px) {
+  .site-edit-grid { grid-template-columns: 1fr; }
+  .site-edit-form :is(input, textarea) { font-size: 16px; }
+}

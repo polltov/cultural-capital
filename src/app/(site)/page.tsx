@@ -1,3 +1,7 @@
+import type { Metadata } from "next";
+import { contactLinks } from "@/lib/contacts";
+import { siteOpenGraph } from "@/lib/site-metadata";
+import { getSiteContent } from "@/server/site-content";
 import { getPublishedCatalog } from "@/server/catalog";
 import { listPublishedFaq } from "@/server/faq";
 import { getLatestNews } from "@/server/news";
@@ -18,23 +22,37 @@ export const revalidate = 300;
 
 const PREVIEW_DATES = 5;
 
+export async function generateMetadata(): Promise<Metadata> {
+  const { content: { seo } } = await getSiteContent();
+  return {
+    title: { absolute: seo.title },
+    description: seo.description,
+    openGraph: siteOpenGraph(seo),
+  };
+}
+
 export default async function HomePage() {
-  const [catalog, latestNews, faq] = await Promise.all([getPublishedCatalog(), getLatestNews(3), listPublishedFaq()]);
+  const [catalog, latestNews, faq, { content }] = await Promise.all([
+    getPublishedCatalog(), getLatestNews(3), listPublishedFaq(), getSiteContent(),
+  ]);
+  const contacts = contactLinks(content.contacts);
+  const organization = organizationLd(contacts, content.hero.mainPhoto.url);
+  const reviews = content.reviews.items.filter((review) => review.published);
   const schedule = scheduleOf(catalog);
   const faqData = faqLd(faq);
   return (
     <SiteShell>
-      <JsonLd data={faqData ? [organizationLd(), faqData] : organizationLd()} />
+      <JsonLd data={faqData ? [organization, faqData] : organization} />
       <BookingProvider catalog={catalog}>
-        <Hero next={nextAvailable(schedule)} />
+        <Hero next={nextAvailable(schedule)} content={content.hero} />
         <Catalog items={catalog} />
-        <AfishaPreview items={schedule.slice(0, PREVIEW_DATES)} total={schedule.length} />
-        <Why />
-        <Route />
-        <ReviewsCarousel />
-        <PrivateTours />
+        <AfishaPreview items={schedule.slice(0, PREVIEW_DATES)} total={schedule.length} contacts={contacts} />
+        <Why content={content.why} />
+        <Route content={content.route} />
+        {reviews.length > 0 && <ReviewsCarousel content={{ ...content.reviews, items: reviews }} />}
+        <PrivateTours content={content.privateTours} contacts={contacts} />
         <NewsBlock items={latestNews} />
-        <Faq items={faq} />
+        <Faq items={faq} contacts={contacts} />
       </BookingProvider>
     </SiteShell>
   );

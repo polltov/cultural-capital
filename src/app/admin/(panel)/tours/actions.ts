@@ -62,13 +62,14 @@ export async function deleteSessionAction(id: number): Promise<SimpleResult> {
   return r;
 }
 
-/** Обложки экскурсий и новостей. */
+/** Обложки экскурсий, новости и фото главной. */
 export async function uploadCoverAction(formData: FormData): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   await requireAccess("content");
   const file = formData.get("file");
   if (!(file instanceof File)) return { ok: false, error: "Выберите файл" };
   try {
-    return { ok: true, url: await uploadImage(file, formData.get("folder") === "news" ? "news" : "tours") };
+    const folder = formData.get("folder");
+    return { ok: true, url: await uploadImage(file, folder === "news" || folder === "site" ? folder : "tours") };
   } catch (e) {
     if (e instanceof UploadError) return { ok: false, error: e.message };
     console.error("upload failed", e);

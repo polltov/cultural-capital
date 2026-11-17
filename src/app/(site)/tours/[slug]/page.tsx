@@ -13,7 +13,8 @@ import { ContactButtons } from "@/components/site/StaticSections";
 import { TourCover } from "@/components/site/TourCover";
 import { BACK_TO_CATALOG, NAV_BACK, TourCoverTransition } from "@/components/site/transitions";
 import { IconAge, IconArrow, IconBag, IconClock, IconGroup, IconInfo, IconPin, IconReturn, IconTicket } from "@/components/site/icons";
-import { contactLinks } from "@/lib/contacts";
+import { getSiteContent } from "@/server/site-content";
+import { contactLinks, type ContactLink } from "@/lib/contacts";
 import { CANCEL_TERMS } from "@/lib/domain/refund-policy";
 import { coverVariants, headlinePrice, routeStops, tourMetaDescription } from "@/lib/domain/tour-text";
 import { breadcrumbLd, tourLd } from "@/lib/seo";
@@ -76,8 +77,8 @@ function Facts({ items }: { items: { icon: React.ReactNode; label: string; value
 }
 
 /** Вместо кнопки покупки, когда купить нечего: что случилось, куда пойти дальше и (если есть контакты) кому написать. */
-function SoldOut({ hasDates }: { hasDates: boolean }) {
-  const hasContacts = contactLinks().length > 0;
+function SoldOut({ hasDates, contacts }: { hasDates: boolean; contacts: ContactLink[] }) {
+  const hasContacts = contacts.length > 0;
   return (
     <div className="booking-empty">
       <p>{hasDates ? "На эти даты все места разобраны — новые появятся в афише." : "Даты этой экскурсии скоро появятся в афише."}</p>
@@ -85,7 +86,7 @@ function SoldOut({ hasDates }: { hasDates: boolean }) {
       {hasContacts && (
         <>
           <p>Или напишите нам — сообщим о новых датах или проведём экскурсию для вашей семьи.</p>
-          <ContactButtons />
+          <ContactButtons contacts={contacts} />
         </>
       )}
     </div>
@@ -94,7 +95,7 @@ function SoldOut({ hasDates }: { hasDates: boolean }) {
 
 export default async function TourPage({ params }: Props) {
   const { slug } = await params;
-  const catalog = await loadCatalog();
+  const [catalog, { content }] = await Promise.all([loadCatalog(), getSiteContent()]);
   const item = findTour(catalog, slug);
   if (!item) notFound();
 
@@ -199,7 +200,7 @@ export default async function TourPage({ params }: Props) {
             </section>
           </div>
           <aside className="tour-aside" aria-label="Покупка билетов">
-            <BookingPanel tour={{ id: tour.id, title: tour.title, priceChild: tour.priceChild, priceAdult: tour.priceAdult }} sessions={sessions} fallback={<SoldOut hasDates={sessions.length > 0} />} />
+            <BookingPanel tour={{ id: tour.id, title: tour.title, priceChild: tour.priceChild, priceAdult: tour.priceAdult }} sessions={sessions} fallback={<SoldOut hasDates={sessions.length > 0} contacts={contactLinks(content.contacts)} />} />
           </aside>
         </div>
 

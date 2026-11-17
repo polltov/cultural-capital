@@ -2,11 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { Markdown } from "@/components/Markdown";
 import { ogrnLabel, operator } from "@/lib/legal";
-import { contactLinks, externalProps } from "@/lib/contacts";
+import { contactLinks, externalProps, type ContactLink } from "@/lib/contacts";
 import { formatDayMonth, formatTime, formatWeekday } from "@/lib/domain/moscow-time";
 import { pluralRu, seatsBadge } from "@/lib/domain/seats";
+import { defaultSiteContent, type SiteContent } from "@/lib/site-content";
 import type { ScheduleItem } from "@/lib/domain/schedule";
 import type { CatalogTour } from "@/server/catalog";
+import { Emphasis } from "./Emphasis";
 import { BuyButton } from "./Booking";
 import { Logo, NAV } from "./Logo";
 import { IconArrow, IconCompass, IconGroup, IconTicket } from "./icons";
@@ -20,32 +22,32 @@ export function SkipLink() {
 type Next = ScheduleItem<CatalogTour["tour"]> | null;
 
 /** Первый экран: обещание, два пути (выбрать экскурсию / ближайшие даты) и подсказка с ближайшим сеансом. */
-export function Hero({ next }: { next: Next }) {
+export function Hero({ next, content }: { next: Next; content: SiteContent["hero"] }) {
   return (
     <section className="hero" aria-labelledby="hero-title">
       <div className="wrap hero-grid">
         <div className="hero-copy">
-          <p className="eyebrow">Санкт-Петербург · экскурсии для семьи</p>
-          <h1 className="hero-title" id="hero-title">Петербург, <em>вдохновляющий</em> <span className="nowrap">с первого шага</span></h1>
-          <p className="hero-sub">Авторские маршруты для детей и взрослых. Историки и искусствоведы, которые умеют говорить с детьми на одном языке.</p>
+          <p className="eyebrow">{content.eyebrow}</p>
+          <h1 className="hero-title" id="hero-title"><Emphasis text={content.title} nowrapTail={content.title === defaultSiteContent.hero.title} /></h1>
+          <p className="hero-sub">{content.description}</p>
           <div className="hero-actions">
-            <Link className="btn btn--dark" href="/#catalog">Выбрать экскурсию <IconArrow /></Link>
-            <Link className="btn btn--ghost" href="/#afisha">Ближайшие даты</Link>
+            <Link className="btn btn--dark" href="/#catalog">{content.catalogLabel} <IconArrow /></Link>
+            <Link className="btn btn--ghost" href="/#afisha">{content.datesLabel}</Link>
           </div>
           <ul className="hero-facts">
-            <li><IconGroup />Группы до 8 человек</li>
-            <li><IconCompass />Сюжет и задания на маршруте</li>
-            <li><IconTicket />Билет — сразу на почту</li>
+            <li><IconGroup />{content.group}</li>
+            <li><IconCompass />{content.route}</li>
+            <li><IconTicket />{content.ticket}</li>
           </ul>
         </div>
         <div className="hero-visual">
           <figure className="hero-photo hero-photo--main">
-            <Image src="/assets/dvortsovaya.jpg" alt="Дворцовая площадь и Александровская колонна на закате" fill preload sizes="(max-width: 760px) 78vw, (max-width: 899px) 420px, (max-width: 1100px) 36vw, 440px" />
-            <figcaption>Дворцовая площадь</figcaption>
+            <Image src={content.mainPhoto.url} alt={content.mainPhoto.alt} fill preload sizes="(max-width: 760px) 78vw, (max-width: 899px) 420px, (max-width: 1100px) 36vw, 440px" />
+            {content.mainPhoto.caption && <figcaption>{content.mainPhoto.caption}</figcaption>}
           </figure>
           <figure className="hero-photo hero-photo--side">
-            <Image src="/assets/spas.jpg" alt="Спас на Крови с высоты" fill sizes="(max-width: 760px) 50vw, (max-width: 899px) 260px, (max-width: 1100px) 22vw, 280px" />
-            <figcaption>Спас на Крови</figcaption>
+            <Image src={content.sidePhoto.url} alt={content.sidePhoto.alt} fill sizes="(max-width: 760px) 50vw, (max-width: 899px) 260px, (max-width: 1100px) 22vw, 280px" />
+            {content.sidePhoto.caption && <figcaption>{content.sidePhoto.caption}</figcaption>}
           </figure>
           {next && <NextStub item={next} />}
         </div>
@@ -73,95 +75,64 @@ function NextStub({ item: { tour, session } }: { item: NonNullable<Next> }) {
   );
 }
 
-export function Why() {
+const WHY_ICONS: Record<string, React.ReactNode> = {
+  "why-1": <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="16" cy="18" r="5"/><circle cx="32" cy="18" r="5"/><circle cx="24" cy="14" r="4"/><path d="M8 38 C8 31 11 27 16 27 M40 38 C40 31 37 27 32 27 M16 40 C16 32 20 28 24 28 C28 28 32 32 32 40"/></svg>,
+  "why-2": <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 12 C20 9 12 9 8 11 V36 C12 34 20 34 24 37 C28 34 36 34 40 36 V11 C36 9 28 9 24 12 Z M24 12 V37"/></svg>,
+  "why-3": <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="15"/><path d="M24 24 L30 16 L26 26 L18 32 Z"/><path d="M24 9 V12 M24 36 V39 M9 24 H12 M36 24 H39"/></svg>,
+  "why-4": <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M12 22 H34 V30 C34 35 30 38 23 38 C16 38 12 35 12 30 Z M34 24 C39 24 41 27 41 30 C41 33 39 35 34 35 M18 14 C16 16 18 18 17 20 M24 12 C22 14 24 16 23 18 M30 14 C28 16 30 18 29 20"/></svg>,
+  "why-5": <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 40 H40 M12 40 V20 M20 40 V20 M28 40 V20 M36 40 V20 M9 20 H39 M9 16 H39 M14 16 L24 8 L34 16"/></svg>,
+};
+
+export function Why({ content = defaultSiteContent.why }: { content?: SiteContent["why"] }) {
+  if (content.items.length === 0) return null;
   return (
     <section className="why" id="about" aria-labelledby="about-title">
       <div className="wrap why-grid">
         <div className="why-intro">
-          <p className="kicker">О нас</p>
-          <h2 className="why-title" id="about-title">Почему с&nbsp;нами <em>интересно</em></h2>
-          <p className="why-lead">Мы водим небольшие группы и строим каждую прогулку как историю, в которой ребёнок — участник, а не слушатель.</p>
+          <p className="kicker">{content.kicker}</p>
+          <h2 className="why-title" id="about-title"><Emphasis text={content.title} /></h2>
+          <p className="why-lead">{content.lead}</p>
           <div className="why-art" aria-hidden="true" />
         </div>
         <ul className="why-list">
-          <li className="why-row">
-            <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="16" cy="18" r="5"/><circle cx="32" cy="18" r="5"/><circle cx="24" cy="14" r="4"/><path d="M8 38 C8 31 11 27 16 27 M40 38 C40 31 37 27 32 27 M16 40 C16 32 20 28 24 28 C28 28 32 32 32 40"/></svg>
-            <h3>Группы до 8 человек</h3>
-            <p>Гид слышит каждого ребёнка, и никто не теряется в толпе.</p>
-          </li>
-          <li className="why-row">
-            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 12 C20 9 12 9 8 11 V36 C12 34 20 34 24 37 C28 34 36 34 40 36 V11 C36 9 28 9 24 12 Z M24 12 V37"/></svg>
-            <h3>История через игру</h3>
-            <p>Загадки, задания и находки по ходу маршрута: дети узнают, а не заучивают.</p>
-          </li>
-          <li className="why-row">
-            <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="15"/><path d="M24 24 L30 16 L26 26 L18 32 Z"/><path d="M24 9 V12 M24 36 V39 M9 24 H12 M36 24 H39"/></svg>
-            <h3>Авторские маршруты</h3>
-            <p>Каждая прогулка строится вокруг сюжета, а не списка дат и фамилий.</p>
-          </li>
-          <li className="why-row">
-            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M12 22 H34 V30 C34 35 30 38 23 38 C16 38 12 35 12 30 Z M34 24 C39 24 41 27 41 30 C41 33 39 35 34 35 M18 14 C16 16 18 18 17 20 M24 12 C22 14 24 16 23 18 M30 14 C28 16 30 18 29 20"/></svg>
-            <h3>Спокойный темп</h3>
-            <p>Идём в темпе самого младшего участника, с паузами и без спешки.</p>
-          </li>
-          <li className="why-row">
-            <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 40 H40 M12 40 V20 M20 40 V20 M28 40 V20 M36 40 V20 M9 20 H39 M9 16 H39 M14 16 L24 8 L34 16"/></svg>
-            <h3>Гиды — историки и педагоги</h3>
-            <p>Знают Петербург в деталях и умеют говорить о нём с детьми.</p>
-          </li>
+          {content.items.map((item) => (
+            <li className="why-row" key={item.id}>
+              {Object.hasOwn(WHY_ICONS, item.id) ? WHY_ICONS[item.id] : <IconCompass />}
+              <h3>{item.title}</h3>
+              {item.body && <p>{item.body}</p>}
+            </li>
+          ))}
         </ul>
       </div>
     </section>
   );
 }
 
-export function Route() {
+export function Route({ content = defaultSiteContent.route }: { content?: SiteContent["route"] }) {
+  if (content.items.length === 0) return null;
   return (
     <section className="route" aria-labelledby="route-title">
       <div className="wrap">
-        <p className="kicker kicker--light">Шаг за шагом</p>
-        <h2 className="route-title" id="route-title">Как проходит экскурсия</h2>
-        <p className="route-lead">От брони до фотографий — шесть простых шагов.</p>
-        <ol className="route-steps">
-          <li className="route-step">
-            <span className="route-num">1</span>
-            <h3>Покупаете билет онлайн</h3>
-            <p>Выбираете дату и оплачиваете картой или по СБП.</p>
-          </li>
-          <li className="route-step">
-            <span className="route-num">2</span>
-            <h3>Получаете билет на почту</h3>
-            <p>С точкой встречи, временем и списком, что взять с собой.</p>
-          </li>
-          <li className="route-step">
-            <span className="route-num">3</span>
-            <h3>Приходите к старту</h3>
-            <p>Гид встречает группу на месте начала маршрута.</p>
-          </li>
-          <li className="route-step">
-            <span className="route-num">4</span>
-            <h3>Гуляете и играете</h3>
-            <p>Истории, задания и остановки в самых интересных местах.</p>
-          </li>
-          <li className="route-step">
-            <span className="route-num">5</span>
-            <h3>Получаете фото</h3>
-            <p>После прогулки отправляем снимки с экскурсии.</p>
-          </li>
-          <li className="route-step">
-            <span className="route-num">6</span>
-            <h3>Возвращаетесь снова</h3>
-            <p>Новый маршрут — новая история Петербурга.</p>
-          </li>
+        <p className="kicker kicker--light">{content.kicker}</p>
+        <h2 className="route-title" id="route-title"><Emphasis text={content.title} /></h2>
+        <p className="route-lead">{content.lead}</p>
+        <ol className={content.items.length === 6 ? "route-steps" : "route-steps route-steps--custom"}>
+          {content.items.map((item, i) => (
+            <li className="route-step" key={item.id}>
+              <span className="route-num">{i + 1}</span>
+              <h3>{item.title}</h3>
+              {item.body && <p>{item.body}</p>}
+            </li>
+          ))}
         </ol>
       </div>
     </section>
   );
 }
 
-/** Ссылки «написать» из contacts.ts: первые две — кнопками; пусто — ничего. */
-export function ContactButtons({ max = 2, light = false }: { max?: number; light?: boolean }) {
-  const links = contactLinks().slice(0, max);
+/** Первые два канала связи показываются кнопками. */
+export function ContactButtons({ contacts, max = 2, light = false }: { contacts: ContactLink[]; max?: number; light?: boolean }) {
+  const links = contacts.slice(0, max);
   if (links.length === 0) return null;
   return (
     <div className="contact-buttons">
@@ -175,18 +146,18 @@ export function ContactButtons({ max = 2, light = false }: { max?: number; light
 }
 
 /** Индивидуальные экскурсии — только когда есть куда написать: без контактов блок ничего не даёт. */
-export function PrivateTours() {
-  if (contactLinks().length === 0) return null;
+export function PrivateTours({ content, contacts }: { content: SiteContent["privateTours"]; contacts: ContactLink[] }) {
+  if (contacts.length === 0) return null;
   return (
     <section className="private" aria-labelledby="private-title">
       <div className="wrap">
         <div className="private-card">
           <div className="private-copy">
-            <p className="kicker kicker--light">Индивидуально</p>
-            <h2 className="private-title" id="private-title">Экскурсия только для <em>вашей семьи</em></h2>
-            <p>Любая экскурсия из каталога может пройти в формате «только ваша семья»: выбираете удобное время, темп и акценты.</p>
-            <p>Для семей от 4 человек и для двух экскурсий в один визит есть специальные условия — напишите нам, подберём вариант.</p>
-            <ContactButtons light />
+            <p className="kicker kicker--light">{content.kicker}</p>
+            <h2 className="private-title" id="private-title"><Emphasis text={content.title} /></h2>
+            <p>{content.paragraph1}</p>
+            <p>{content.paragraph2}</p>
+            <ContactButtons contacts={contacts} light />
           </div>
           <div className="private-art" aria-hidden="true" />
         </div>
@@ -195,9 +166,12 @@ export function PrivateTours() {
   );
 }
 
-export function Faq({ items }: { items: { id: number; question: string; answer: string }[] }) {
+export function Faq({ items, contacts = contactLinks() }: {
+  items: { id: number; question: string; answer: string }[];
+  contacts?: ContactLink[];
+}) {
   if (items.length === 0) return null;
-  const hasContacts = contactLinks().length > 0;
+  const hasContacts = contacts.length > 0;
   return (
     <section className="faq" id="faq" aria-labelledby="faq-title">
       <div className="wrap faq-grid">
@@ -207,7 +181,7 @@ export function Faq({ items }: { items: { id: number; question: string; answer: 
           {hasContacts && (
             <>
               <p className="slead">Не нашли ответ? Напишите нам — подскажем и поможем выбрать маршрут.</p>
-              <ContactButtons />
+              <ContactButtons contacts={contacts} />
             </>
           )}
         </div>
@@ -224,8 +198,11 @@ export function Faq({ items }: { items: { id: number; question: string; answer: 
   );
 }
 
-export function Footer() {
-  const contacts = contactLinks();
+export function Footer({ description = defaultSiteContent.footer.description, contacts = contactLinks(), nav = NAV }: {
+  description?: string;
+  contacts?: ContactLink[];
+  nav?: typeof NAV;
+}) {
   const year = new Date().getFullYear();
   return (
     <footer className="foot">
@@ -233,12 +210,12 @@ export function Footer() {
         <div className="foot-top">
           <div className="foot-brand">
             <Logo light lazy className="logo logo--foot" />
-            <p className="foot-tag">Экскурсии по Петербургу для детей и взрослых: маленькие группы, авторские маршруты, история через игру.</p>
+            <p className="foot-tag">{description}</p>
           </div>
           <nav className="foot-col" aria-label="Разделы сайта">
             <p className="foot-h">Разделы</p>
             <ul>
-              {NAV.map((n) => <li key={n.href}><Link href={n.href}>{n.label}</Link></li>)}
+              {nav.map((n) => <li key={n.href}><Link href={n.href}>{n.label}</Link></li>)}
               <li><Link href="/account">Мои билеты</Link></li>
             </ul>
           </nav>

@@ -17,7 +17,7 @@ export default async function NewsArchivePage({ searchParams }: { searchParams: 
   const requested = typeof raw === "string" && /^\d{1,6}$/.test(raw) ? Number(raw) : 1;
   const { items, page, pages } = await listPublishedNews(requested);
   return (
-    <SiteShell mainClassName="news-page">
+    <SiteShell mainClassName="news-page" showNews={items.length > 0}>
       <div className="wrap">
         <nav className="crumbs" aria-label="Навигационная цепочка">
           <ol><li><Link href="/" transitionTypes={NAV_BACK}>Главная</Link></li><li aria-current="page">Новости</li></ol>

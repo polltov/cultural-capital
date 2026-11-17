@@ -6,7 +6,9 @@ import { externalProps, writeUsHref, type ContactLink } from "@/lib/contacts";
 import { IconClose, IconMenu } from "./icons";
 import { Logo, NAV } from "./Logo";
 
-export function SiteHeader({ cta, contacts, nav = NAV }: {
+const fallbackNav = NAV.filter(({ href }) => href !== "/news" && href !== "/#reviews");
+
+export function SiteHeader({ cta, contacts, nav = fallbackNav }: {
   cta?: { href: string; label: string };
   contacts: ContactLink[];
   nav?: typeof NAV;

@@ -1,25 +1,41 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { EmptySchedule } from "@/components/site/Afisha";
 import { SiteShell } from "@/components/site/SiteShell";
 import { contactLinks } from "@/lib/contacts";
 import { defaultSiteContent } from "@/lib/site-content";
 
-const { loadPublishedCatalog, getSiteContent } = vi.hoisted(() => ({
+const { loadPublishedCatalog, getSiteContent, hasPublishedNews } = vi.hoisted(() => ({
   loadPublishedCatalog: vi.fn(),
   getSiteContent: vi.fn(),
+  hasPublishedNews: vi.fn(),
 }));
 
 vi.mock("@/server/catalog", () => ({ loadPublishedCatalog }));
 vi.mock("@/server/site-content", () => ({ getSiteContent }));
+vi.mock("@/server/news", () => ({ hasPublishedNews }));
 
 const contactSettings = { ...defaultSiteContent.contacts, email: "organizer@example.org" };
 const content = { ...defaultSiteContent, contacts: contactSettings };
 
+beforeEach(() => { hasPublishedNews.mockResolvedValue(false); });
+
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
+});
+
+describe("новости в навигации сайта", () => {
+  it.each([false, true])("показывает ссылки только при публикации новости (%s)", async (published) => {
+    loadPublishedCatalog.mockResolvedValue([]);
+    getSiteContent.mockResolvedValue({ content });
+    hasPublishedNews.mockResolvedValue(published);
+    const { container } = render(await SiteShell({ children: null }));
+
+    expect(container.querySelectorAll('header a[href="/news"], footer a[href="/news"]'))
+      .toHaveLength(published ? 3 : 0);
+  });
 });
 
 describe("действие в шапке сайта", () => {

@@ -27,6 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { absolute: seo.title },
     description: seo.description,
+    alternates: { canonical: "/" },
     openGraph: siteOpenGraph(seo),
   };
 }
@@ -43,7 +44,7 @@ export default async function HomePage() {
   const request = next ? undefined : requestTourContact(contacts);
   const faqData = faqLd(faq);
   return (
-    <SiteShell>
+    <SiteShell showNews={latestNews.length > 0}>
       <JsonLd data={faqData ? [organization, faqData] : organization} />
       <BookingProvider catalog={catalog}>
         <Hero next={next} content={content.hero} requestHref={request?.href} />

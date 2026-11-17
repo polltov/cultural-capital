@@ -16,8 +16,8 @@ export const CRITICAL_FONTS = [
   "/fonts/pt-sans-normal-cyrillic-00c236.woff2", // кнопки, надзаголовки (жирный)
 ] as const;
 
-/** Вызывается при рендере корневого layout: React добавляет <link rel="preload" as="font"> в <head>. */
-export function preloadCriticalFonts(): void {
+/** React добавляет <link rel="preload" as="font"> в <head> при рендере страницы. */
+export function preloadCriticalFonts(fonts: readonly string[] = CRITICAL_FONTS): void {
   // crossOrigin обязателен: шрифты всегда запрашиваются в режиме CORS, иначе предзагруженный файл скачается второй раз
-  for (const href of CRITICAL_FONTS) preload(href, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
+  for (const href of fonts) preload(href, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
 }

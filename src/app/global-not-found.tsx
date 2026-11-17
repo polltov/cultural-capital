@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { NotFoundContent } from "@/components/site/NotFoundContent";
 import { SiteShell } from "@/components/site/SiteShell";
-import { preloadCriticalFonts } from "@/lib/critical-fonts";
 import { siteIcons } from "@/lib/site-icons";
 import "./fonts.css";
 import "./(site)/site.css";
@@ -15,7 +14,6 @@ export const metadata: Metadata = {
 };
 
 export default function GlobalNotFound() {
-  preloadCriticalFonts();
   return (
     <html lang="ru" data-scroll-behavior="smooth">
       <body>

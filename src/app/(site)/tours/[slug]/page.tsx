@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -14,6 +16,7 @@ import { BACK_TO_CATALOG, NAV_BACK, TourCoverTransition } from "@/components/sit
 import { IconAge, IconArrow, IconBag, IconClock, IconGroup, IconInfo, IconPin, IconReturn, IconTicket } from "@/components/site/icons";
 import { getSiteContent } from "@/server/site-content";
 import { contactLinks, externalProps, requestTourContact, REQUEST_TOUR_LABEL, type ContactLink } from "@/lib/contacts";
+import { CRITICAL_FONTS } from "@/lib/critical-fonts";
 import { CANCEL_TERMS } from "@/lib/domain/refund-policy";
 import { coverVariants, headlinePrice, routeStops, tourMetaDescription } from "@/lib/domain/tour-text";
 import { breadcrumbLd, tourLd } from "@/lib/seo";
@@ -47,6 +50,12 @@ const COVER_SIZES = [
   "(max-width: 1279px) calc(50vw - 72px)",
   "568px",
 ].join(", ");
+
+// На телефоне исходная обложка Эрмитажа приходит с HTML: второй запрос по медленной сети не нужен.
+// Если редактор заменит фото, новая обложка будет загружаться обычным способом.
+const EGYPT_HALL_COVER = "/assets/egypt-hall.jpg";
+const EGYPT_HALL_MOBILE = `data:image/avif;base64,${readFileSync(join(process.cwd(), "public/assets/egypt-hall-mobile.avif")).toString("base64")}`;
+const TITLE_FONT = [CRITICAL_FONTS[0]];
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -109,6 +118,7 @@ export default async function TourPage({ params }: Props) {
   if (!item) notFound();
 
   const { tour, sessions } = item;
+  const mobileCover = tour.slug === "egipetskiy-zal-ermitazha" && tour.coverUrl === EGYPT_HALL_COVER ? EGYPT_HALL_MOBILE : undefined;
   const variants = Object.fromEntries(coverVariants(catalog.map((c) => c.tour)));
   const numbers = Object.fromEntries(catalog.map((c, i) => [c.tour.slug, i + 1]));
   // В браузер уходит только то, что нужно окну покупки и карточкам: без описаний и служебных полей остальных экскурсий.
@@ -140,7 +150,7 @@ export default async function TourPage({ params }: Props) {
 
   return (
     // Кнопка в шапке ведёт к датам этой экскурсии, когда есть свободные места.
-    <SiteShell cta={canBuy ? { href: "#booking", label: "Купить билет" } : undefined}>
+    <SiteShell cta={canBuy ? { href: "#booking", label: "Купить билет" } : undefined} fontPreloads={mobileCover ? TITLE_FONT : undefined}>
       <JsonLd data={[...tourLd(tour, sessions), breadcrumbLd([{ name: "Главная", path: "/" }, { name: "Экскурсии", path: "/#catalog" }, { name: tour.title, path: `/tours/${tour.slug}` }])]} />
       <BookingProvider catalog={bookable}>
         <div className="wrap">
@@ -174,7 +184,10 @@ export default async function TourPage({ params }: Props) {
             {/* та же обложка, что у карточки в каталоге: при переходе из каталога она перетекает сюда (transitions.tsx) */}
             <TourCoverTransition slug={tour.slug}>
               <div className="tour-media">
-                <TourCover src={tour.coverUrl} alt={tour.title} seed={tour.slug} variant={variants[tour.slug]} sizes={COVER_SIZES} loading="eager" />
+                <TourCover
+                  src={tour.coverUrl} alt={tour.title} seed={tour.slug} variant={variants[tour.slug]}
+                  sizes={COVER_SIZES} loading="eager" mobileAvif={mobileCover}
+                />
               </div>
             </TourCoverTransition>
           </div>

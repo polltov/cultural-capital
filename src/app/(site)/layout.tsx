@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { preloadCriticalFonts } from "@/lib/critical-fonts";
 import { siteIcons } from "@/lib/site-icons";
 import { defaultSiteContent } from "@/lib/site-content";
 import { siteOpenGraph } from "@/lib/site-metadata";
@@ -31,7 +30,6 @@ export const viewport: Viewport = {
 };
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
-  preloadCriticalFonts();
   return (
     <html lang="ru" data-scroll-behavior="smooth">
       <body>

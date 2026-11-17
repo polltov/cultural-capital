@@ -1,4 +1,5 @@
 import { contactLinks, requestTourContact, REQUEST_TOUR_LABEL } from "@/lib/contacts";
+import { preloadCriticalFonts } from "@/lib/critical-fonts";
 import { loadPublishedCatalog } from "@/server/catalog";
 import { hasPublishedNews } from "@/server/news";
 import { getSiteContent } from "@/server/site-content";
@@ -11,13 +12,15 @@ import { PageTransition } from "./transitions";
  * Каркас публичной страницы: ссылка «к содержимому», шапка, <main id="main"> и подвал. Целиком обёрнут
  * в PageTransition — сдвиг при переходе «вглубь» и «назад»; шапка при этом закреплена (SiteHeader).
  */
-export async function SiteShell({ children, cta, mainClassName, showNews }: {
+export async function SiteShell({ children, cta, mainClassName, showNews, fontPreloads }: {
   children: React.ReactNode;
   /** Кнопка в шапке; на странице экскурсии ведёт к её датам, а не в общую афишу. */
   cta?: { href: string; label: string };
   mainClassName?: string;
   showNews?: boolean;
+  fontPreloads?: readonly string[];
 }) {
+  preloadCriticalFonts(fontPreloads);
   const [{ content }, catalog, hasNews] = await Promise.all([
     getSiteContent(),
     cta ? [] : loadPublishedCatalog(),

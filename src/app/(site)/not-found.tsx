@@ -7,7 +7,8 @@ export const metadata: Metadata = { title: "Страница не найдена
 /** notFound() на страницах сайта: несуществующая экскурсия, новость или заказ. */
 export default function NotFound() {
   return (
-    <SiteShell>
+    // Next передаёт эту границу вместе с обычными страницами; её шрифты загрузятся из CSS при показе 404.
+    <SiteShell fontPreloads={[]}>
       <NotFoundContent />
     </SiteShell>
   );
